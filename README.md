@@ -4,13 +4,12 @@ A real-time AI platform where alumni and professionals can create their own AI c
 
 ## ✨ Features
 
-- **Multi-Bot Creation** – Each user creates their own AI persona
-- **Document Upload** – PDF, DOCX, Image (with OCR)
-- **RAG Pipeline** – Chunking, embeddings, pgvector similarity search
-- **Streaming Chat** – Real-time LLM responses via SSE
-- **Live Voice Mode** – WebRTC + ElevenLabs TTS
-- **Multi-Tenant** – Full data isolation per bot (`WHERE bot_id = ?`)
-- **Cloud-Ready** – Docker + Nginx + Vercel deployment
+- **Multi-Bot Creation** – Each user creates their own AI persona.
+- **Advanced Ingestion** – Automated OCR for scanned PDFs using `PyMuPDF` + `EasyOCR`.
+- **RAG Pipeline** – State-of-the-art `Nomic V2 (768d)` embeddings with `pgvector` similarity search.
+- **Groq Integration** – Lightning-fast LLM responses using `llama3-8b-8192`.
+- **Multi-Tenant Safety** – Complete data isolation via `bot_id` filtering in all vector queries.
+- **Docker-Ready** – Streamlined backend container with Tesseract/EasyOCR dependencies.
 
 ## 🏗️ Architecture
 
@@ -25,71 +24,50 @@ Frontend (Next.js + TypeScript - Vercel)
 | RAG | Voice | Auth | Chat |
 ------------------------------
          |
-     Supabase + pgvector
+   Supabase + pgvector (Nomic V2)
          |
-   LLM Provider + ElevenLabs
+   Groq Cloud (Llama 3) + ElevenLabs
 ```
 
 ## 📁 Project Structure
 
 ```
 persona_ai_capstone/
-├── frontend/          # Next.js 14+ App (TypeScript + Tailwind CSS)
-│   ├── src/app/       # App Router pages
-│   ├── src/           # Components, hooks, services
-│   └── public/        # Static assets
-│
-├── backend/           # FastAPI Backend (Python)
-│   ├── api/           # Routes, schemas, middleware
+├── frontend/          # Next.js 14+ (App Router, Tailwind, TypeScript)
+├── backend/           # FastAPI (Python 3.11)
+│   ├── api/           # Routers (auth, bots, documents, chat, voice)
 │   ├── core/          # Config, security, utils
-│   ├── database/      # Models, queries, RLS
-│   ├── rag/           # Ingestion, chunking, embeddings, retrieval
-│   ├── voice/         # STT, TTS, WebRTC, streaming
-│   └── workers/       # Background processing
-│
-├── nginx/             # Nginx reverse proxy config
-├── docker-compose.yml # Docker services
-├── Dockerfile         # Backend container
-└── .env.example       # Environment template
+│   ├── database/      # Models, queries, migrations (RLS + pgvector)
+│   ├── rag/           # Ingestion (OCR), chunking, embeddings, retrieval
+│   ├── voice/         # STT, TTS (ElevenLabs), WebRTC
+│   └── workers/       # Asynchronous ingestion processing
+├── .env.example       # Template for keys (Supabase, Groq, OpenAI)
+└── README.md
 ```
 
 ## 🚀 Quick Start
 
-### Frontend
-```bash
-cd frontend
-npm install
-npm run dev
-```
+### 1. Database Setup
+Enable `pgvector` and create the schema by running the SQL in [supabase_schema.sql](file:///c:/Mern%20Stack/persona_ai_capstone/backend/database/supabase_schema.sql).
 
-### Backend
+### 2. Backend
 ```bash
 cd backend
 pip install -r requirements.txt
 uvicorn api.main:app --reload --port 8000
 ```
 
-### Docker
+### 3. Frontend
 ```bash
-docker-compose up --build
+cd frontend
+npm install
+npm run dev
 ```
 
-## 🔧 Environment Setup
-
-1. Copy `.env.example` to `.env`
-2. Fill in your Supabase, OpenAI, and ElevenLabs credentials
-3. Run the development servers
-
-## 📅 Implementation Timeline
-
-| Month | Focus |
-|-------|-------|
-| 1 | Foundation & Setup |
-| 2 | RAG Core Pipeline |
-| 3 | Chat Mode (Streaming) |
-| 4 | Live Voice Mode |
-| 5 | Production & Testing |
+## 🔌 API Testing (Postman)
+**POST** `/api/documents/{bot_id}/upload`
+- Body: `form-data` with `file` (PDF)
+- Returns: `{"status": "ingested", "chunks": X, "method": "EasyOCR"}`
 
 ## 📄 License
-
 MIT

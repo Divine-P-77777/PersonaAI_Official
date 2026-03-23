@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+backend/.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Build & Output
+.next/
+backend/dist/
+backend/build/
+frontend/out/
+
+# Environment Variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+backend/.env
+
+# IDEs & System
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+backend/*.log
+
+# Project-specific
+backend/rag/models/  # HuggingFace might cache here
+backend/rag/cache/
+frontend/.turbo/
