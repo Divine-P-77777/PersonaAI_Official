@@ -1,0 +1,25 @@
+# Docker Compose for PersonaBot
+# This orchestrates both the frontend and backend services
+
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    container_name: personabot-api
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    restart: always
+
+  frontend:
+    build: ./frontend
+    container_name: personabot-web
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api
+    depends_on:
+      - backend
+    restart: always

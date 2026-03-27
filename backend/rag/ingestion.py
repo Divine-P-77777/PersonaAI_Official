@@ -1,74 +1,117 @@
-import io
-import fitz  # PyMuPDF
-import easyocr
-import numpy as np
-from PIL import Image
+import logging
+import traceback
+import uuid
+from datetime import datetime
+from typing import List, Optional
+
+from backend.database.models import IngestionStatus, SourceType
+from backend.database.queries import (
+    insert_data_chunks,
+    update_data_source_status,
+)
+from backend.rag.processors import extract_text
 from backend.rag.chunking import chunk_text
 from backend.rag.embeddings import get_embeddings
-from backend.database.connection import get_supabase_client
 
-# Initialize EasyOCR reader (singleton-ish)
-_ocr_reader = None
+logger = logging.getLogger(__name__)
 
+async def ingest_source(
+    bot_id: str,
+    source_id: str,
+    source_type: SourceType,
+    *,
+    content: Optional[str] = None,
+    url: Optional[str] = None,
+    raw_bytes: Optional[bytes] = None,
+    token: Optional[str] = None,
+) -> int:
+    """Orchestrate the ingestion of a single data source.
+    
+    1. Extract text from the source (PDF, Image, Text, Web).
+    2. Chunk the extracted text.
+    3. Generate embeddings for the chunks.
+    4. Store chunks and embeddings in the database.
+    5. Update data source status.
+    """
+    try:
+        # Update status to processing
+        await update_data_source_status(source_id, IngestionStatus.processing, token=token)
 
-def get_ocr_reader():
-    """Get or create EasyOCR reader instance."""
-    global _ocr_reader
-    if _ocr_reader is None:
-        _ocr_reader = easyocr.Reader(['en'])
-    return _ocr_reader
+        # 1. Fetch file bytes if it's a file type and only URL is provided
+        if source_type in (SourceType.pdf, SourceType.image) and not raw_bytes and url:
+            logger.info(f"[INGEST] Fetching file bytes from URL for source {source_id}")
+            try:
+                import httpx
+                async with httpx.AsyncClient(follow_redirects=True, timeout=30.0) as client:
+                    response = await client.get(url)
+                    response.raise_for_status()
+                    raw_bytes = response.content
+                    logger.info(f"[INGEST] Fetched {len(raw_bytes)} bytes for source {source_id} (content-type: {response.headers.get('content-type', 'unknown')})")
+            except Exception as fetch_err:
+                raise RuntimeError(f"Failed to download file from URL '{url}': {fetch_err}")
 
+        if source_type in (SourceType.pdf, SourceType.image) and not raw_bytes:
+            raise ValueError(f"No raw bytes available for {source_type.value} source — file was not uploaded or URL is missing")
 
-def pdf_to_ocr_text(file_content: bytes) -> str:
-    """Extract text from PDF using OCR page-by-page."""
-    doc = fitz.open(stream=file_content, filetype="pdf")
-    reader = get_ocr_reader()
-    full_text = []
+        # 2. Extract plain text
+        logger.info(f"[INGEST] Extracting text from source {source_id} (type={source_type.value})")
+        extracted_text = await extract_text(
+            source_type,
+            content=content,
+            url=url,
+            raw_bytes=raw_bytes
+        )
 
-    for page_num in range(len(doc)):
-        page = doc[page_num]
-        # Increase resolution for better OCR
-        pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
-        img_data = pix.tobytes("ppm")
-        img = Image.open(io.BytesIO(img_data))
+        if not extracted_text.strip():
+            raise ValueError("No text extracted from data source")
+        
+        logger.info(f"[INGEST] Extracted {len(extracted_text)} characters from source {source_id}")
 
-        # Convert PIL image to numpy array for EasyOCR
-        img_np = np.array(img)
-        ocr_result = reader.readtext(img_np, detail=0, paragraph=True)
-        page_text = " ".join(ocr_result)
-        full_text.append(page_text)
+        # 2. Chunk text
+        chunks = chunk_text(extracted_text)
+        logger.info(f"[INGEST] Chunked into {len(chunks)} chunk(s) for source {source_id}")
+        
+        if not chunks:
+            raise ValueError("Text split resulted in zero chunks")
 
-    doc.close()
-    return "\n\n".join(full_text)
+        # 3. Generate embeddings
+        logger.info(f"[INGEST] Generating embeddings for {len(chunks)} chunks...")
+        embeddings_manager = get_embeddings()
+        embeddings = embeddings_manager.embed_documents(chunks)
+        logger.info(f"[INGEST] Embeddings generated (dim={len(embeddings[0])} each)")
 
+        # 4. Store in database (data_chunks table)
+        chunk_records = []
+        for i, (text_content, embedding) in enumerate(zip(chunks, embeddings)):
+            chunk_records.append({
+                "id": str(uuid.uuid4()),
+                "data_source_id": source_id,
+                "bot_id": bot_id,
+                "chunk_index": i,
+                "content": text_content,
+                "embedding": list(embedding),
+                "metadata": {
+                    "source_id": source_id,
+                    "type": source_type,
+                    "timestamp": datetime.utcnow().isoformat()
+                },
+                "created_at": datetime.utcnow().isoformat()
+            })
 
-async def ingest_document(bot_id: str, file_name: str, file_content: bytes):
-    """Orchestrate the full document ingestion pipeline."""
-    # 1. OCR Extract
-    text = pdf_to_ocr_text(file_content)
+        # 4. Store in database (data_chunks table)
+        logger.info(f"[INGEST] Writing {len(chunk_records)} chunks to DB for source {source_id}")
+        await insert_data_chunks(chunk_records, token=token)
 
-    # 2. Chunk
-    chunks = chunk_text(text)
+        # 5. Final status update
+        await update_data_source_status(source_id, IngestionStatus.completed, token=token)
+        logger.info(f"[INGEST] ✅ Source {source_id} ingested successfully — {len(chunks)} chunks stored")
+        
+        return len(chunks)
 
-    # 3. Embed
-    embeddings_manager = get_embeddings()
-    embeddings = embeddings_manager.embed_documents(chunks)
-
-    # 4. Store in Supabase
-    supabase = get_supabase_client()
-
-    records = []
-    for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
-        records.append({
-            "bot_id": bot_id,
-            "content": chunk,
-            "embedding": embedding,
-            "metadata": {
-                "source": file_name,
-                "chunk_index": i
-            }
-        })
-
-    # Batch insert into document_chunks
-    result = supabase.table("document_chunks").insert(records).execute()
-    return len(chunks)
+    except Exception as e:
+        err_msg = str(e) or repr(e) or type(e).__name__
+        full_tb = traceback.format_exc()
+        logger.error(f"Ingestion failed for source {source_id}: {err_msg}")
+        logger.error(f"Full traceback:\n{full_tb}")
+        await update_data_source_status(source_id, IngestionStatus.failed, error=err_msg, token=token)
+        raise

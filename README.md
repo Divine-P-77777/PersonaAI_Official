@@ -64,6 +64,16 @@ npm install
 npm run dev
 ```
 
+
+How to get your Nomic API Key
+To use the new API-based embedding system, you'll need an API key from Nomic Atlas:
+
+Sign Up/In: Go to atlas.nomic.ai.
+Access Settings: Click on your Profile Avatar (top right) and select Settings.
+API Keys: On the left sidebar, click on API Keys.
+Create Key: Click "Create API Key", copy it, and paste it into your backend/.env file:
+
+
 ## 🔌 API Testing (Postman)
 **POST** `/api/documents/{bot_id}/upload`
 - Body: `form-data` with `file` (PDF)
