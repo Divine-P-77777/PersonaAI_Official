@@ -4,11 +4,15 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from langchain_groq import ChatGroq
-from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
 from backend.core.config import get_settings
 from backend.core.security import get_current_user
-from backend.database.queries import get_bot_by_id
+from backend.database.queries import (
+    get_bot_by_id, 
+    get_recent_messages, 
+    save_message
+)
 from backend.rag.retrieval import retrieve_similar_chunks
 from backend.rag.context_builder import build_context
 
@@ -68,8 +72,34 @@ async def chat_with_bot(
         bot_name=bot["name"]
     )
 
-    # 4. Stream response via langchain_groq ChatGroq
+    # 4. Fetch recent chat history for context (Top 5 messages)
+    history = await get_recent_messages(
+        user_id=user["id"], 
+        bot_id=bot_id, 
+        limit=5, 
+        token=user.get("_token")
+    )
+    
+    # Format history for LangChain
+    history_messages = []
+    for msg in history:
+        if msg["role"] == "user":
+            history_messages.append(HumanMessage(content=msg["content"]))
+        else:
+            history_messages.append(AIMessage(content=msg["content"]))
+
+    # 5. Save incoming user message to history
+    await save_message(
+        user_id=user["id"],
+        bot_id=bot_id,
+        role="user",
+        content=user_message,
+        token=user.get("_token")
+    )
+
+    # 6. Stream response via langchain_groq ChatGroq
     async def generate():
+        full_response = ""
         try:
             llm = ChatGroq(
                 model=settings.LLM_MODEL,
@@ -78,17 +108,32 @@ async def chat_with_bot(
                 max_tokens=1024,
                 streaming=True,
             )
+            # Combine System Prompt + History + Current Message
             messages = [
                 SystemMessage(content=system_prompt),
+                *history_messages,
                 HumanMessage(content=user_message),
             ]
+            
             async for chunk in llm.astream(messages):
                 token = chunk.content
                 if token:
+                    full_response += token
                     yield f"data: {json.dumps({'token': token})}\n\n"
 
             yield "data: [DONE]\n\n"
-            logger.info(f"[CHAT] ✅ Stream complete for bot {bot_id}")
+            
+            # Persist assistant response to history
+            if full_response:
+                await save_message(
+                    user_id=user["id"],
+                    bot_id=bot_id,
+                    role="assistant",
+                    content=full_response,
+                    token=user.get("_token")
+                )
+            
+            logger.info(f"[CHAT] ✅ Stream complete & history saved for bot {bot_id}")
 
         except Exception as e:
             logger.error(f"[CHAT] ❌ LLM streaming failed: {e}")

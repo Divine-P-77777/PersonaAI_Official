@@ -48,10 +48,19 @@ async def get_bot(
     bot_id: UUID,
     user: Dict[str, Any] = Depends(get_current_user)
 ):
-    """Fetch a specific bot by ID. Multi-tenant isolation enforced."""
-    bot = await get_bot_by_id(str(bot_id), owner_id=user["id"], token=user.get("_token"))
+    """Fetch a specific bot by ID. Allows public viewing of 'ready' bots."""
+    bot = await get_bot_by_id(str(bot_id), token=user.get("_token"))
+    
     if not bot:
         raise HTTPException(status_code=404, detail="Bot not found")
+        
+    # Access Control: Owner can see any status; others can only see "ready"
+    if bot["owner_id"] != user["id"] and bot["status"] != "ready":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="This persona is private or still in training"
+        )
+        
     return bot
 
 @router.put("/{bot_id}", response_model=BotResponse)

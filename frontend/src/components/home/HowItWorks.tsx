@@ -1,6 +1,67 @@
 import { Search, MessageCircle, Sparkles, Upload, Settings, Rocket } from 'lucide-react';
+import { useRef, useEffect } from 'react';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+gsap.registerPlugin(ScrollTrigger);
 
 export function HowItWorks() {
+    const sectionRef = useRef<HTMLDivElement>(null);
+    const studentStepsRef = useRef<HTMLDivElement[]>([]);
+    const mentorStepsRef = useRef<HTMLDivElement[]>([]);
+
+    useEffect(() => {
+        const ctx = gsap.context(() => {
+            // Student steps animation
+            const studentSteps = studentStepsRef.current.filter(Boolean);
+            if (studentSteps.length > 0) {
+                gsap.fromTo(studentSteps, 
+                    { y: 20, opacity: 0 },
+                    { 
+                        scrollTrigger: {
+                            trigger: studentSteps[0],
+                            start: 'top 90%',
+                            once: true
+                        },
+                        y: 0,
+                        opacity: 1,
+                        duration: 0.6,
+                        stagger: 0.1,
+                        ease: 'power2.out',
+                        force3D: true,
+                        overwrite: 'auto'
+                    }
+                );
+            }
+
+            // Mentor steps animation
+            const mentorSteps = mentorStepsRef.current.filter(Boolean);
+            if (mentorSteps.length > 0) {
+                gsap.fromTo(mentorSteps, 
+                    { y: 20, opacity: 0 },
+                    { 
+                        scrollTrigger: {
+                            trigger: mentorSteps[0],
+                            start: 'top 92%',
+                            once: true
+                        },
+                        y: 0,
+                        opacity: 1,
+                        duration: 0.6,
+                        stagger: 0.1,
+                        ease: 'power2.out',
+                        force3D: true,
+                        overwrite: 'auto'
+                    }
+                );
+            }
+
+            ScrollTrigger.refresh();
+        }, sectionRef);
+
+        return () => ctx.revert();
+    }, []);
+
     const studentSteps = [
         {
             icon: Search,
@@ -47,43 +108,48 @@ export function HowItWorks() {
         <section id="how-it-works" className="py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-gray-50 to-white">
             <div className="max-w-7xl mx-auto">
                 {/* Section Header */}
-                <div className="text-center max-w-3xl mx-auto mb-16">
-                    <h2 className="text-4xl lg:text-5xl text-gray-900 mb-4">
+                <div className="text-center max-w-3xl mx-auto mb-20">
+                    <h2 className="text-4xl lg:text-6xl font-bold text-gray-900 mb-6 tracking-tight">
                         How PersonaBot{' '}
-                        <span className="bg-gradient-to-r from-orange-400 to-pink-500 bg-clip-text text-transparent">
+                        <span className="bg-gradient-to-r from-orange-400 via-pink-500 to-rose-600 bg-clip-text text-transparent">
                             works
                         </span>
                     </h2>
-                    <p className="text-xl text-gray-600">
+                    <p className="text-xl text-gray-600 leading-relaxed">
                         Whether you're seeking guidance or sharing knowledge, we make it simple
                     </p>
                 </div>
 
-                <div className="space-y-16">
+                <div className="space-y-24">
                     {/* For Students */}
-                    <div>
-                        <div className="text-center mb-8">
-                            <span className="inline-block px-4 py-2 bg-orange-100 text-orange-700 rounded-full text-sm">
+                    <div ref={sectionRef}>
+                        <div className="text-center mb-12">
+                            <span className="inline-flex items-center gap-2 px-6 py-2 bg-orange-50 text-orange-600 rounded-full text-sm font-bold border border-orange-100 shadow-sm">
+                                <Search className="w-4 h-4" />
                                 For Students
                             </span>
                         </div>
-                        <div className="grid md:grid-cols-3 gap-8">
+                        <div className="grid md:grid-cols-3 gap-12 relative">
                             {studentSteps.map((step, index) => {
                                 const Icon = step.icon;
                                 return (
-                                    <div key={index} className="relative">
+                                    <div 
+                                        key={index} 
+                                        ref={(el) => { if (el) studentStepsRef.current[index] = el; }}
+                                        className="relative group pt-4"
+                                    >
                                         <div className="flex flex-col items-center text-center">
-                                            <div className={`w-16 h-16 bg-gradient-to-br ${step.color} rounded-2xl flex items-center justify-center mb-4 shadow-lg`}>
-                                                <Icon className="w-8 h-8 text-white" />
+                                            <div className={`w-20 h-20 bg-gradient-to-br ${step.color} rounded-3xl flex items-center justify-center mb-6 shadow-2xl group-hover:scale-110 transition-transform duration-500`}>
+                                                <Icon className="w-10 h-10 text-white" />
                                             </div>
-                                            <div className="absolute -top-3 -left-3 w-8 h-8 bg-white rounded-full border-2 border-gray-200 flex items-center justify-center shadow-sm">
-                                                <span className="text-sm text-gray-700">{index + 1}</span>
+                                            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-2 w-10 h-10 bg-white rounded-2xl border-2 border-orange-100 flex items-center justify-center shadow-lg font-bold text-orange-600 z-10">
+                                                {index + 1}
                                             </div>
-                                            <h3 className="text-xl text-gray-900 mb-2">{step.title}</h3>
-                                            <p className="text-gray-600 leading-relaxed">{step.description}</p>
+                                            <h3 className="text-2xl font-bold text-gray-900 mb-3">{step.title}</h3>
+                                            <p className="text-gray-600 leading-relaxed text-[15px]">{step.description}</p>
                                         </div>
                                         {index < studentSteps.length - 1 && (
-                                            <div className="hidden md:block absolute top-8 left-[60%] w-[80%] h-0.5 bg-gradient-to-r from-gray-300 to-transparent"></div>
+                                            <div className="hidden lg:block absolute top-14 left-[65%] w-[70%] h-[2px] bg-gradient-to-r from-orange-200/50 via-orange-100/30 to-transparent"></div>
                                         )}
                                     </div>
                                 );
@@ -92,36 +158,41 @@ export function HowItWorks() {
                     </div>
 
                     {/* Divider */}
-                    <div className="flex items-center justify-center">
-                        <div className="h-px bg-gray-200 flex-1 max-w-xs"></div>
-                        <span className="px-4 text-gray-400">or</span>
-                        <div className="h-px bg-gray-200 flex-1 max-w-xs"></div>
+                    <div className="flex items-center justify-center py-4">
+                        <div className="h-[2px] bg-gradient-to-r from-transparent via-gray-200 to-transparent flex-1 max-w-md"></div>
+                        <span className="px-6 py-2 bg-white rounded-2xl border border-gray-100 text-gray-400 font-medium italic shadow-sm">vs</span>
+                        <div className="h-[2px] bg-gradient-to-r from-transparent via-gray-200 to-transparent flex-1 max-w-md"></div>
                     </div>
 
-                    {/* For Creators */}
+                    {/* For Mentors */}
                     <div>
-                        <div className="text-center mb-8">
-                            <span className="inline-block px-4 py-2 bg-pink-100 text-pink-700 rounded-full text-sm">
+                        <div className="text-center mb-12">
+                            <span className="inline-flex items-center gap-2 px-6 py-2 bg-pink-50 text-pink-600 rounded-full text-sm font-bold border border-pink-100 shadow-sm">
+                                <Rocket className="w-4 h-4" />
                                 For Mentors
                             </span>
                         </div>
-                        <div className="grid md:grid-cols-3 gap-8">
+                        <div className="grid md:grid-cols-3 gap-12 relative">
                             {creatorSteps.map((step, index) => {
                                 const Icon = step.icon;
                                 return (
-                                    <div key={index} className="relative">
+                                    <div 
+                                        key={index} 
+                                        ref={(el) => { if (el) mentorStepsRef.current[index] = el; }}
+                                        className="relative group pt-4"
+                                    >
                                         <div className="flex flex-col items-center text-center">
-                                            <div className={`w-16 h-16 bg-gradient-to-br ${step.color} rounded-2xl flex items-center justify-center mb-4 shadow-lg`}>
-                                                <Icon className="w-8 h-8 text-white" />
+                                            <div className={`w-20 h-20 bg-gradient-to-br ${step.color} rounded-3xl flex items-center justify-center mb-6 shadow-2xl group-hover:scale-110 transition-transform duration-500`}>
+                                                <Icon className="w-10 h-10 text-white" />
                                             </div>
-                                            <div className="absolute -top-3 -left-3 w-8 h-8 bg-white rounded-full border-2 border-gray-200 flex items-center justify-center shadow-sm">
-                                                <span className="text-sm text-gray-700">{index + 1}</span>
+                                            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-2 w-10 h-10 bg-white rounded-2xl border-2 border-pink-100 flex items-center justify-center shadow-lg font-bold text-pink-600 z-10">
+                                                {index + 1}
                                             </div>
-                                            <h3 className="text-xl text-gray-900 mb-2">{step.title}</h3>
-                                            <p className="text-gray-600 leading-relaxed">{step.description}</p>
+                                            <h3 className="text-2xl font-bold text-gray-900 mb-3">{step.title}</h3>
+                                            <p className="text-gray-600 leading-relaxed text-[15px]">{step.description}</p>
                                         </div>
                                         {index < creatorSteps.length - 1 && (
-                                            <div className="hidden md:block absolute top-8 left-[60%] w-[80%] h-0.5 bg-gradient-to-r from-gray-300 to-transparent"></div>
+                                            <div className="hidden lg:block absolute top-14 left-[65%] w-[70%] h-[2px] bg-gradient-to-r from-pink-200/50 via-pink-100/30 to-transparent"></div>
                                         )}
                                     </div>
                                 );

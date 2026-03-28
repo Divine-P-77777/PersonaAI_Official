@@ -62,14 +62,15 @@ export default function ExplorePage() {
       </div>
 
       {/* Navigation Space Holder */}
-      <div className="h-20" />
+      <div className="h-24 lg:h-32" />
 
       {/* Hero Section */}
-      <section className="relative pt-12 pb-20 px-6 lg:px-12 z-10">
+      <section className="relative pt-4 pb-20 px-6 lg:px-12 z-10">
         <div className="max-w-7xl mx-auto">
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
             className="text-center"
           >
@@ -78,7 +79,7 @@ export default function ExplorePage() {
               <span className="text-xs text-orange-950 font-bold tracking-widest uppercase">Verified Experts</span>
             </div>
             
-            <h1 className="text-6xl md:text-8xl font-black text-gray-900 mb-8 tracking-tighter leading-[0.9]">
+            <h1 className="text-5xl md:text-7xl lg:text-8xl font-black text-gray-900 mb-8 tracking-tighter leading-[0.9]">
               Elite Mentors <br /> 
               <span className="bg-gradient-to-r from-gray-900 via-orange-600 to-pink-600 bg-clip-text text-transparent">
                 One Click Away.
@@ -154,9 +155,9 @@ export default function ExplorePage() {
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 justify-items-center">
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="h-[480px] bg-white rounded-[3rem] p-8 space-y-4 animate-pulse">
+              <div key={i} className="w-full max-w-sm h-[480px] bg-white rounded-[3rem] p-8 space-y-4 animate-pulse">
                    <div className="h-40 bg-gray-50 rounded-3xl" />
                    <div className="h-6 w-1/2 bg-gray-50 rounded-full" />
                    <div className="h-4 w-full bg-gray-50 rounded-full" />
@@ -165,22 +166,22 @@ export default function ExplorePage() {
             ))}
           </div>
         ) : filteredBots.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 justify-items-center">
             <AnimatePresence>
               {filteredBots.map((bot, index) => (
                 <motion.div
                   key={bot.id}
                   layout
-                  initial={{ opacity: 0, y: 40 }}
-                  animate={{ opacity: 1, y: 0 }}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ duration: 0.5, delay: index * 0.05 }}
-                  className="group relative"
+                  transition={{ duration: 0.5 }}
+                  className="group relative w-full max-w-sm"
                 >
                   <div className="h-[520px] bg-white rounded-[3rem] border border-gray-100/50 shadow-sm hover:shadow-[0_40px_100px_rgba(0,0,0,0.08)] hover:-translate-y-3 transition-all duration-700 overflow-hidden flex flex-col p-8 cursor-pointer relative z-10">
                     
                     {/* Premium Status Badge */}
-                    <div className="absolute top-10 right-10 z-20">
+                    <div className="absolute top-8 right-8 z-20">
                          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 rounded-full text-[10px] font-black tracking-widest text-green-600 uppercase">
                             <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
                             Live Now
@@ -188,8 +189,8 @@ export default function ExplorePage() {
                     </div>
 
                     {/* Bot Visual Section */}
-                    <div className="relative mb-8 pt-4">
-                        <div className="w-24 h-24 rounded-[2.2rem] bg-gradient-to-br from-gray-50 to-white p-1 shadow-2xl transition-transform duration-500 group-hover:scale-110">
+                    <div className="relative mb-6 pt-2">
+                        <div className="w-20 h-20 rounded-[2.2rem] bg-gradient-to-br from-gray-50 to-white p-1 shadow-2xl transition-transform duration-500 group-hover:scale-110">
                             <div className="w-full h-full rounded-[1.8rem] bg-white p-1 overflow-hidden ring-1 ring-gray-100">
                                 <img 
                                     src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${bot.name}`} 
@@ -199,53 +200,53 @@ export default function ExplorePage() {
                             </div>
                         </div>
                         
-                        <div className="mt-8">
-                            <div className="flex items-center gap-2 mb-2">
-                                <h3 className="text-3xl font-black text-gray-900 tracking-tight group-hover:text-orange-600 transition-colors truncate">
+                        <div className="mt-6">
+                            <div className="flex items-center gap-2 mb-1.5">
+                                <h3 className="text-2xl font-black text-gray-900 tracking-tight group-hover:text-orange-600 transition-colors truncate">
                                     {bot.name}
                                 </h3>
-                                <ShieldCheck size={20} className="text-blue-500 fill-blue-500/10" />
+                                <ShieldCheck size={18} className="text-blue-500 fill-blue-500/10" />
                             </div>
-                            <div className="flex items-center gap-2 text-[11px] text-gray-400 font-bold uppercase tracking-widest">
-                                <User size={12} className="text-gray-300" />
+                            <div className="flex items-center gap-2 text-[10px] text-gray-400 font-bold uppercase tracking-widest leading-none">
+                                <User size={10} className="text-gray-300" />
                                 Created by {bot.owner?.display_name || "Nexus Network"}
                             </div>
                         </div>
                     </div>
 
                     {/* Tags */}
-                    <div className="flex flex-wrap gap-2 mb-6">
+                    <div className="flex flex-wrap gap-1.5 mb-6">
                       {bot.persona_config.expertise?.slice(0, 3).map((skill, i) => (
-                        <span key={i} className="px-4 py-1.5 bg-zinc-50 text-zinc-500 text-[10px] font-black rounded-xl uppercase tracking-widest flex items-center gap-1.5">
-                          <Zap size={10} className="text-orange-400" />
+                        <span key={i} className="px-3 py-1 bg-zinc-50 text-zinc-500 text-[9px] font-black rounded-xl uppercase tracking-widest flex items-center gap-1">
+                          <Zap size={9} className="text-orange-400" />
                           {skill}
                         </span>
                       ))}
                     </div>
 
                     {/* Bio Snippet */}
-                    <p className="text-gray-500 line-clamp-3 leading-relaxed font-medium mb-auto">
+                    <p className="text-gray-500 text-sm line-clamp-3 leading-relaxed font-medium mb-auto">
                         {bot.description || `Specialized AI mentor focused on ${bot.persona_config.expertise?.join(', ')}. Ask anything about industry frameworks or leadership.`}
                     </p>
 
                     {/* Performance Stats Overlay Header */}
-                    <div className="pt-8 border-t border-gray-50 flex items-center justify-between">
-                         <div className="flex items-center gap-6">
+                    <div className="pt-6 border-t border-gray-100 flex items-center justify-between mt-6">
+                         <div className="flex items-center gap-4">
                               <div className="flex flex-col">
-                                  <span className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Success</span>
-                                  <span className="text-xl font-black text-gray-900 tracking-tight">98%</span>
+                                  <span className="text-[9px] text-gray-400 font-black uppercase tracking-widest leading-none mb-1">Success</span>
+                                  <span className="text-lg font-black text-gray-900 tracking-tight">98%</span>
                               </div>
                               <div className="flex flex-col">
-                                  <span className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Sessions</span>
-                                  <span className="text-xl font-black text-gray-900 tracking-tight">12.4k</span>
+                                  <span className="text-[9px] text-gray-400 font-black uppercase tracking-widest leading-none mb-1">Sessions</span>
+                                  <span className="text-lg font-black text-gray-900 tracking-tight">12.4k</span>
                               </div>
                          </div>
                          
                          <Link 
                             href={`/chat/${bot.id}`}
-                            className="w-16 h-16 rounded-3xl bg-gray-900 text-white flex items-center justify-center hover:bg-orange-600 hover:scale-110 active:scale-95 transition-all duration-300 shadow-[0_15px_30px_rgba(0,0,0,0.1)]"
+                            className="w-14 h-14 rounded-[1.8rem] bg-gray-900 text-white flex items-center justify-center hover:bg-orange-600 hover:scale-110 active:scale-95 transition-all duration-300 shadow-xl"
                         >
-                            <MessageSquare className="w-7 h-7" />
+                            <MessageSquare className="w-6 h-6" />
                         </Link>
                     </div>
                   </div>

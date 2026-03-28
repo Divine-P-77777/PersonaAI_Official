@@ -46,31 +46,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-orange-50 to-white text-gray-900 font-sans selection:bg-orange-200">
       {/* Premium Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100/50 shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 h-18 flex items-center justify-between">
-          <Link href="/dashboard" className="flex items-center gap-2 group">
-            <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-pink-500 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
-              <Zap className="text-white fill-white" size={22} />
-            </div>
-            <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-orange-600 to-pink-600 bg-clip-text text-transparent">
-              PersonaBot
-            </span>
-          </Link>
-          
-          <div className="flex items-center gap-4">
-            <button
-               onClick={handleSignOut}
-               className="text-gray-500 hover:text-red-500 transition-colors p-2 rounded-full hover:bg-red-50"
-               title="Sign Out"
-            >
-              <LogOut size={20} />
-            </button>
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-100 to-pink-100 border-2 border-white shadow-sm flex items-center justify-center overflow-hidden cursor-pointer hover:ring-2 ring-orange-200 transition-all">
-                <User size={20} className="text-orange-600" />
-            </div>
-          </div>
-        </div>
-      </header>
+
 
       <main className="max-w-7xl mx-auto pt-28 pb-12 px-6">
         {/* Welcome Section */}
@@ -140,7 +116,7 @@ export default function DashboardPage() {
                       {bot.status === "ready" ? "Online" : "Training"}
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-4 mb-6">
                     <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-50 to-pink-50 flex items-center justify-center text-orange-600 group-hover:from-orange-400 group-hover:to-pink-500 group-hover:text-white shadow-inner transition-all duration-300">
                       {bot.avatar_url ? (
@@ -165,12 +141,12 @@ export default function DashboardPage() {
 
                   <div className="flex items-center justify-between pt-6 border-t border-orange-50">
                     <div className="flex gap-2">
-                       <span className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center text-orange-600 hover:bg-orange-100 transition-colors">
-                          <MessageSquare size={16} />
-                       </span>
-                       <span className="w-8 h-8 rounded-lg bg-pink-50 flex items-center justify-center text-pink-600 hover:bg-pink-100 transition-colors">
-                          <LayoutDashboard size={16} />
-                       </span>
+                      <span className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center text-orange-600 hover:bg-orange-100 transition-colors">
+                        <MessageSquare size={16} />
+                      </span>
+                      <span className="w-8 h-8 rounded-lg bg-pink-50 flex items-center justify-center text-pink-600 hover:bg-pink-100 transition-colors">
+                        <LayoutDashboard size={16} />
+                      </span>
                     </div>
                     <div className="w-12 h-12 rounded-2xl bg-gray-50 border-2 border-transparent flex items-center justify-center text-gray-400 group-hover:bg-gradient-to-br from-orange-400 to-pink-500 group-hover:text-white group-hover:border-white transition-all duration-300 shadow-sm group-hover:shadow-lg">
                       <ArrowUpRight size={22} />

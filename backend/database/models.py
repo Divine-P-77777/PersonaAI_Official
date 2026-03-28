@@ -229,3 +229,24 @@ class DataChunk(Base):
 
     # Relationships
     source: Mapped[DataSource] = relationship("DataSource", back_populates="chunks")
+
+
+# Model: Message
+
+class Message(Base):
+    """
+    Stores persistent chat history between a user and a bot.
+    Used for context window memory in LLM prompts.
+    """
+
+    __tablename__ = "messages"
+    __table_args__ = (
+        Index("messages_user_bot_idx", "user_id", "bot_id", "created_at"),
+    )
+
+    id         = Column(UUID(as_uuid=True), primary_key=True, server_default=func.uuid_generate_v4())
+    user_id    = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    bot_id     = Column(UUID(as_uuid=True), ForeignKey("bots.id", ondelete="CASCADE"), nullable=False)
+    role       = Column(Enum(MessageRole), nullable=False)
+    content    = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

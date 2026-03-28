@@ -130,3 +130,16 @@ CREATE INDEX IF NOT EXISTS data_chunks_data_source_id_idx ON data_chunks (data_s
 CREATE INDEX IF NOT EXISTS data_chunks_embedding_idx
     ON data_chunks USING hnsw (embedding vector_cosine_ops);
 
+-- Table: messages
+-- Stores persistent chat history between a user and a bot.
+CREATE TABLE IF NOT EXISTS messages (
+    id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    bot_id     UUID NOT NULL REFERENCES bots(id) ON DELETE CASCADE,
+    role       message_role NOT NULL,
+    content    TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS messages_user_bot_idx ON messages (user_id, bot_id, created_at DESC);
+

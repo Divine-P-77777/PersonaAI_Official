@@ -99,12 +99,15 @@ async def get_bots_by_owner(owner_id: str, token: str = None) -> list[dict]:
 
 async def get_bot_by_id(bot_id: str, owner_id: Optional[str] = None, token: str = None) -> Optional[dict]:
     """Fetch a single bot; optionally restrict to owner."""
-    client = get_authed_client(token) if token else get_supabase_client()
-    query = client.table("bots").select("*").eq("id", bot_id)
-    if owner_id:
-        query = query.eq("owner_id", owner_id)
-    result = query.maybe_single().execute()
-    return result.data
+    try:
+        client = get_authed_client(token) if token else get_supabase_client()
+        query = client.table("bots").select("*").eq("id", bot_id)
+        if owner_id:
+            query = query.eq("owner_id", owner_id)
+        result = query.maybe_single().execute()
+        return result.data if result else None
+    except Exception:
+        return None
 
 
 async def create_bot(bot_data: dict, token: str = None) -> dict:
@@ -312,3 +315,46 @@ async def search_similar_chunks(
         logger.info(f"[DB] Similarity Search: Found 0 matches for bot {bot_id} (threshold={similarity_threshold})")
 
     return results
+
+
+# Chat History (Messages)
+
+async def get_recent_messages(user_id: str, bot_id: str, limit: int = 5, token: str = None) -> list[dict]:
+    """Fetch the most recent N messages for a user+bot pair (ordered ASC for LLM context)."""
+    try:
+        client = get_authed_client(token) if token else get_supabase_client()
+        result = (
+            client
+            .table("messages")
+            .select("role, content")
+            .eq("user_id", user_id)
+            .eq("bot_id", bot_id)
+            .order("created_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        
+        # Reverse to get chronological order [oldest -> newest] for the LLM
+        messages = result.data or []
+        messages.reverse()
+        return messages
+    except Exception as e:
+        logger.error(f"[DB] Failed to fetch recent messages: {e}")
+        return []
+
+
+async def save_message(user_id: str, bot_id: str, role: str, content: str, token: str = None) -> Optional[dict]:
+    """Persist a single chat message to the history."""
+    try:
+        client = get_authed_client(token) if token else get_supabase_client()
+        data = {
+            "user_id": user_id,
+            "bot_id": bot_id,
+            "role":    role,
+            "content": content
+        }
+        result = client.table("messages").insert(data).execute()
+        return result.data[0] if result.data else None
+    except Exception as e:
+        logger.error(f"[DB] Failed to save message: {e}")
+        return None

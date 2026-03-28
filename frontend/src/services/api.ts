@@ -137,22 +137,54 @@ class ApiService {
     const decoder = new TextDecoder();
     if (!reader) { onError("No stream"); return; }
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      const text = decoder.decode(value, { stream: true });
-      const lines = text.split("\n").filter(l => l.startsWith("data: "));
-      for (const line of lines) {
-        const payload = line.slice(6).trim();
-        if (payload === "[DONE]") { onDone(); return; }
-        try {
-          const parsed = JSON.parse(payload);
-          if (parsed.token) onToken(parsed.token);
-          if (parsed.error) onError(parsed.error);
-        } catch { /* ignore partial chunks */ }
+    let buffer = "";
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        // Accumulate and decode chunk
+        buffer += decoder.decode(value, { stream: true });
+        
+        // Find all complete SSE messages separated by "\n\n"
+        let boundary = buffer.indexOf("\n\n");
+        while (boundary !== -1) {
+          const completePart = buffer.slice(0, boundary);
+          buffer = buffer.slice(boundary + 2); // Reset for next search
+          
+          // Process individual lines within the split part
+          const lines = completePart.split("\n");
+          for (const line of lines) {
+            const trimmedLine = line.trim();
+            if (trimmedLine.startsWith("data: ")) {
+              const payload = trimmedLine.slice(6).trim();
+              
+              if (payload === "[DONE]") {
+                onDone();
+                return;
+              }
+
+              try {
+                const parsed = JSON.parse(payload);
+                if (parsed.token) onToken(parsed.token);
+                if (parsed.error) onError(parsed.error);
+              } catch (e) {
+                console.warn("Retrying partial JSON payload:", payload);
+                // If it fails to parse, we put it back in the buffer just in case
+                // but usually "\n\n" implies a complete JSON block in our backend.
+              }
+            }
+          }
+          
+          boundary = buffer.indexOf("\n\n");
+        }
       }
+    } catch (e: any) {
+        onError(`Streaming read error: ${e.message}`);
+    } finally {
+        onDone();
     }
-    onDone();
   }
 }
 

@@ -73,9 +73,14 @@ export const MessageBubble = ({ message, isStreaming }: MessageBubbleProps) => {
           </ReactMarkdown>
           {isStreaming && (
             <motion.span
-              animate={{ opacity: [0, 1, 0] }}
-              transition={{ repeat: Infinity, duration: 0.8 }}
-              className="inline-block w-2 h-4 ml-1 bg-orange-500 rounded-full vertical-middle"
+              animate={{ opacity: [1, 0] }}
+              transition={{ 
+                repeat: Infinity, 
+                duration: 0.5,
+                repeatType: "reverse",
+                ease: "linear" 
+              }}
+              className="inline-block w-[2px] h-[1.1em] ml-1 bg-orange-500 rounded-full align-middle shadow-[0_0_8px_rgba(249,115,22,0.5)]"
             />
           )}
         </div>

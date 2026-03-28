@@ -3,7 +3,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { SmoothScroll } from "@/components/ui/SmoothScroll";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -20,6 +19,8 @@ export const metadata: Metadata = {
   description: "Connect with AI-powered personas of alumni, professors, and professionals.",
 };
 
+import LayoutProvider from "@/components/layout/LayoutProvider";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -30,10 +31,11 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <SmoothScroll>
-          {children}
-          <ToastContainer />
-        </SmoothScroll>
+
+          <LayoutProvider>
+            {children}
+          </LayoutProvider>
+        
       </body>
     </html>
   );

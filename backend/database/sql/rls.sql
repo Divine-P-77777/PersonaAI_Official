@@ -7,6 +7,7 @@ ALTER TABLE bots               ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ingestion_batches  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE data_sources       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE data_chunks        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE messages           ENABLE ROW LEVEL SECURITY;
 
 -- users
 -- Users can read and update only their own profile row.
@@ -59,3 +60,8 @@ CREATE POLICY "data_chunks: owner manage" ON data_chunks
 -- Any authenticated user can READ chunks (needed for RAG retrieval).
 CREATE POLICY "data_chunks: authenticated can read" ON data_chunks
     FOR SELECT USING (auth.role() = 'authenticated');
+
+-- messages
+-- Users can only read and manage their own message history.
+CREATE POLICY "messages: user full access" ON messages
+    FOR ALL USING (auth.uid() = user_id);
