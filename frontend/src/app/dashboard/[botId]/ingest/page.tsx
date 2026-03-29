@@ -58,6 +58,22 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
     setSources([...sources, newSource])
   }
 
+  // Cleanup WebSocket on unmount
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) {
+        try {
+          // If it's a websocket, close it
+          if (typeof (pollRef.current as any).close === 'function') {
+            (pollRef.current as any).close();
+          } else {
+            clearInterval(pollRef.current as any);
+          }
+        } catch (e) {}
+      }
+    };
+  }, []);
+
   const removeSource = (id: string) => {
     setSources(sources.filter(s => s.id !== id))
   }
@@ -74,20 +90,46 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
   }
 
   const startPolling = (id: string, total: number) => {
-    pollRef.current = setInterval(async () => {
-      try {
-        const batch = await api.getBatchStatus(id)
-        const pct = total > 0 ? Math.round((batch.processed_files / total) * 100) : 0
-        setBatchProgress(pct)
-        setBatchStatus(batch.status as any)
-        if (batch.status === "completed" || batch.status === "failed") {
-          clearInterval(pollRef.current!)
-          pollRef.current = null
-          if (batch.status === "completed") showSuccess("All sources processed successfully! 🎉")
-          else showError("Some sources failed to process. Check logs.")
+    try {
+      const wsUrl = `${api.getWsUrl()}/ingestion/batch/${id}/ws`;
+      const ws = new WebSocket(wsUrl);
+
+      ws.onmessage = (event) => {
+        try {
+          const batch = JSON.parse(event.data);
+          
+          if (batch.error) {
+            showError(batch.error);
+            ws.close();
+            return;
+          }
+
+          const pct = total > 0 ? Math.round((batch.processed_files / total) * 100) : 0;
+          setBatchProgress(pct);
+          setBatchStatus(batch.status);
+          
+          if (batch.status === "completed" || batch.status === "failed") {
+            ws.close();
+            if (batch.status === "completed") {
+              showSuccess("All sources processed successfully! 🎉");
+            } else {
+              showError("Some sources failed to process. Check logs.");
+            }
+          }
+        } catch (err) {
+          console.error("WS Parse error", err);
         }
-      } catch { /* ignore poll errors */ }
-    }, 2000)
+      };
+
+      ws.onerror = (error) => {
+        console.error("WebSocket Error:", error);
+      };
+
+      pollRef.current = ws as any;
+    } catch (err) {
+      console.error("Failed to establish WebSocket:", err);
+      showError("Connection failed for live progress.");
+    }
   }
 
   const handleStartIngestion = async () => {
@@ -196,7 +238,7 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
                 >
                   <button 
                     onClick={() => removeSource(source.id)}
-                    className="absolute top-4 right-4 w-10 h-10 rounded-xl flex items-center justify-center text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100"
+                    className="absolute top-2 right-2 sm:top-4 sm:right-4 w-10 h-10 rounded-xl flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all opacity-100 sm:opacity-0 group-hover:opacity-100 z-10"
                   >
                     <X size={20} />
                   </button>
@@ -209,9 +251,9 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
                       {source.type === "image" && <Zap size={24} />}
                     </div>
                     
-                    <div className="flex-1 space-y-4">
+                    <div className="flex-1 space-y-4 min-w-0 mt-4 sm:mt-0 pt-6 sm:pt-0">
                       {source.type === "web_link" ? (
-                        <div className="space-y-4">
+                        <div className="space-y-4 min-w-0">
                           <input
                             type="text"
                             placeholder="Data source title (e.g. Personal Portfolio)"
@@ -219,19 +261,19 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
                             value={source.title}
                             onChange={(e) => updateSource(source.id, { title: e.target.value })}
                           />
-                          <div className="flex items-center gap-2 bg-gray-50 rounded-2xl px-5 py-4 border-2 border-orange-50 focus-within:border-orange-200 transition-colors">
-                            <span className="text-gray-400 font-bold">https://</span>
+                          <div className="flex items-center gap-2 bg-gray-50 rounded-2xl px-4 py-4 border-2 border-orange-50 focus-within:border-orange-200 transition-colors">
+                            <span className="text-gray-400 font-bold shrink-0">https://</span>
                             <input
                               type="text"
                               placeholder="example.com/article"
-                              className="flex-1 bg-transparent border-none outline-none text-gray-700 font-medium"
+                              className="flex-1 min-w-0 bg-transparent border-none outline-none text-gray-700 font-medium"
                               value={source.url}
                               onChange={(e) => updateSource(source.id, { url: e.target.value })}
                             />
                           </div>
                         </div>
                       ) : source.type === "long_text" ? (
-                        <div className="space-y-4">
+                        <div className="space-y-4 min-w-0">
                           <input
                             type="text"
                             placeholder="Text block title (e.g. My Philosphy)"
@@ -247,17 +289,17 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
                           />
                         </div>
                       ) : (
-                        <div className="space-y-4">
-                          <div className="flex items-center gap-4">
+                        <div className="space-y-4 min-w-0">
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                             <input
                               type="text"
                               placeholder="Filename"
-                              className="flex-1 bg-transparent border-none outline-none text-xl font-bold text-gray-900 placeholder-gray-300 pointer-events-none"
+                              className="w-full sm:flex-1 bg-transparent border-none outline-none text-xl font-bold text-gray-900 placeholder-gray-300 pointer-events-none truncate"
                               value={source.title}
                               readOnly
                             />
                             {!source.file && (
-                                <label className="h-12 px-6 bg-gradient-to-r from-orange-400 to-pink-500 text-white text-sm font-bold rounded-xl flex items-center gap-2 cursor-pointer shadow-lg shadow-orange-100 hover:scale-105 transition-all">
+                                <label className="h-12 w-full sm:w-auto px-6 bg-gradient-to-r from-orange-400 to-pink-500 text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-orange-100 hover:scale-105 transition-all shrink-0">
                                   <Upload size={16} /> Browse
                                   <input type="file" className="hidden" accept={source.type === 'pdf' ? '.pdf' : 'image/*'} onChange={(e) => handleFileUpload(source.id, e)} />
                                 </label>

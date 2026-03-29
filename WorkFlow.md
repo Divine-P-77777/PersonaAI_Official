@@ -86,8 +86,15 @@ For a secure, production-level implementation using **Supabase + FastAPI** (with
 *   **Index Note**: PostgreSQL arrays are 1-indexed. If the path is `user_id/file.jpg`, index `[1]` is the user ID. Don't prefix with the bucket name in the path string, as the bucket name is already part of the URL.
 
 
+### 🚀 Seamless Production Deployment
+We utilize a **Docker-first** approach to ensure environment parity between local development and AWS EC2 production. 
+
+- **Static Infrastructure**: The frontend is deployed via Vercel for Edge-optimized performance.
+- **Containerized Backend**: FastAPI and its ingestion workers are bundled into a single **Docker Image**, pre-configured with Tesseract and system-level OCR dependencies.
+- **Registry**: Images are pushed to `dynamicphillic` for automated pulls on production nodes.
+
 ### Docker Deployment Commands
-To build and push images to the registry for **dynamicphillic**:
+To build and push images for **dynamicphillic**:
 
 #### 1. Backend API
 ```powershell

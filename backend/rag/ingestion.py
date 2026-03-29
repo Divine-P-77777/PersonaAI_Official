@@ -63,7 +63,7 @@ async def ingest_source(
         )
 
         if not extracted_text.strip():
-            raise ValueError("No text extracted from data source")
+            raise ValueError("The provided source did not contain any readable text.")
         
         logger.info(f"[INGEST] Extracted {len(extracted_text)} characters from source {source_id}")
 

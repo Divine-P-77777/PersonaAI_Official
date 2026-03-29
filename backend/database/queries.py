@@ -248,6 +248,19 @@ async def update_data_source_status(source_id: str, status: str, error: Optional
     client.table("data_sources").update(updates).eq("id", source_id).execute()
 
 
+async def delete_data_source(source_id: str, token: str = None) -> bool:
+    """Delete a data source (chunks cascade automatically)."""
+    client = get_authed_client(token) if token else get_supabase_client()
+    result = (
+        client
+        .table("data_sources")
+        .delete()
+        .eq("id", source_id)
+        .execute()
+    )
+    return bool(result.data)
+
+
 # ---------------------------------------------------------------------------
 # Data Chunks
 # ---------------------------------------------------------------------------

@@ -43,6 +43,10 @@ class ApiService {
     return response.json();
   }
 
+  getWsUrl(): string {
+    return API_URL.replace(/^http/, 'ws');
+  }
+
   // Auth
   async getCurrentUser(): Promise<UserProfile> {
     return this.request<UserProfile>("/auth/me");
@@ -88,7 +92,7 @@ class ApiService {
   ): Promise<IngestionBatch> {
     const formData = new FormData();
     
-    // Add the JSON metadata as a string (if your backend supports it)
+    // Add the JSON metadata as a string (if  backend supports it)
     // Actually our backend expects BatchIngestionRequest as JSON Body usually.
     // However, we updated it to handle files. Let's send it as multipart.
     
@@ -105,6 +109,14 @@ class ApiService {
 
   async getBatchStatus(batchId: string): Promise<IngestionBatch> {
     return this.request<IngestionBatch>(`/ingestion/batch/${batchId}`);
+  }
+
+  async getBotDataSources(botId: string): Promise<DataSource[]> {
+    return this.request<DataSource[]>(`/ingestion/${botId}/sources`);
+  }
+
+  async deleteDataSource(sourceId: string): Promise<{status: string, message: string}> {
+    return this.request<{status: string, message: string}>(`/ingestion/source/${sourceId}`, "DELETE");
   }
 
   // Chat (SSE Streaming)

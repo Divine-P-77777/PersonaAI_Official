@@ -38,7 +38,7 @@ graph TD
 ### 1. Prerequisites
 - **Python**: 3.11 or higher
 - **Node.js**: 18.x or higher
-- **Docker**: (Optional, for containerized deployment)
+- **Docker**: Required for seamless production deployment (Backend + Workers)
 - **Accounts**: Supabase, Groq, Cloudinary.
 
 ### 2. Backend Installation

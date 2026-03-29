@@ -150,7 +150,7 @@ export function DataSources({ formData, updateFormData }: DataSourcesProps) {
                                         <button
                                             type="button"
                                             onClick={() => removeSource(formData.dataSources.findIndex(s => s === source))}
-                                            className="text-red-500 hover:text-red-700 transition-colors"
+                                            className="p-2 -mr-2 sm:mr-0 rounded-full text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors"
                                         >
                                             <X className="w-5 h-5" />
                                         </button>
@@ -194,11 +194,11 @@ export function DataSources({ formData, updateFormData }: DataSourcesProps) {
                                             <button
                                                 type="button"
                                                 onClick={() => removeSource(formData.dataSources.findIndex(s => s === source))}
-                                                className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                                                className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 shadow-sm"
                                             >
                                                 <X className="w-4 h-4" />
                                             </button>
-                                            <div className="absolute bottom-2 left-2 right-2 text-white text-sm opacity-0 group-hover:opacity-100 transition-opacity truncate">
+                                            <div className="absolute bottom-2 left-2 right-2 text-white text-sm opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity truncate drop-shadow-md bg-black/40 px-2 py-1 rounded">
                                                 {source.title}
                                             </div>
                                         </div>
@@ -255,7 +255,7 @@ export function DataSources({ formData, updateFormData }: DataSourcesProps) {
                                         <button
                                             type="button"
                                             onClick={() => removeSource(formData.dataSources.findIndex(s => s === source))}
-                                            className="text-red-500 hover:text-red-700 transition-colors ml-4"
+                                            className="p-2 -mr-2 sm:mr-0 ml-2 sm:ml-4 rounded-full text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors"
                                         >
                                             <X className="w-5 h-5" />
                                         </button>
@@ -312,7 +312,7 @@ export function DataSources({ formData, updateFormData }: DataSourcesProps) {
                                         <button
                                             type="button"
                                             onClick={() => removeSource(formData.dataSources.findIndex(s => s === source))}
-                                            className="text-red-500 hover:text-red-700 transition-colors ml-4"
+                                            className="p-2 -mr-2 sm:mr-0 ml-2 sm:ml-4 rounded-full text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors"
                                         >
                                             <X className="w-5 h-5" />
                                         </button>
@@ -369,7 +369,7 @@ export function DataSources({ formData, updateFormData }: DataSourcesProps) {
                                         <button
                                             type="button"
                                             onClick={() => removeSource(formData.dataSources.findIndex(s => s === source))}
-                                            className="text-red-500 hover:text-red-700 transition-colors ml-4"
+                                            className="p-2 -mr-2 sm:mr-0 ml-2 sm:ml-4 rounded-full text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors"
                                         >
                                             <X className="w-5 h-5" />
                                         </button>

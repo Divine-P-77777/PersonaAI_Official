@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
@@ -40,46 +41,52 @@ async def process_batch(batch_id: str, token: str = None, file_payloads: dict[st
 
         logger.info(f"[WORKER] 📦 Processing {total_files} source(s) in batch {batch_id}")
 
-        for i, source in enumerate(sources):
+        semaphore = asyncio.Semaphore(3)
+
+        async def _process_single_source(i: int, source: dict):
+            nonlocal processed_files
             source_id = source["id"]
             bot_id = source["bot_id"]
             source_type = SourceType(source["type"])
             source_title = source.get("title", source_id)
             
-            logger.info(f"[WORKER] [{i+1}/{total_files}] Processing source '{source_title}' (type={source_type.value})")
-            
-            try:
-                # Ingest source (it handles chunks and embeddings)
-                # Pass raw_bytes from memory if available to bypass Cloudinary download
-                cached_bytes = file_payloads.get(source_id)
-                if cached_bytes:
-                    logger.info(f"[WORKER] [{i+1}/{total_files}] Processing '{source_title}' using memory-cached bytes ({len(cached_bytes)} bytes)")
+            async with semaphore:
+                logger.info(f"[WORKER] [{i+1}/{total_files}] Processing source '{source_title}' (type={source_type.value})")
                 
-                chunk_count = await ingest_source(
-                    bot_id=bot_id,
-                    source_id=source_id,
-                    source_type=source_type,
-                    content=source.get("content"),
-                    url=source.get("url"),
-                    raw_bytes=cached_bytes,
-                    token=token
-                )
-                processed_files += 1
-                logger.info(f"[WORKER] ✅ Source '{source_title}' processed successfully → {chunk_count} chunks stored")
+                try:
+                    cached_bytes = file_payloads.get(source_id)
+                    if cached_bytes:
+                        logger.info(f"[WORKER] [{i+1}/{total_files}] Processing '{source_title}' using memory-cached bytes ({len(cached_bytes)} bytes)")
+                    
+                    chunk_count = await ingest_source(
+                        bot_id=bot_id,
+                        source_id=source_id,
+                        source_type=source_type,
+                        content=source.get("content"),
+                        url=source.get("url"),
+                        raw_bytes=cached_bytes,
+                        token=token
+                    )
+                    processed_files += 1
+                    logger.info(f"[WORKER] ✅ Source '{source_title}' processed successfully → {chunk_count} chunks stored")
 
-                # Update processed count in real time
-                await update_batch_status(batch_id, {
-                    "processed_files": processed_files,
-                }, token=token)
+                    # Update processed count in real time
+                    await update_batch_status(batch_id, {
+                        "processed_files": processed_files,
+                    }, token=token)
 
-            except Exception as e:
-                import traceback
-                err_msg = str(e) or type(e).__name__
-                full_tb = traceback.format_exc()
-                error_item = {"source_id": source_id, "error": err_msg}
-                error_log.append(error_item)
-                logger.error(f"[WORKER] ❌ Source '{source_title}' failed: {err_msg}")
-                logger.debug(f"[WORKER] Full traceback for '{source_title}':\n{full_tb}")
+                except Exception as e:
+                    import traceback
+                    err_msg = str(e) or type(e).__name__
+                    full_tb = traceback.format_exc()
+                    error_log.append({"source_id": source_id, "error": err_msg})
+                    logger.error(f"[WORKER] ❌ Source '{source_title}' failed: {err_msg}")
+                    logger.debug(f"[WORKER] Full traceback for '{source_title}':\n{full_tb}")
+
+        # Execute concurrent tasks
+        tasks = [_process_single_source(i, source) for i, source in enumerate(sources)]
+        if tasks:
+            await asyncio.gather(*tasks)
 
         # Update batch final status
         final_status = IngestionStatus.completed

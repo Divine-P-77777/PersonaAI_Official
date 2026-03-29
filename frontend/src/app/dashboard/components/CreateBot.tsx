@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '../../../hooks/useToast';
 
 export type BotFormData = {
-    // Basic Info
+
     botName: string;
     botDescription: string;
     avatarUrl: string;
@@ -91,7 +91,7 @@ export function CreateBot() {
     const handleSubmit = async () => {
         setIsSubmitting(true);
         setError(null);
-        
+
         try {
             // 1. Create Bot Base Metadata
             const botResponse = await api.createBot({
@@ -119,11 +119,11 @@ export function CreateBot() {
                         content: s.content,
                         url: s.url
                     }));
-                
+
                 const files = formData.dataSources
                     .filter(s => s.file)
                     .map(s => s.file as File);
-                
+
                 const fileSourcesMetadata = formData.dataSources
                     .filter(s => s.file)
                     .map(s => ({
@@ -133,7 +133,7 @@ export function CreateBot() {
 
                 // Call ingestion endpoint
                 await api.createIngestionBatch(
-                    botId, 
+                    botId,
                     [...textAndLinkSources, ...fileSourcesMetadata],
                     files
                 );
@@ -224,7 +224,7 @@ export function CreateBot() {
                 </div>
 
                 {/* Form Content */}
-                <div className="bg-white rounded-3xl shadow-xl p-8 lg:p-12 mb-8">
+                <div className="bg-white rounded-3xl shadow-xl p-6 sm:p-8 lg:p-12 mb-8">
                     {/* Form Content Placeholder */}
 
                     {currentStep === 1 && (
@@ -240,6 +240,17 @@ export function CreateBot() {
                         <Review formData={formData} />
                     )}
                 </div>
+
+                {/* Error Banner */}
+                {error && (
+                    <div className="mb-8 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-r-2xl flex items-start gap-3 shadow-sm animate-in fade-in slide-in-from-bottom-2">
+                        <X className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                        <div>
+                            <h3 className="font-semibold text-sm">Action Failed</h3>
+                            <p className="text-sm mt-1">{error}</p>
+                        </div>
+                    </div>
+                )}
 
                 {/* Navigation Buttons */}
                 <div className="flex justify-between items-center">

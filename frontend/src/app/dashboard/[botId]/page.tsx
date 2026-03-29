@@ -15,16 +15,22 @@ import {
    ExternalLink,
    RefreshCw,
    FileText,
-   ChevronRight
+   ChevronRight,
+   Trash2,
+   Image as ImageIcon,
+   Link as LinkIcon,
+   Type
 } from "lucide-react"
 import { api } from "@/services/api"
 import { useToast } from "@/hooks/useToast"
 import Link from "next/link"
-import { Bot as BotType } from "@/types"
+import { Bot as BotType, DataSource } from "@/types"
+import KnowledgeSourcesList from "../components/KnowledgeSourcesList"
 
 export default function BotDetailPage({ params }: { params: Promise<{ botId: string }> }) {
    const { botId } = React.use(params)
    const [bot, setBot] = useState<BotType | null>(null)
+   const [sources, setSources] = useState<DataSource[]>([])
    const [loading, setLoading] = useState(true)
    const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
    const { showError, showSuccess } = useToast()
@@ -46,6 +52,16 @@ export default function BotDetailPage({ params }: { params: Promise<{ botId: str
       }
    };
 
+   const handleDeleteSource = async (sourceId: string) => {
+      try {
+         await api.deleteDataSource(sourceId);
+         setSources(sources.filter(s => s.id !== sourceId));
+         showSuccess("Knowledge source deleted securely.");
+      } catch (err: any) {
+         showError(err.message || "Failed to delete source.");
+      }
+   };
+
    useEffect(() => {
       if (botId) {
          fetchBot()
@@ -55,8 +71,12 @@ export default function BotDetailPage({ params }: { params: Promise<{ botId: str
    const fetchBot = async () => {
       try {
          setLoading(true)
-         const data = await api.getBot(botId as string)
-         setBot(data)
+         const [botData, sourcesData] = await Promise.all([
+             api.getBot(botId as string),
+             api.getBotDataSources(botId as string)
+         ]);
+         setBot(botData)
+         setSources(sourcesData)
       } catch (err: any) {
          console.error("Failed to fetch bot:", err)
          showError("Could not load bot details.")
@@ -166,7 +186,7 @@ export default function BotDetailPage({ params }: { params: Promise<{ botId: str
                               <div className="text-[10px] uppercase tracking-widest text-orange-400 font-bold">Chats</div>
                            </div>
                            <div className="text-center p-3 rounded-2xl bg-pink-50/50">
-                              <div className="text-xl font-black text-pink-600">0</div>
+                              <div className="text-xl font-black text-pink-600">{sources.length}</div>
                               <div className="text-[10px] uppercase tracking-widest text-pink-400 font-bold">Sources</div>
                            </div>
                         </div>
@@ -214,7 +234,7 @@ export default function BotDetailPage({ params }: { params: Promise<{ botId: str
                            </span>
                         </div>
                         <h4 className="text-xl font-black text-gray-900 mb-1">Knowledge Guard</h4>
-                        <p className="text-gray-500 text-sm font-medium">Your persona is synced with 0 data sources and is ready for interaction.</p>
+                        <p className="text-gray-500 text-sm font-medium">Your persona is synced with {sources.length} data sources and is ready for interaction.</p>
                      </div>
 
                      <div className="bg-white rounded-[32px] p-8 border-l-8 border-l-pink-400 border border-pink-100 shadow-sm">
@@ -243,19 +263,11 @@ export default function BotDetailPage({ params }: { params: Promise<{ botId: str
                         </Link>
                      </div>
 
-                     <div className="flex flex-col items-center justify-center py-12 text-center border-2 border-dashed border-orange-50 rounded-[32px] bg-orange-50/10">
-                        <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center text-gray-300 mb-4">
-                           <FileText size={32} />
-                        </div>
-                        <h4 className="font-bold text-gray-900 mb-1">No sources uploaded</h4>
-                        <p className="text-gray-400 text-sm max-w-xs mx-auto mb-6">Your persona needs data to become a specialized mentor.</p>
-                        <Link 
-                           href={`/dashboard/${bot.id}/ingest`}
-                           className="px-6 py-2 bg-white border border-orange-100 text-orange-600 font-bold rounded-xl hover:bg-orange-50 transition-all font-sans"
-                        >
-                           Upload Now
-                        </Link>
-                     </div>
+                     <KnowledgeSourcesList 
+                        sources={sources} 
+                        botId={bot.id} 
+                        onDeleteSource={handleDeleteSource} 
+                     />
                   </section>
                </div>
 
