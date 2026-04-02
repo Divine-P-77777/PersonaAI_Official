@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { FileText, Image as ImageIcon, Type, Link as LinkIcon, Video, Upload, X, Plus } from 'lucide-react';
 import { BotFormData } from './CreateBot';
+import { FileDropZone } from './FileDropZone';
 
 interface DataSourcesProps {
     formData: BotFormData;
@@ -32,6 +33,10 @@ export function DataSources({ formData, updateFormData }: DataSourcesProps) {
             }));
             updateFormData({ dataSources: [...formData.dataSources, ...newSources] });
         }
+    };
+
+    const handleMagicFilesAdded = (newFiles: Array<{ type: 'pdf' | 'image'; title: string; file: File }>) => {
+        updateFormData({ dataSources: [...formData.dataSources, ...newFiles] });
     };
 
     const addTextSource = () => {
@@ -79,8 +84,16 @@ export function DataSources({ formData, updateFormData }: DataSourcesProps) {
     return (
         <div className="space-y-8">
             <div className="text-center mb-8">
-                <h2 className="text-3xl text-gray-900 mb-2">Upload your knowledge</h2>
-                <p className="text-gray-600">Add documents, links, and content that represent your expertise</p>
+                <h2 className="text-3xl text-gray-900 mb-2 font-black tracking-tight">Upload your knowledge</h2>
+                <p className="text-gray-600 font-medium">Add documents, links, and content that represent your expertise</p>
+            </div>
+
+            {/* Magic Drop Zone */}
+            <FileDropZone onFilesAdded={handleMagicFilesAdded} className="mb-10" />
+
+            <div className="relative flex items-center justify-center my-10">
+                <div className="absolute inset-x-0 h-px bg-gray-100" />
+                <span className="relative bg-white px-4 text-xs font-black uppercase tracking-[0.2em] text-gray-400">Or add specific types</span>
             </div>
 
             {/* Source Type Tabs */}
@@ -382,22 +395,29 @@ export function DataSources({ formData, updateFormData }: DataSourcesProps) {
             </div>
 
             {/* Summary Card */}
-            <div className="bg-gradient-to-br from-orange-50 to-pink-50 rounded-2xl p-6 border border-orange-100">
-                <h3 className="text-lg text-gray-900 mb-3">📊 Upload Summary</h3>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
+            <div className="bg-gradient-to-br from-orange-50 to-pink-50 rounded-[32px] p-8 border border-orange-100 shadow-sm">
+                <h3 className="text-xl font-black text-gray-900 mb-4 tracking-tight flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center text-orange-600">
+                        <Upload size={18} />
+                    </div>
+                    Knowledge Summary
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-6 text-center">
                     {sourceTypes.map((source) => {
                         const count = getSourcesByType(source.type).length;
                         return (
-                            <div key={source.type}>
-                                <div className="text-2xl text-gray-900">{count}</div>
-                                <div className="text-sm text-gray-600">{source.label}</div>
+                            <div key={source.type} className="bg-white/50 backdrop-blur-sm rounded-2xl p-4 border border-white">
+                                <div className="text-2xl font-black text-gray-900 leading-none mb-1">{count}</div>
+                                <div className="text-[10px] font-black uppercase tracking-widest text-gray-500">{source.label}</div>
                             </div>
                         );
                     })}
                 </div>
-                <p className="text-sm text-gray-600 mt-4 text-center">
-                    Total: {formData.dataSources.length} items uploaded
-                </p>
+                <div className="mt-6 pt-6 border-t border-orange-100 flex justify-center">
+                   <div className="px-6 py-2 bg-orange-600 text-white rounded-full text-xs font-black uppercase tracking-widest">
+                       Total: {formData.dataSources.length} items
+                   </div>
+                </div>
             </div>
         </div>
     );

@@ -83,7 +83,7 @@ export default function SourcesModal({ isOpen, onClose, sources, onDeleteClick, 
                >
                   <div className="flex items-center justify-between mb-6 pb-4 border-b border-orange-50 shrink-0">
                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-orange-50 text-orange-600 rounded-2xl flex items-center justify-center shadow-inner shrink-0">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-orange-50 text-orange-700 rounded-2xl flex items-center justify-center shadow-inner shrink-0">
                            <Database className="w-5 h-5 sm:w-6 sm:h-6" />
                         </div>
                         <div className="min-w-0">
@@ -93,7 +93,8 @@ export default function SourcesModal({ isOpen, onClose, sources, onDeleteClick, 
                               {sources.length > 0 && onDeleteBulk && (
                                  <button 
                                     onClick={toggleSelectAll}
-                                    className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-orange-500 hover:text-orange-600 px-2 py-0.5 rounded-lg bg-orange-50 transition-all border border-orange-100 w-fit"
+                                    className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-orange-700 hover:text-orange-800 px-2 py-0.5 rounded-lg bg-orange-50 transition-all border border-orange-100 w-fit"
+                                    aria-label={selectedIds.size === sources.length ? "Deselect all sources" : "Select all sources"}
                                  >
                                     {selectedIds.size === sources.length ? "Deselect" : "Select All"}
                                  </button>
@@ -103,7 +104,8 @@ export default function SourcesModal({ isOpen, onClose, sources, onDeleteClick, 
                      </div>
                      <button 
                         onClick={onClose}
-                        className="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-all shrink-0"
+                        className="w-10 h-10 flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-all shrink-0"
+                        aria-label="Close Modal"
                      >
                         <X size={24} />
                      </button>
@@ -141,7 +143,7 @@ export default function SourcesModal({ isOpen, onClose, sources, onDeleteClick, 
 
                               <div className="flex items-center gap-4 flex-1 min-w-0">
                                  <div className={`w-12 h-12 rounded-xl shadow-sm flex items-center justify-center shrink-0 transition-colors ${
-                                    isSelected ? "bg-white text-orange-600" : "bg-white text-orange-400"
+                                    isSelected ? "bg-white text-orange-700" : "bg-white text-orange-600"
                                  }`}>
                                     {source.type === 'pdf' && <FileText size={20} />}
                                     {source.type === 'image' && <ImageIcon size={20} />}
@@ -152,8 +154,8 @@ export default function SourcesModal({ isOpen, onClose, sources, onDeleteClick, 
                                  <div className="flex-1 min-w-0">
                                     <h5 className="font-bold text-gray-900 truncate" title={source.title}>{source.title}</h5>
                                     <span className={`text-[10px] font-black uppercase tracking-widest ${
-                                       source.status === 'completed' ? 'text-green-500' : 
-                                       source.status === 'failed' ? 'text-red-500' : 'text-orange-500 animate-pulse'
+                                       source.status === 'completed' ? 'text-green-600' : 
+                                       source.status === 'failed' ? 'text-red-600' : 'text-orange-600 animate-pulse'
                                     }`}>
                                        {source.status}
                                     </span>
@@ -163,7 +165,8 @@ export default function SourcesModal({ isOpen, onClose, sources, onDeleteClick, 
                               {!isSelected && (
                                  <button 
                                     onClick={(e) => { e.stopPropagation(); onDeleteClick(source); }}
-                                    className="p-3 bg-white text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all shadow-sm shrink-0 sm:opacity-0 group-hover:opacity-100"
+                                    className="p-3 bg-white text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all shadow-sm shrink-0 sm:opacity-0 group-hover:opacity-100"
+                                    aria-label={`Delete knowledge source: ${source.title}`}
                                     title="Delete source"
                                  >
                                     <Trash2 size={18} />

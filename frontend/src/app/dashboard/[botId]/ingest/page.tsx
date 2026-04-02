@@ -23,6 +23,7 @@ import Link from "next/link"
 import { api } from "@/services/api"
 import { useToast } from "@/hooks/useToast"
 import { useRouter } from "next/navigation"
+import { FileDropZone } from "../../components/FileDropZone"
 
 type SourceType = "pdf" | "image" | "long_text" | "web_link"
 
@@ -56,6 +57,17 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
       ...(type === "web_link" ? { url: "" } : {})
     }
     setSources([...sources, newSource])
+  }
+
+  const handleMagicFilesAdded = (newFiles: Array<{ type: 'pdf' | 'image'; title: string; file: File }>) => {
+    const newStagedSources = newFiles.map(f => ({
+      id: Math.random().toString(36).substr(2, 9),
+      type: f.type as SourceType,
+      title: f.title,
+      file: f.file
+    }))
+    setSources(prev => [...prev, ...newStagedSources])
+    showSuccess(`Magicly added ${newFiles.length} sources!`)
   }
 
   // Cleanup WebSocket on unmount
@@ -254,8 +266,18 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
           <p className="text-gray-500 text-lg font-medium">Upload documents, paste links, or write text to build your persona's knowledge base.</p>
         </div>
 
+        {/* Magic Drop Zone */}
+        <div className="mb-12">
+            <FileDropZone onFilesAdded={handleMagicFilesAdded} />
+        </div>
+
+        <div className="relative flex items-center justify-center my-12">
+            <div className="absolute inset-x-0 h-px bg-orange-100/50" />
+            <span className="relative bg-orange-50 px-6 text-xs font-black uppercase tracking-[0.3em] text-orange-400">Or add other types</span>
+        </div>
+
         {/* Action Bar */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
           {[
             { type: "pdf", icon: FileText, label: "PDF", color: "orange" },
             { type: "image", icon: Zap, label: "Image", color: "orange" },
@@ -265,10 +287,10 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
             <button 
               key={btn.type}
               onClick={() => addSource(btn.type as SourceType)}
-              className="h-16 px-4 bg-white border-2 border-orange-50 rounded-2xl flex flex-col items-center justify-center gap-1 hover:border-orange-200 hover:bg-orange-50/30 transition-all group shadow-sm"
+              className="h-20 px-4 bg-white/50 backdrop-blur-sm border-2 border-orange-50 rounded-[28px] flex flex-col items-center justify-center gap-2 hover:border-orange-300 hover:bg-orange-100/30 transition-all group shadow-sm hover:shadow-orange-100"
             >
-              <btn.icon size={20} className="text-gray-400 group-hover:text-orange-500 transition-colors" />
-              <span className="text-xs font-bold text-gray-600">{btn.label}</span>
+              <btn.icon size={24} className="text-gray-400 group-hover:text-orange-500 transition-colors" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 group-hover:text-gray-900">{btn.label}</span>
             </button>
           ))}
         </div>

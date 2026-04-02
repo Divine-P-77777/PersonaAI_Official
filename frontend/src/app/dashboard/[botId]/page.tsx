@@ -144,17 +144,18 @@ export default function BotDetailPage({ params }: { params: Promise<{ botId: str
                <div className="flex items-center gap-4">
                   <Link
                      href="/dashboard"
-                     className="p-2 hover:bg-orange-50 rounded-xl text-gray-500 hover:text-orange-600 transition-all"
+                     className="p-2 hover:bg-orange-50 rounded-xl text-gray-500 hover:text-orange-700 transition-all"
+                     aria-label="Back to Dashboard"
                   >
                      <ArrowLeft size={20} />
                   </Link>
                   <div className="flex items-center gap-3">
-                     <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center text-orange-600">
+                     <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center text-orange-700">
                         <Bot size={22} />
                      </div>
                      <div>
                         <h1 className="font-bold text-gray-900 leading-tight">{bot.name}</h1>
-                        <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Persona Management</p>
+                        <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Persona Management</p>
                      </div>
                   </div>
                </div>
@@ -162,12 +163,13 @@ export default function BotDetailPage({ params }: { params: Promise<{ botId: str
                <div className="flex items-center gap-6">
                   {/* Live/Pause Toggle */}
                   <div className="flex items-center gap-3 bg-gray-50 px-4 py-2 rounded-2xl border border-orange-50">
-                     <span className={`text-[10px] font-black uppercase tracking-widest ${bot.status === 'ready' ? 'text-green-600' : 'text-gray-400'}`}>
+                     <span className={`text-[10px] font-black uppercase tracking-widest ${bot.status === 'ready' ? 'text-green-700' : 'text-gray-500'}`}>
                         {bot.status === 'ready' ? 'Live' : 'Paused'}
                      </span>
                      <button 
                         onClick={handleToggleStatus}
-                        className={`w-10 h-5 rounded-full p-1 transition-all duration-300 flex items-center ${bot.status === 'ready' ? 'bg-green-500 justify-end' : 'bg-gray-200 justify-start'}`}
+                        className={`w-10 h-5 rounded-full p-1 transition-all duration-300 flex items-center ${bot.status === 'ready' ? 'bg-green-600 justify-end' : 'bg-gray-300 justify-start'}`}
+                        aria-label="Toggle Persona Status"
                      >
                         <motion.div 
                            layout
@@ -208,37 +210,37 @@ export default function BotDetailPage({ params }: { params: Promise<{ botId: str
                                  <Bot size={48} />
                               </div>
                            )}
-                           <div className={`absolute -bottom-2 -right-2 w-10 h-10 border-4 border-white rounded-full flex items-center justify-center text-white ${bot.status === 'ready' ? 'bg-green-500' : 'bg-gray-400'}`} title={bot.status === 'ready' ? 'Active' : 'Paused'}>
+                           <div className={`absolute -bottom-2 -right-2 w-10 h-10 border-4 border-white rounded-full flex items-center justify-center text-white ${bot.status === 'ready' ? 'bg-green-600' : 'bg-gray-500'}`} title={bot.status === 'ready' ? 'Active' : 'Paused'}>
                               <Zap size={16} fill="white" />
                            </div>
                         </div>
                         <h2 className="text-2xl font-black text-gray-900 mb-2">{bot.name}</h2>
-                        <p className="text-gray-500 font-medium leading-relaxed mb-6 italic">
+                        <p className="text-gray-600 font-semibold leading-relaxed mb-6 italic">
                            "{bot.description}"
                         </p>
 
                         <div className="w-full pt-6 border-t border-orange-50 grid grid-cols-2 gap-4">
                            <div className="text-center p-3 rounded-2xl bg-orange-50/50">
-                              <div className="text-xl font-black text-orange-600">0</div>
-                              <div className="text-[10px] uppercase tracking-widest text-orange-400 font-bold">Chats</div>
+                              <div className="text-xl font-black text-orange-700">0</div>
+                              <div className="text-[10px] uppercase tracking-widest text-orange-500 font-bold">Chats</div>
                            </div>
                            <div className="text-center p-3 rounded-2xl bg-pink-50/50">
-                              <div className="text-xl font-black text-pink-600">{sources.length}</div>
-                              <div className="text-[10px] uppercase tracking-widest text-pink-400 font-bold">Sources</div>
+                              <div className="text-xl font-black text-pink-700">{sources.length}</div>
+                              <div className="text-[10px] uppercase tracking-widest text-pink-500 font-bold">Sources</div>
                            </div>
                         </div>
                      </div>
                   </section>
 
                   <section className="bg-white rounded-[32px] p-6 border border-orange-100 shadow-sm">
-                     <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-6">Persona Config</h3>
+                     <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-6">Persona Config</h3>
                      <div className="space-y-4">
                         <Link 
                            href={`/dashboard/${bot.id}/edit`}
                            className="flex items-center justify-between p-3 hover:bg-orange-50 rounded-2xl transition-colors group cursor-pointer"
                         >
                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center group-hover:bg-orange-500 group-hover:text-white transition-all">
+                              <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-700 flex items-center justify-center group-hover:bg-orange-500 group-hover:text-white transition-all">
                                  <Settings size={18} />
                               </div>
                               <span className="font-bold text-gray-700">Settings</span>
@@ -247,7 +249,7 @@ export default function BotDetailPage({ params }: { params: Promise<{ botId: str
                         </Link>
                         <div className="flex items-center justify-between p-3 hover:bg-pink-50 rounded-2xl transition-colors group cursor-pointer">
                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-xl bg-pink-100 text-pink-600 flex items-center justify-center group-hover:bg-pink-500 group-hover:text-white transition-all">
+                              <div className="w-10 h-10 rounded-xl bg-pink-100 text-pink-700 flex items-center justify-center group-hover:bg-pink-500 group-hover:text-white transition-all">
                                  <RefreshCw size={18} />
                               </div>
                               <span className="font-bold text-gray-700">Retrain Model</span>
@@ -263,10 +265,10 @@ export default function BotDetailPage({ params }: { params: Promise<{ botId: str
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                      <div className="bg-white rounded-[32px] p-8 border-l-8 border-l-orange-400 border border-orange-100 shadow-sm">
                         <div className="flex justify-between items-start mb-4">
-                           <div className="p-3 bg-orange-50 text-orange-600 rounded-2xl">
+                           <div className="p-3 bg-orange-50 text-orange-700 rounded-2xl">
                               <ShieldCheck size={28} />
                            </div>
-                           <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${bot.status === 'ready' ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
+                           <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${bot.status === 'ready' ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                               {bot.status === 'ready' ? 'Health: 100%' : 'Status: Paused'}
                            </span>
                         </div>
@@ -276,10 +278,10 @@ export default function BotDetailPage({ params }: { params: Promise<{ botId: str
 
                      <div className="bg-white rounded-[32px] p-8 border-l-8 border-l-pink-400 border border-pink-100 shadow-sm">
                         <div className="flex justify-between items-start mb-4">
-                           <div className="p-3 bg-pink-50 text-pink-600 rounded-2xl">
+                           <div className="p-3 bg-pink-50 text-pink-700 rounded-2xl">
                               <BarChart3 size={28} />
                            </div>
-                           <span className="px-3 py-1 bg-gray-50 text-gray-400 rounded-full text-xs font-black uppercase tracking-wider">No Data</span>
+                           <span className="px-3 py-1 bg-gray-50 text-gray-500 rounded-full text-xs font-black uppercase tracking-wider">No Data</span>
                         </div>
                         <h4 className="text-xl font-black text-gray-900 mb-1">Performance</h4>
                         <p className="text-gray-500 text-sm font-medium">Insights and student engagement metrics will appear once you share your bot.</p>
@@ -294,7 +296,8 @@ export default function BotDetailPage({ params }: { params: Promise<{ botId: str
                         </div>
                         <Link
                            href={`/dashboard/${bot.id}/ingest`}
-                           className="p-3 bg-orange-50 text-orange-600 rounded-2xl hover:bg-orange-500 hover:text-white transition-all shadow-inner"
+                           className="p-3 bg-orange-50 text-orange-700 rounded-2xl hover:bg-orange-500 hover:text-white transition-all shadow-inner"
+                           aria-label="Add or Refresh Knowledge Sources"
                         >
                            <RefreshCw size={20} />
                         </Link>

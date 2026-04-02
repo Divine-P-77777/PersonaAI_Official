@@ -124,7 +124,7 @@ export function HowItWorks() {
                     {/* For Students */}
                     <div ref={sectionRef}>
                         <div className="text-center mb-12">
-                            <span className="inline-flex items-center gap-2 px-6 py-2 bg-orange-50 text-orange-600 rounded-full text-sm font-bold border border-orange-100 shadow-sm">
+                            <span className="inline-flex items-center gap-2 px-6 py-2 bg-orange-50 text-orange-700 rounded-full text-sm font-bold border border-orange-100 shadow-sm">
                                 <Search className="w-4 h-4" />
                                 For Students
                             </span>
@@ -142,7 +142,7 @@ export function HowItWorks() {
                                             <div className={`w-20 h-20 bg-gradient-to-br ${step.color} rounded-3xl flex items-center justify-center mb-6 shadow-2xl group-hover:scale-110 transition-transform duration-500`}>
                                                 <Icon className="w-10 h-10 text-white" />
                                             </div>
-                                            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-2 w-10 h-10 bg-white rounded-2xl border-2 border-orange-100 flex items-center justify-center shadow-lg font-bold text-orange-600 z-10">
+                                            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-2 w-10 h-10 bg-white rounded-2xl border-2 border-orange-100 flex items-center justify-center shadow-lg font-bold text-orange-700 z-10">
                                                 {index + 1}
                                             </div>
                                             <h3 className="text-2xl font-bold text-gray-900 mb-3">{step.title}</h3>
@@ -160,14 +160,14 @@ export function HowItWorks() {
                     {/* Divider */}
                     <div className="flex items-center justify-center py-4">
                         <div className="h-[2px] bg-gradient-to-r from-transparent via-gray-200 to-transparent flex-1 max-w-md"></div>
-                        <span className="px-6 py-2 bg-white rounded-2xl border border-gray-100 text-gray-400 font-medium italic shadow-sm">vs</span>
+                        <span className="px-6 py-2 bg-white rounded-2xl border border-gray-100 text-gray-500 font-semibold italic shadow-sm">vs</span>
                         <div className="h-[2px] bg-gradient-to-r from-transparent via-gray-200 to-transparent flex-1 max-w-md"></div>
                     </div>
 
                     {/* For Mentors */}
                     <div>
                         <div className="text-center mb-12">
-                            <span className="inline-flex items-center gap-2 px-6 py-2 bg-pink-50 text-pink-600 rounded-full text-sm font-bold border border-pink-100 shadow-sm">
+                            <span className="inline-flex items-center gap-2 px-6 py-2 bg-pink-50 text-pink-700 rounded-full text-sm font-bold border border-pink-100 shadow-sm">
                                 <Rocket className="w-4 h-4" />
                                 For Mentors
                             </span>
@@ -185,7 +185,7 @@ export function HowItWorks() {
                                             <div className={`w-20 h-20 bg-gradient-to-br ${step.color} rounded-3xl flex items-center justify-center mb-6 shadow-2xl group-hover:scale-110 transition-transform duration-500`}>
                                                 <Icon className="w-10 h-10 text-white" />
                                             </div>
-                                            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-2 w-10 h-10 bg-white rounded-2xl border-2 border-pink-100 flex items-center justify-center shadow-lg font-bold text-pink-600 z-10">
+                                            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-2 w-10 h-10 bg-white rounded-2xl border-2 border-pink-100 flex items-center justify-center shadow-lg font-bold text-pink-700 z-10">
                                                 {index + 1}
                                             </div>
                                             <h3 className="text-2xl font-bold text-gray-900 mb-3">{step.title}</h3>

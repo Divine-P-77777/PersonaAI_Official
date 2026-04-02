@@ -46,7 +46,7 @@ export function FAQ() {
       <JsonLd data={faqData} />
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-orange-50 text-orange-600 rounded-full text-sm font-bold border border-orange-100 mb-6">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-orange-50 text-orange-700 rounded-full text-sm font-bold border border-orange-100 mb-6">
             <HelpCircle className="w-4 h-4" />
             Support
           </div>
@@ -68,13 +68,13 @@ export function FAQ() {
                 onClick={() => setOpenIndex(openIndex === index ? null : index)}
                 className="w-full p-8 flex items-center justify-between text-left"
               >
-                <span className={`text-xl font-bold transition-colors ${openIndex === index ? 'text-orange-600' : 'text-gray-900 group-hover:text-orange-500'}`}>
+                <span className={`text-xl font-bold transition-colors ${openIndex === index ? 'text-orange-700' : 'text-gray-900 group-hover:text-orange-600'}`}>
                   {faq.question}
                 </span>
                 {openIndex === index ? (
-                  <ChevronUp className="w-6 h-6 text-orange-500 shrink-0" />
+                  <ChevronUp className="w-6 h-6 text-orange-600 shrink-0" />
                 ) : (
-                  <ChevronDown className="w-6 h-6 text-gray-400 shrink-0 group-hover:text-orange-400" />
+                  <ChevronDown className="w-6 h-6 text-gray-500 shrink-0 group-hover:text-orange-600" />
                 )}
               </button>
               <div 

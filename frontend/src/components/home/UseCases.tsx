@@ -97,14 +97,14 @@ export function UseCases() {
                                     <div className={`w-14 h-14 bg-gradient-to-br ${useCase.color} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-lg shadow-gray-200`}>
                                         <Icon className="w-7 h-7 text-white" />
                                     </div>
-                                    <h3 className="text-2xl font-bold text-gray-900 mb-3 group-hover:text-orange-600 transition-colors">
+                                    <h3 className="text-2xl font-bold text-gray-900 mb-3 group-hover:text-orange-700 transition-colors">
                                         {useCase.title}
                                     </h3>
                                     <p className="text-gray-600 text-lg leading-relaxed group-hover:text-gray-700 transition-colors">
                                         {useCase.description}
                                     </p>
                                     
-                                    <div className="mt-8 flex items-center gap-2 text-orange-500 font-bold opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-500">
+                                    <div className="mt-8 flex items-center gap-2 text-orange-700 font-bold opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-500">
                                         <span>Explore Path</span>
                                         <GraduationCap className="w-5 h-5" />
                                     </div>

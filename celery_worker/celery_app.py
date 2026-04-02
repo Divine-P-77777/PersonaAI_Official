@@ -34,14 +34,7 @@ celery_app.conf.update(
     result_backend="rpc://"
 )
 
-# =============================================================
-# Render Free Tier Fix: Minimal HTTP Health Server
-# CRITICAL: Must start at MODULE IMPORT TIME, NOT inside the
-# worker_ready signal. Render scans for a bound port during
-# startup BEFORE the worker connects to any broker. If the
-# health server only starts after broker connection, Render
-# kills the service before the connection is ever established.
-# =============================================================
+
 class HealthCheckHandler(BaseHTTPRequestHandler):
     """Minimal HTTP handler — serves a 200 OK on GET /health."""
     def do_GET(self):
@@ -67,7 +60,7 @@ def start_health_server():
     logger.info(f"🌐 Health server listening on port {port} (Render free tier compatibility)")
     server.serve_forever()
 
-# ✅ Start the health server IMMEDIATELY at import time —
+# Start the health server IMMEDIATELY at import time —
 # this runs before `celery worker` CLI even tries to connect to RabbitMQ.
 _health_thread = threading.Thread(target=start_health_server, daemon=True)
 _health_thread.start()

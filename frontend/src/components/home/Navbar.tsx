@@ -47,7 +47,7 @@ export function Navbar() {
 
                     {/* Desktop Navigation */}
                     <div className="hidden md:flex items-center gap-8">
-                        <Link href="/explore" className="text-sm font-semibold text-gray-600 hover:text-orange-600 transition-colors">
+                        <Link href="/explore" className="text-sm font-semibold text-gray-600 hover:text-orange-700 transition-colors">
                             Explore
                         </Link>
                         
@@ -81,7 +81,7 @@ export function Navbar() {
                                                 className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-gray-100 p-2 overflow-hidden"
                                             >
                                                 <div className="px-3 py-2 border-b border-gray-50 mb-1">
-                                                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Account</p>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Account</p>
                                                     <p className="text-xs font-bold text-gray-900 truncate">{user.email}</p>
                                                 </div>
                                                 
@@ -143,7 +143,7 @@ export function Navbar() {
                                 onClick={() => setIsMenuOpen(false)}
                                 className="flex items-center gap-3 px-4 py-3 text-base font-bold text-gray-900 hover:bg-gray-50 rounded-2xl transition-colors"
                             >
-                                <Sparkles size={20} className="text-orange-500" />
+                                <Sparkles size={20} className="text-orange-600" />
                                 Explore Personas
                             </Link>
 

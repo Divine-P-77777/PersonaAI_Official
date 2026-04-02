@@ -10,7 +10,6 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '../../../hooks/useToast';
 
 export type BotFormData = {
-
     botName: string;
     botDescription: string;
     avatarUrl: string;
@@ -57,7 +56,6 @@ export function CreateBot() {
     const [currentStep, setCurrentStep] = useState(1);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [isSuccess, setIsSuccess] = useState(false);
     const [batchId, setBatchId] = useState<string | null>(null);
     const [createdBotId, setCreatedBotId] = useState<string | null>(null);
     const router = useRouter();
@@ -186,20 +184,20 @@ export function CreateBot() {
             <div className="max-w-5xl mx-auto">
                 {/* Header */}
                 <div className="text-center mb-12">
-                    <h1 className="text-4xl lg:text-5xl text-gray-900 mb-4">
+                    <h1 className="text-4xl lg:text-5xl text-gray-900 mb-4 font-black tracking-tight">
                         Create Your{' '}
                         <span className="bg-gradient-to-r from-orange-400 to-pink-500 bg-clip-text text-transparent">
                             AI Persona
                         </span>
                     </h1>
-                    <p className="text-xl text-gray-600">
+                    <p className="text-xl text-gray-600 font-medium">
                         Share your knowledge and experience with students around the world
                     </p>
                 </div>
 
                 {/* Progress Steps */}
-                <div className="mb-12">
-                    <div className="flex items-center justify-between">
+                <div className="mb-12 overflow-x-auto pb-4">
+                    <div className="flex items-center justify-between min-w-[600px]">
                         {steps.map((step, index) => {
                             const Icon = step.icon;
                             const isActive = currentStep === step.id;
@@ -208,12 +206,11 @@ export function CreateBot() {
                             return (
                                 <div key={step.id} className="flex-1 flex items-center">
                                     <div className="flex flex-col items-center flex-1">
-                                        {/* Step Circle */}
                                         <div
-                                            className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${isCompleted
-                                                ? 'bg-gradient-to-br from-orange-400 to-pink-500 text-white'
+                                            className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${isCompleted
+                                                ? 'bg-gradient-to-br from-orange-400 to-pink-500 text-white shadow-lg'
                                                 : isActive
-                                                    ? 'bg-gradient-to-br from-orange-400 to-pink-500 text-white ring-4 ring-orange-100'
+                                                    ? 'bg-gradient-to-br from-orange-400 to-pink-500 text-white ring-4 ring-orange-100 shadow-xl'
                                                     : 'bg-gray-200 text-gray-400'
                                                 }`}
                                         >
@@ -223,10 +220,9 @@ export function CreateBot() {
                                                 <Icon className="w-6 h-6" />
                                             )}
                                         </div>
-                                        {/* Step Label */}
                                         <div className="mt-2 text-center">
                                             <div
-                                                className={`text-sm ${isActive || isCompleted ? 'text-gray-900' : 'text-gray-500'
+                                                className={`text-xs font-bold uppercase tracking-wider ${isActive || isCompleted ? 'text-gray-900' : 'text-gray-400'
                                                     }`}
                                             >
                                                 {step.name}
@@ -234,10 +230,9 @@ export function CreateBot() {
                                         </div>
                                     </div>
 
-                                    {/* Connector Line */}
                                     {index < steps.length - 1 && (
                                         <div
-                                            className={`h-1 flex-1 mx-4 rounded transition-all ${isCompleted
+                                            className={`h-1 flex-1 mx-4 rounded-full transition-all duration-500 ${isCompleted
                                                 ? 'bg-gradient-to-r from-orange-400 to-pink-500'
                                                 : 'bg-gray-200'
                                                 }`}
@@ -250,9 +245,7 @@ export function CreateBot() {
                 </div>
 
                 {/* Form Content */}
-                <div className="bg-white rounded-3xl shadow-xl p-6 sm:p-8 lg:p-12 mb-8">
-                    {/* Form Content Placeholder */}
-
+                <div className="bg-white rounded-[40px] shadow-2xl shadow-orange-500/5 p-6 sm:p-10 lg:p-12 mb-8 border border-white">
                     {currentStep === 1 && (
                         <BasicInfo formData={formData} updateFormData={updateFormData} />
                     )}
@@ -265,7 +258,7 @@ export function CreateBot() {
                     {currentStep === 4 && (
                         <Review formData={formData} />
                     )}
-                    {currentStep === 5 && (
+                    {currentStep === 5 && (createdBotId || batchId) && (
                         <IngestionProgress 
                             botId={createdBotId || ''} 
                             batchId={batchId} 
@@ -275,25 +268,26 @@ export function CreateBot() {
 
                 {/* Error Banner */}
                 {error && (
-                    <div className="mb-8 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-r-2xl flex items-start gap-3 shadow-sm animate-in fade-in slide-in-from-bottom-2">
-                        <X className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                    <div className="mb-8 p-6 bg-red-50 border-l-8 border-red-500 text-red-700 rounded-r-[32px] flex items-start gap-4 shadow-sm animate-in fade-in slide-in-from-bottom-2">
+                        <X className="w-6 h-6 flex-shrink-0 mt-0.5" />
                         <div>
-                            <h3 className="font-semibold text-sm">Action Failed</h3>
-                            <p className="text-sm mt-1">{error}</p>
+                            <h3 className="font-black text-lg uppercase tracking-tight">Bot Creation Failed</h3>
+                            <p className="text-sm mt-1 font-semibold opacity-90">{error}</p>
                         </div>
                     </div>
                 )}
 
                 {/* Navigation Buttons */}
                 {currentStep < 5 && (
-                    <div className="flex justify-between items-center">
+                    <div className="flex justify-between items-center px-2">
                         <button
                             onClick={handleBack}
-                            className="flex items-center gap-2 px-6 py-3 rounded-full transition-all bg-white text-gray-700 border-2 border-gray-200 hover:border-gray-300 hover:shadow-lg"
+                            className="flex items-center gap-2 px-8 py-4 rounded-3xl transition-all bg-white text-gray-700 border-2 border-gray-100 hover:border-gray-200 hover:shadow-xl hover:text-red-500 font-bold"
+                            aria-label={currentStep === 1 ? "Exit Bot Creation" : "Go back to previous step"}
                         >
                             {currentStep === 1 ? (
                                 <>
-                                    <X className="w-5 h-5" />
+                                    <X className="w-5 h-5 text-red-500" />
                                     Exit
                                 </>
                             ) : (
@@ -304,34 +298,37 @@ export function CreateBot() {
                             )}
                         </button>
 
-                        {currentStep < 4 ? (
-                            <button
-                                onClick={handleNext}
-                                className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-orange-400 to-pink-500 text-white rounded-full hover:shadow-xl transition-all"
-                            >
-                                Next Step
-                                <ArrowRight className="w-5 h-5" />
-                            </button>
-                        ) : (
-                            <button
-                                onClick={handleSubmit}
-                                disabled={isSubmitting}
-                                className={`flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-green-400 to-emerald-500 text-white rounded-full hover:shadow-xl transition-all ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''
-                                    }`}
-                            >
-                                {isSubmitting ? (
-                                    <>
-                                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                        Creating Bot...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Check className="w-5 h-5" />
-                                        Create Bot
-                                    </>
-                                )}
-                            </button>
-                        )}
+                        <div className="flex gap-4">
+                            {currentStep < 4 ? (
+                                <button
+                                    onClick={handleNext}
+                                    className="flex items-center gap-2 px-10 py-4 bg-gradient-to-r from-gray-900 to-gray-800 text-white rounded-3xl hover:shadow-2xl hover:scale-105 transition-all font-bold"
+                                    aria-label="Proceed to next step"
+                                >
+                                    Next Step
+                                    <ArrowRight className="w-5 h-5" />
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={handleSubmit}
+                                    disabled={isSubmitting}
+                                    className={`flex items-center gap-2 px-10 py-4 bg-gradient-to-r from-orange-400 to-pink-500 text-white rounded-3xl hover:shadow-2xl hover:scale-105 transition-all font-bold ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                    aria-label="Submit bot creation form"
+                                >
+                                    {isSubmitting ? (
+                                        <>
+                                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                            Creating Persona...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Check className="w-5 h-5" />
+                                            Finish & Train
+                                        </>
+                                    )}
+                                </button>
+                            )}
+                        </div>
                     </div>
                 )}
             </div>
