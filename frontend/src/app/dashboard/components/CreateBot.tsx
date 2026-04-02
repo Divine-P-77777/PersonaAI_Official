@@ -4,6 +4,7 @@ import { BasicInfo } from './BasicInfo';
 import { PersonaConfig } from './PersonaConfig';
 import { DataSources } from './DataSources';
 import { Review } from './Review';
+import { IngestionProgress } from './IngestionProgress';
 import { api } from '../../../services/api';
 import { useRouter } from 'next/navigation';
 import { useToast } from '../../../hooks/useToast';
@@ -48,7 +49,8 @@ const steps = [
     { id: 1, name: 'Basic Info', icon: User },
     { id: 2, name: 'Your Persona', icon: Sparkles },
     { id: 3, name: 'Upload Data', icon: Upload },
-    { id: 4, name: 'Review', icon: Eye }
+    { id: 4, name: 'Review', icon: Eye },
+    { id: 5, name: 'Training', icon: Sparkles }
 ];
 
 export function CreateBot() {
@@ -56,6 +58,8 @@ export function CreateBot() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isSuccess, setIsSuccess] = useState(false);
+    const [batchId, setBatchId] = useState<string | null>(null);
+    const [createdBotId, setCreatedBotId] = useState<string | null>(null);
     const router = useRouter();
     const { showSuccess, showError } = useToast();
 
@@ -76,14 +80,37 @@ export function CreateBot() {
         setFormData(prev => ({ ...prev, ...data }));
     };
 
+    const validateStep = () => {
+        if (currentStep === 1) {
+            if (!formData.botName.trim() || !formData.botDescription.trim()) {
+                showError('Please fill in the Bot Name and Description to continue');
+                return false;
+            }
+        } else if (currentStep === 2) {
+            if (!formData.greeting.trim() || !formData.tone) {
+                showError('Please provide a Greeting Message and choose a Tone to continue');
+                return false;
+            }
+            if (formData.expertise.length === 0) {
+                showError('Please add at least one area of expertise');
+                return false;
+            }
+        }
+        return true;
+    };
+
     const handleNext = () => {
-        if (currentStep < steps.length) {
+        if (validateStep() && currentStep < steps.length) {
             setCurrentStep(currentStep + 1);
         }
     };
 
     const handleBack = () => {
-        if (currentStep > 1) {
+        if (currentStep === 1) {
+            if (window.confirm("Are you sure you want to exit? Your progress will be lost.")) {
+                router.push('/dashboard');
+            }
+        } else if (currentStep > 1) {
             setCurrentStep(currentStep - 1);
         }
     };
@@ -132,18 +159,17 @@ export function CreateBot() {
                     }));
 
                 // Call ingestion endpoint
-                await api.createIngestionBatch(
+                const batchResponse = await api.createIngestionBatch(
                     botId,
                     [...textAndLinkSources, ...fileSourcesMetadata],
                     files
                 );
+                setBatchId(batchResponse.id);
             }
 
-            setIsSuccess(true);
-            showSuccess('Persona created successfully! Redirecting to dashboard...');
-            setTimeout(() => {
-                router.push(`/dashboard/${botId}`);
-            }, 2000);
+            setCreatedBotId(botId);
+            setCurrentStep(5); // Move to real-time progress step
+            showSuccess('Bot created! Now indexing documents...');
 
         } catch (err: any) {
             console.error('Submission failed:', err);
@@ -239,6 +265,12 @@ export function CreateBot() {
                     {currentStep === 4 && (
                         <Review formData={formData} />
                     )}
+                    {currentStep === 5 && (
+                        <IngestionProgress 
+                            botId={createdBotId || ''} 
+                            batchId={batchId} 
+                        />
+                    )}
                 </div>
 
                 {/* Error Banner */}
@@ -253,48 +285,55 @@ export function CreateBot() {
                 )}
 
                 {/* Navigation Buttons */}
-                <div className="flex justify-between items-center">
-                    <button
-                        onClick={handleBack}
-                        disabled={currentStep === 1}
-                        className={`flex items-center gap-2 px-6 py-3 rounded-full transition-all ${currentStep === 1
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                            : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-gray-300 hover:shadow-lg'
-                            }`}
-                    >
-                        <ArrowLeft className="w-5 h-5" />
-                        Back
-                    </button>
-
-                    {currentStep < steps.length ? (
+                {currentStep < 5 && (
+                    <div className="flex justify-between items-center">
                         <button
-                            onClick={handleNext}
-                            className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-orange-400 to-pink-500 text-white rounded-full hover:shadow-xl transition-all"
+                            onClick={handleBack}
+                            className="flex items-center gap-2 px-6 py-3 rounded-full transition-all bg-white text-gray-700 border-2 border-gray-200 hover:border-gray-300 hover:shadow-lg"
                         >
-                            Next Step
-                            <ArrowRight className="w-5 h-5" />
-                        </button>
-                    ) : (
-                        <button
-                            onClick={handleSubmit}
-                            disabled={isSubmitting}
-                            className={`flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-green-400 to-emerald-500 text-white rounded-full hover:shadow-xl transition-all ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''
-                                }`}
-                        >
-                            {isSubmitting ? (
+                            {currentStep === 1 ? (
                                 <>
-                                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                    Creating Bot...
+                                    <X className="w-5 h-5" />
+                                    Exit
                                 </>
                             ) : (
                                 <>
-                                    <Check className="w-5 h-5" />
-                                    Create Bot
+                                    <ArrowLeft className="w-5 h-5" />
+                                    Back
                                 </>
                             )}
                         </button>
-                    )}
-                </div>
+
+                        {currentStep < 4 ? (
+                            <button
+                                onClick={handleNext}
+                                className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-orange-400 to-pink-500 text-white rounded-full hover:shadow-xl transition-all"
+                            >
+                                Next Step
+                                <ArrowRight className="w-5 h-5" />
+                            </button>
+                        ) : (
+                            <button
+                                onClick={handleSubmit}
+                                disabled={isSubmitting}
+                                className={`flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-green-400 to-emerald-500 text-white rounded-full hover:shadow-xl transition-all ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''
+                                    }`}
+                            >
+                                {isSubmitting ? (
+                                    <>
+                                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                        Creating Bot...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Check className="w-5 h-5" />
+                                        Create Bot
+                                    </>
+                                )}
+                            </button>
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     );

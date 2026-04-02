@@ -62,6 +62,16 @@ export default function BotDetailPage({ params }: { params: Promise<{ botId: str
       }
    };
 
+   const handleDeleteSourcesBulk = async (sourceIds: string[]) => {
+      try {
+         await api.deleteDataSourcesBulk(sourceIds);
+         setSources(sources.filter(s => !sourceIds.includes(s.id)));
+         showSuccess(`Successfully deleted ${sourceIds.length} sources.`);
+      } catch (err: any) {
+         showError(err.message || "Bulk deletion failed.");
+      }
+   };
+
    useEffect(() => {
       if (botId) {
          fetchBot()
@@ -88,11 +98,38 @@ export default function BotDetailPage({ params }: { params: Promise<{ botId: str
 
    if (loading) {
       return (
-         <div className="min-h-screen bg-orange-50/30 flex items-center justify-center">
-            <div className="flex flex-col items-center gap-4">
-               <div className="w-12 h-12 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin" />
-               <p className="text-orange-600 font-medium animate-pulse">Loading Persona...</p>
-            </div>
+         <div className="min-h-screen bg-white flex flex-col items-center justify-center relative overflow-hidden">
+            {/* Soft Background Glows */}
+            <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-orange-100/50 rounded-full blur-[120px] animate-pulse" />
+            <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-pink-100/50 rounded-full blur-[120px] animate-pulse" />
+            
+            <motion.div 
+               initial={{ opacity: 0, scale: 0.9 }}
+               animate={{ opacity: 1, scale: 1 }}
+               className="relative z-10 flex flex-col items-center"
+            >
+               <div className="relative w-24 h-24 mb-6">
+                  {/* Outer Spinning Ring */}
+                  <div className="absolute inset-0 rounded-3xl border-2 border-transparent border-t-orange-400 border-r-pink-500 animate-spin" style={{ animationDuration: '3s' }} />
+                  
+                  {/* Inner Content */}
+                  <div className="absolute inset-2 bg-gradient-to-br from-orange-400 to-pink-500 rounded-2xl flex items-center justify-center shadow-xl shadow-orange-200">
+                     <Bot className="w-10 h-10 text-white" />
+                  </div>
+                  
+                  {/* Pulse Effect */}
+                  <div className="absolute inset-0 bg-orange-400 rounded-3xl animate-ping opacity-20" />
+               </div>
+
+               <div className="text-center">
+                  <h3 className="text-xl font-bold text-gray-900 mb-1">Loading Persona...</h3>
+                  <div className="flex items-center justify-center gap-1">
+                     <div className="w-1 h-1 bg-orange-400 rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
+                     <div className="w-1 h-1 bg-orange-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                     <div className="w-1 h-1 bg-orange-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
+                  </div>
+               </div>
+            </motion.div>
          </div>
       )
    }
@@ -266,7 +303,8 @@ export default function BotDetailPage({ params }: { params: Promise<{ botId: str
                      <KnowledgeSourcesList 
                         sources={sources} 
                         botId={bot.id} 
-                        onDeleteSource={handleDeleteSource} 
+                        onDeleteSource={handleDeleteSource}
+                        onDeleteSourcesBulk={handleDeleteSourcesBulk}
                      />
                   </section>
                </div>

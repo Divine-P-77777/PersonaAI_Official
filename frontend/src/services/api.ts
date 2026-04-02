@@ -5,6 +5,24 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
 
 type HttpMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
 
+// Payload emitted by the /ingestion/batch/{id}/ws WebSocket endpoint every 1.5s
+export interface IngestionSourceStatus {
+  id: string;
+  title: string;
+  type: string;
+  status: "pending" | "processing" | "completed" | "failed";
+  error_message?: string | null;
+}
+
+export interface IngestionUpdate {
+  status: "pending" | "processing" | "completed" | "failed";
+  total_files: number;
+  processed_files: number;
+  error_log: Array<{ source_id?: string; title?: string; error: string }>;
+  sources: IngestionSourceStatus[];
+  error?: string; // WebSocket-level error
+}
+
 class ApiService {
   private async request<T>(
     endpoint: string,
@@ -111,12 +129,92 @@ class ApiService {
     return this.request<IngestionBatch>(`/ingestion/batch/${batchId}`);
   }
 
+  /**
+   * Opens a WebSocket connection to the ingestion progress stream.
+   *
+   * - Emits IngestionUpdate payloads every ~1.5s as the backend worker processes files.
+   * - Passes the Supabase JWT as `?token=` so backend RLS reads are authenticated.
+   * - Auto-reconnects once (after 2s) if the connection drops unexpectedly.
+   *
+   * @returns A cleanup function — call it to close the socket and cancel reconnect.
+   */
+  connectIngestionWebSocket(
+    batchId: string,
+    onUpdate: (data: IngestionUpdate) => void,
+    onDone: (data: IngestionUpdate) => void,
+    onError: (err: string) => void
+  ): () => void {
+    let ws: WebSocket | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let isClosed = false;
+    let didReconnect = false;
+
+    const connect = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      // Convert http(s) → ws(s)
+      const wsBase = API_URL.replace(/^http/, "ws");
+      const url = `${wsBase}/ingestion/batch/${batchId}/ws${token ? `?token=${encodeURIComponent(token)}` : ""}`;
+
+      ws = new WebSocket(url);
+
+      ws.onopen = () => {
+        didReconnect = false; // reset on successful connect
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data) as IngestionUpdate;
+
+          if (data.error) {
+            onError(data.error);
+            return;
+          }
+
+          onUpdate(data);
+
+          if (data.status === "completed" || data.status === "failed") {
+            onDone(data);
+          }
+        } catch {
+          console.warn("[WS] Failed to parse ingestion update:", event.data);
+        }
+      };
+
+      ws.onerror = () => {
+        onError("WebSocket connection error — retrying...");
+      };
+
+      ws.onclose = () => {
+        if (!isClosed && !didReconnect) {
+          // Attempt one auto-reconnect after 2 seconds
+          didReconnect = true;
+          reconnectTimer = setTimeout(connect, 2000);
+        }
+      };
+    };
+
+    connect();
+
+    // Return a cleanup function the component should call on unmount
+    return () => {
+      isClosed = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      ws?.close();
+    };
+  }
+
   async getBotDataSources(botId: string): Promise<DataSource[]> {
     return this.request<DataSource[]>(`/ingestion/${botId}/sources`);
   }
 
   async deleteDataSource(sourceId: string): Promise<{status: string, message: string}> {
     return this.request<{status: string, message: string}>(`/ingestion/source/${sourceId}`, "DELETE");
+  }
+
+  async deleteDataSourcesBulk(sourceIds: string[]): Promise<{status: string, message: string}> {
+    return this.request<{status: string, message: string}>("/ingestion/sources/bulk", "DELETE", sourceIds);
   }
 
   // Chat (SSE Streaming)

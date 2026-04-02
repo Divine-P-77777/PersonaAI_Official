@@ -141,14 +141,14 @@ export function Hero() {
                     {/* Right Content - Image */}
                     <div className="relative mt-12 lg:mt-0">
                         <div ref={imageRef} className="relative aspect-[4/3] rounded-[2.5rem] overflow-hidden shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] border-[12px] border-white/50 backdrop-blur-sm">
-                            <Image
-                                src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=1200"
-                                alt="Students learning together"
-                                fill
-                                priority
-                                className="object-cover hover:scale-105 transition-transform duration-1000"
-                                sizes="(max-width: 768px) 100vw, 50vw"
-                            />
+                                <Image
+                                    src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=1200"
+                                    alt="Students collaborating and learning with AI-powered mentors in a modern setting"
+                                    fill
+                                    priority
+                                    className="object-cover hover:scale-105 transition-transform duration-1000"
+                                    sizes="(max-width: 768px) 100vw, 50vw"
+                                />
                         </div>
                         {/* Floating cards */}
                         <div ref={card1Ref} className="absolute -bottom-6 -left-4 md:-bottom-8 md:-left-12 bg-white/90 backdrop-blur-md p-4 md:p-6 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-white max-w-[200px] md:max-w-none">

@@ -89,6 +89,8 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
     }
   }
 
+  const [phaseLabel, setPhaseLabel] = useState<string>("")
+
   const startPolling = (id: string, total: number) => {
     try {
       const wsUrl = `${api.getWsUrl()}/ingestion/batch/${id}/ws`;
@@ -104,9 +106,61 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
             return;
           }
 
-          const pct = total > 0 ? Math.round((batch.processed_files / total) * 100) : 0;
-          setBatchProgress(pct);
+          // ── Sub-step progress calculation ──────────────────────
+          // Instead of just processed_files/total which only gives 0% or 100%
+          // for a single file, we use per-source statuses for granular feedback:
+          //   pending    = 0 points
+          //   processing = 0.5 points (extraction or embedding in progress)
+          //   completed  = 1.0 points
+          //   failed     = 1.0 points (done, just with error)
+          const sourceStatuses: Array<{ status: string }> = batch.sources || [];
+          const effectiveTotal = Math.max(total, sourceStatuses.length, 1);
+          
+          let weightedProgress = 0;
+          for (const src of sourceStatuses) {
+            if (src.status === "completed" || src.status === "failed") {
+              weightedProgress += 1.0;
+            } else if (src.status === "processing") {
+              weightedProgress += 0.5;
+            }
+            // pending = 0
+          }
+          
+          // If all sources are processing but none completed yet,
+          // check for embedding phase note → bump to ~60%
+          const errorLog = batch.error_log || [];
+          const isEmbedding = errorLog.some((e: any) => e.note);
+          
+          if (isEmbedding && weightedProgress < effectiveTotal) {
+            // During embedding, artificially push to ~60-70%
+            weightedProgress = Math.max(weightedProgress, effectiveTotal * 0.65);
+          }
+          
+          const pct = Math.min(
+            Math.round((weightedProgress / effectiveTotal) * 100),
+            batch.status === "completed" ? 100 : 99
+          );
+          
+          // Force 100% only when truly completed
+          const finalPct = batch.status === "completed" ? 100 : pct;
+          setBatchProgress(finalPct);
           setBatchStatus(batch.status);
+
+          // ── Phase label: tell user what's happening right now ──
+          if (batch.status === "completed") {
+            setPhaseLabel("All sources embedded into knowledge base! ✅");
+          } else if (batch.status === "failed") {
+            setPhaseLabel("Some sources failed during processing.");
+          } else if (isEmbedding) {
+            setPhaseLabel("🧠 Generating AI embeddings — this is the slowest step...");
+          } else if (sourceStatuses.some((s: any) => s.status === "processing")) {
+            const processingCount = sourceStatuses.filter((s: any) => s.status === "processing").length;
+            setPhaseLabel(`📄 Extracting & chunking ${processingCount} document${processingCount > 1 ? 's' : ''}...`);
+          } else if (batch.processed_files > 0 && batch.processed_files < total) {
+            setPhaseLabel(`💾 Storing vectors... ${batch.processed_files}/${total} complete`);
+          } else {
+            setPhaseLabel("OCR → Chunking → Embedding → Vector DB write...");
+          }
           
           if (batch.status === "completed" || batch.status === "failed") {
             ws.close();
@@ -150,6 +204,7 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
       setBatchId(batch.id)
       setBatchStatus("processing")
       setBatchProgress(0)
+      setPhaseLabel("Starting ingestion pipeline...")
       setShowStatus(true)
       startPolling(batch.id, sources.length)
       showSuccess("Knowledge ingestion started! Processing in background...")
@@ -160,6 +215,7 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
       setIsUploading(false)
     }
   }
+
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-orange-50 to-white text-gray-900 font-sans selection:bg-orange-200">
@@ -294,7 +350,7 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
                             <input
                               type="text"
                               placeholder="Filename"
-                              className="w-full sm:flex-1 bg-transparent border-none outline-none text-xl font-bold text-gray-900 placeholder-gray-300 pointer-events-none truncate"
+                              className="w-full sm:flex-1 bg-transparent border-none outline-none text-xl font-bold text-gray-900 placeholder-gray-300 pointer-events-none truncate min-w-0"
                               value={source.title}
                               readOnly
                             />
@@ -306,8 +362,10 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
                             )}
                           </div>
                           {source.file && (
-                            <div className="py-3 px-5 bg-green-50 border-2 border-green-100 text-green-600 rounded-2xl text-sm font-bold inline-flex items-center gap-2">
-                                <CheckCircle2 size={18} /> {source.file.name} ready for secure upload
+                            <div className="py-3 px-5 bg-green-50 border-2 border-green-100 text-green-600 rounded-2xl text-sm font-bold flex items-center gap-2 min-w-0">
+                                <CheckCircle2 size={18} className="shrink-0" /> 
+                                <span className="truncate flex-1" title={source.file.name}>{source.file.name}</span>
+                                <span className="shrink-0">ready</span>
                             </div>
                           )}
                         </div>
@@ -408,12 +466,8 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
                       transition={{ duration: 0.6, ease: "easeOut" }}
                     />
                   </div>
-                  <p className="text-xs text-gray-400 mt-2 font-medium">
-                    {batchStatus === "completed"
-                      ? "All sources successfully embedded into the knowledge base."
-                      : batchStatus === "failed"
-                      ? "Some sources failed — please check the error logs."
-                      : "OCR → Chunking → Embedding → Vector DB write..."}
+                  <p className="text-xs text-gray-500 mt-2 font-medium">
+                    {phaseLabel || "Initializing pipeline..."}
                   </p>
                 </div>
 

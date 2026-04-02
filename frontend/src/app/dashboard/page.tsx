@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { Bot, Plus, ArrowUpRight, Search, Zap, Clock, User, LogOut, LayoutDashboard, Settings, MessageSquare } from "lucide-react"
+import { Bot, Plus, ArrowUpRight, Search, Zap, Clock, User, LogOut, LayoutDashboard, Settings, MessageSquare, FileText } from "lucide-react"
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { api } from "@/services/api"
@@ -78,23 +78,44 @@ export default function DashboardPage() {
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-72 rounded-[40px] bg-white border-2 border-orange-50 animate-pulse shadow-sm" />
+              <div 
+                key={i} 
+                className="h-72 rounded-[40px] bg-white border-2 border-orange-50 shadow-sm relative overflow-hidden flex flex-col p-8"
+              >
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-16 h-16 rounded-2xl bg-orange-50/50 animate-pulse" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-6 w-3/4 bg-orange-50/50 rounded-lg animate-pulse" />
+                    <div className="h-4 w-1/2 bg-orange-50/50 rounded-lg animate-pulse" />
+                  </div>
+                </div>
+                <div className="space-y-3 flex-1">
+                  <div className="h-4 w-full bg-orange-50/30 rounded-lg animate-pulse" />
+                  <div className="h-4 w-5/6 bg-orange-50/30 rounded-lg animate-pulse" />
+                </div>
+                <div className="h-10 w-full bg-orange-50/20 rounded-xl animate-pulse mt-6" />
+              </div>
             ))}
           </div>
         ) : bots.length === 0 ? (
-          <div className="text-center py-20 bg-white rounded-[40px] border-2 border-dashed border-orange-100">
-            <div className="w-20 h-20 bg-orange-50 rounded-full flex items-center justify-center mx-auto mb-6 text-orange-400">
-              <Bot size={40} />
+          <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-orange-100 rounded-[40px] bg-gradient-to-br from-orange-50/30 to-pink-50/30 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-8 text-orange-100/20 pointer-events-none">
+               <FileText size={120} />
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">No personas yet</h3>
-            <p className="text-gray-500 mb-8">Create your first AI persona to start sharing your expertise.</p>
-            <Link
-              href="/dashboard/create"
-              className="inline-flex items-center gap-2 px-8 py-3 bg-orange-50 text-orange-600 font-bold rounded-2xl hover:bg-orange-100 transition-colors"
+            
+            <div className="w-20 h-20 bg-white rounded-3xl shadow-xl shadow-orange-100 flex items-center justify-center text-orange-400 mb-6 relative z-10">
+               <Zap size={36} fill="currentColor" className="opacity-20 absolute" />
+               <FileText size={32} className="relative z-10" />
+            </div>
+            <h4 className="text-xl font-black text-gray-900 mb-2">Knowledge Gap detected</h4>
+            <p className="text-gray-500 font-medium max-w-xs mx-auto mb-8 leading-relaxed">Your persona is currently an empty shell. Feed it data to transform it into a specialized AI mentor.</p>
+            <Link 
+               href={`/dashboard/create`}
+               className="px-10 py-3 bg-gradient-to-r from-orange-400 to-pink-500 text-white font-black rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-lg shadow-orange-100 uppercase tracking-widest text-xs"
             >
-              <Plus size={20} /> Create Now
+               + Create Persona
             </Link>
-          </div>
+         </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {bots.map((bot) => (

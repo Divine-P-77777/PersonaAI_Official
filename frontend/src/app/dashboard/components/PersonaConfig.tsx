@@ -115,7 +115,7 @@ export function PersonaConfig({ formData, updateFormData }: PersonaConfigProps) 
             {/* Expertise */}
             <div>
                 <label className="block text-sm text-gray-700 mb-2">
-                    Areas of Expertise
+                    Areas of Expertise <span className="text-red-500">*</span>
                 </label>
                 <div className="flex gap-2 mb-3">
                     <input

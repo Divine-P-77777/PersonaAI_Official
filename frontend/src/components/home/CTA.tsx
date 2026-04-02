@@ -11,7 +11,7 @@ export function CTA() {
                     <div className="absolute inset-0 z-0 opacity-30">
                         <Image
                             src="https://images.unsplash.com/photo-1512238972088-8acb84db0771?q=80&w=1200"
-                            alt="Background"
+                            alt="Mentors and mentees collaborating in a modern, vibrant professional environment"
                             fill
                             className="object-cover"
                         />

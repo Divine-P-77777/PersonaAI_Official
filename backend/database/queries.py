@@ -261,6 +261,19 @@ async def delete_data_source(source_id: str, token: str = None) -> bool:
     return bool(result.data)
 
 
+async def delete_data_sources_bulk(source_ids: list[str], token: str = None) -> bool:
+    """Batch-delete multiple data sources in one query (chunks cascade)."""
+    client = get_authed_client(token) if token else get_supabase_client()
+    result = (
+        client
+        .table("data_sources")
+        .delete()
+        .in_("id", source_ids)
+        .execute()
+    )
+    return bool(result.data)
+
+
 # ---------------------------------------------------------------------------
 # Data Chunks
 # ---------------------------------------------------------------------------

@@ -1288,3 +1288,941 @@ Want to learn more? Check out the following resources:
 
 - [Submit your sitemap to Google](https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap#addsitemap)
 - [Learn how to combine sitemap extensions](https://developers.google.com/search/docs/crawling-indexing/sitemaps/combine-sitemap-extensions)
+
+
+
+
+
+
+
+#  Ranking and search appearance 
+
+# AI Features and Your Website | Google Search Central
+
+# AI features and your website
+
+
+This guide covers how AI features like AI Overviews and AI Mode work in Google Search from a site
+owner's perspective and how to approach your content's inclusion in these experiences.
+The best practices for SEO remain relevant for AI features in Google Search (such as AI Overviews and AI Mode). **There are no additional requirements to appear in AI Overviews or AI Mode,
+nor other special optimizations necessary.** That said, it's always good to review the [fundamental SEO best practices](https://developers.google.com/search/docs/essentials).
+
+## How AI features work in Search
+
+
+As with Search overall, the AI features [AI Overviews](https://support.google.com/websearch/answer/14901683)
+and [AI Mode](https://support.google.com/websearch/answer/16011537) surface relevant links to help people find the information they're
+looking for quickly and reliably, as well as to help them explore content they may not have
+discovered before. These features offer unique opportunities for more types of sites to appear.
+
+
+**AI Overviews** help people get to the gist of a complicated topic or question more
+quickly, and provide a jumping off point to explore links to learn more. They were designed to
+show up on queries where they can add additional benefits beyond what people might already get on
+Search. With AI Overviews, people have been visiting a greater diversity of websites for help with
+more complex questions.
+
+
+**AI Mode** is particularly helpful for queries where further exploration, reasoning,
+or complex comparisons are needed. People can ask nuanced questions that might have previously
+taken multiple searches --- from exploring a new concept, to comparing options, and beyond --- and
+get a comprehensive AI-powered response with links to supporting websites.
+[Video](https://www.youtube.com/watch?v=AnKaUXbwL20)
+
+
+Both AI Overviews and AI Mode may use a "query fan-out" technique --- issuing multiple related
+searches across subtopics and data sources --- to develop a response. While responses are being
+generated, our advanced models identify more supporting web pages, allowing us to
+**display a wider and more diverse set of helpful links** associated with the
+response than with a classic web search, enabling new opportunities for exploration.
+
+
+AI Mode and AI Overviews may use different models and techniques, so the set of responses and
+links they show will vary. AI Overviews are only shown when our systems determine that it is
+additive to classic Search, and as such, often don't trigger.
+
+## How to appear in AI features
+
+
+You can apply the same [foundational SEO best practices](https://developers.google.com/search/docs/essentials) for
+AI features as you do for Google Search overall: making sure the page meets the
+[technical requirements for Google Search](https://developers.google.com/search/docs/essentials/technical),
+following [Search policies](https://support.google.com/websearch/answer/10622781),
+and focusing on the [key best practices](https://developers.google.com/search/docs/essentials#key-best-practices),
+such as [creating helpful, reliable, people-first content](https://developers.google.com/search/docs/fundamentals/creating-helpful-content).
+
+### Technical requirements for appearing in AI features
+
+
+To be eligible to be shown as a supporting link in AI Overviews or AI Mode, a page must be indexed
+and eligible to be shown in Google Search with a snippet, fulfilling the
+[Search technical requirements](https://developers.google.com/search/docs/essentials/technical). There are no
+additional technical requirements.
+Just because a page meets all requirements, best practices, and complies with the policies, doesn't mean that Google will crawl, index, or serve its content. Indexing and serving isn't guaranteed. Learn more about [How Search Works](https://developers.google.com/search/docs/fundamentals/how-search-works).
+
+### SEO best practices
+
+
+While specific optimization isn't required for AI Overviews and AI Mode, all existing
+[SEO fundamentals](https://developers.google.com/search/docs/fundamentals/seo-starter-guide) continue to be
+worthwhile, for example:
+
+- Ensuring that crawling is allowed in robots.txt, and by any CDN or hosting infrastructure
+- Making your content easily findable through [internal links](https://developers.google.com/search/docs/crawling-indexing/links-crawlable#internal-links) on your website
+- Providing a great [page experience](https://developers.google.com/search/docs/appearance/page-experience) for users
+- Making sure that important content is available in textual form
+- Supporting your textual content with high-quality [images](https://developers.google.com/search/docs/appearance/google-images) and [videos](https://developers.google.com/search/docs/appearance/video), when applicable
+- Making sure your [structured data](https://developers.google.com/search/docs/appearance/structured-data/sd-policies) matches the visible text on the page
+- Checking that your [Merchant Center](https://support.google.com/merchants/answer/12159157) and [Business Profile](https://developers.google.com/search/docs/appearance/establish-business-details) information is up-to-date
+
+> [!NOTE]
+> You don't need to create new machine readable files, AI text files, or markup to appear in these features. There's also no special schema.org structured data that you need to add.
+
+
+To discover and diagnose potential technical issues quickly, [verify your site
+in Search Console](https://support.google.com/webmasters/answer/9008080).
+
+## Measuring the performance of your site
+
+
+Just like the rest of the search results page, sites appearing in AI features (such as AI Overviews
+and AI Mode) are included in the overall search traffic in
+[Search Console](https://search.google.com/search-console/about).
+In particular, they're reported on in the [Performance report](https://support.google.com/webmasters/answer/7576553),
+within the ["Web" search type](https://support.google.com/webmasters/answer/7576553#by_search_type).
+Learn more about how [AI Overviews](https://support.google.com/webmasters/answer/7042828#ai-overviews&zippy=%2Ct%2Cai-overviews)
+and [AI Mode](https://support.google.com/webmasters/answer/7042828#ai-mode&zippy=%2Ct%2Cai-mode) are counted
+towards the overall data in Search Console, how to
+[analyze traffic changes](https://developers.google.com/search/docs/monitor-debug/debugging-search-traffic-drops)
+overall, and how to [combine Search Console and Analytics data](https://developers.google.com/search/docs/monitor-debug/google-analytics-search-console).
+
+
+In addition to Search Console, you could also track conversions and time spent on your site in
+other tools, such as Google Analytics. We've seen that when people click from search results
+pages with AI Overviews, these clicks are higher quality (meaning, users are more likely to spend
+more time on the site).
+
+## Controlling your content in AI features in Search
+
+
+AI is built into Search and integral to how Search functions, which is why robots.txt directives
+for [Googlebot](https://developers.google.com/search/docs/crawling-indexing/overview-google-crawlers) is the control
+for site owners to manage access to how their sites are crawled for Search. To limit the
+information shown from your pages in Search, use [`nosnippet`,
+`data-nosnippet`, `max-snippet`](https://developers.google.com/search/docs/crawling-indexing/robots-meta-tag), or
+[`noindex`](https://developers.google.com/search/docs/crawling-indexing/block-indexing) controls.
+
+
+To limit AI training and grounding in some of Google's other systems, read more
+[about Google-Extended](https://developers.google.com/search/docs/crawling-indexing/google-common-crawlers#google-extended).
+
+### Troubleshooting preview controls
+
+
+If you implemented [preview controls](https://developers.google.com/search/docs/appearance/snippet#nosnippet) and
+you're still seeing your content appear in AI features on Search, try the following steps:
+
+1. Make sure that the preview control is correct and visible to Googlebot. To test if your implementation is correct, use the [URL
+   Inspection tool](https://support.google.com/webmasters/answer/9012289) to see the HTML that Googlebot received while crawling the page.
+2. Allow time for Google to recrawl and process the change in preview controls. Remember that crawling can take anywhere from several days to several months, depending on how often our systems determine a page needs to be refreshed. If you've made changes, you can [request
+   that Google recrawl your pages](https://developers.google.com/search/docs/crawling-indexing/ask-google-to-recrawl).
+
+
+If you tried the troubleshooting steps and still find issues, post in the
+[Google Search Central Help Community](https://support.google.com/webmasters/thread/227739087).
+
+
+# AI Features and Your Website | Google Search Central
+
+# AI features and your website
+
+
+This guide covers how AI features like AI Overviews and AI Mode work in Google Search from a site
+owner's perspective and how to approach your content's inclusion in these experiences.
+The best practices for SEO remain relevant for AI features in Google Search (such as AI Overviews and AI Mode). **There are no additional requirements to appear in AI Overviews or AI Mode,
+nor other special optimizations necessary.** That said, it's always good to review the [fundamental SEO best practices](https://developers.google.com/search/docs/essentials).
+
+## How AI features work in Search
+
+
+As with Search overall, the AI features [AI Overviews](https://support.google.com/websearch/answer/14901683)
+and [AI Mode](https://support.google.com/websearch/answer/16011537) surface relevant links to help people find the information they're
+looking for quickly and reliably, as well as to help them explore content they may not have
+discovered before. These features offer unique opportunities for more types of sites to appear.
+
+
+**AI Overviews** help people get to the gist of a complicated topic or question more
+quickly, and provide a jumping off point to explore links to learn more. They were designed to
+show up on queries where they can add additional benefits beyond what people might already get on
+Search. With AI Overviews, people have been visiting a greater diversity of websites for help with
+more complex questions.
+
+
+**AI Mode** is particularly helpful for queries where further exploration, reasoning,
+or complex comparisons are needed. People can ask nuanced questions that might have previously
+taken multiple searches --- from exploring a new concept, to comparing options, and beyond --- and
+get a comprehensive AI-powered response with links to supporting websites.
+[Video](https://www.youtube.com/watch?v=AnKaUXbwL20)
+
+
+Both AI Overviews and AI Mode may use a "query fan-out" technique --- issuing multiple related
+searches across subtopics and data sources --- to develop a response. While responses are being
+generated, our advanced models identify more supporting web pages, allowing us to
+**display a wider and more diverse set of helpful links** associated with the
+response than with a classic web search, enabling new opportunities for exploration.
+
+
+AI Mode and AI Overviews may use different models and techniques, so the set of responses and
+links they show will vary. AI Overviews are only shown when our systems determine that it is
+additive to classic Search, and as such, often don't trigger.
+
+## How to appear in AI features
+
+
+You can apply the same [foundational SEO best practices](https://developers.google.com/search/docs/essentials) for
+AI features as you do for Google Search overall: making sure the page meets the
+[technical requirements for Google Search](https://developers.google.com/search/docs/essentials/technical),
+following [Search policies](https://support.google.com/websearch/answer/10622781),
+and focusing on the [key best practices](https://developers.google.com/search/docs/essentials#key-best-practices),
+such as [creating helpful, reliable, people-first content](https://developers.google.com/search/docs/fundamentals/creating-helpful-content).
+
+### Technical requirements for appearing in AI features
+
+
+To be eligible to be shown as a supporting link in AI Overviews or AI Mode, a page must be indexed
+and eligible to be shown in Google Search with a snippet, fulfilling the
+[Search technical requirements](https://developers.google.com/search/docs/essentials/technical). There are no
+additional technical requirements.
+Just because a page meets all requirements, best practices, and complies with the policies, doesn't mean that Google will crawl, index, or serve its content. Indexing and serving isn't guaranteed. Learn more about [How Search Works](https://developers.google.com/search/docs/fundamentals/how-search-works).
+
+### SEO best practices
+
+
+While specific optimization isn't required for AI Overviews and AI Mode, all existing
+[SEO fundamentals](https://developers.google.com/search/docs/fundamentals/seo-starter-guide) continue to be
+worthwhile, for example:
+
+- Ensuring that crawling is allowed in robots.txt, and by any CDN or hosting infrastructure
+- Making your content easily findable through [internal links](https://developers.google.com/search/docs/crawling-indexing/links-crawlable#internal-links) on your website
+- Providing a great [page experience](https://developers.google.com/search/docs/appearance/page-experience) for users
+- Making sure that important content is available in textual form
+- Supporting your textual content with high-quality [images](https://developers.google.com/search/docs/appearance/google-images) and [videos](https://developers.google.com/search/docs/appearance/video), when applicable
+- Making sure your [structured data](https://developers.google.com/search/docs/appearance/structured-data/sd-policies) matches the visible text on the page
+- Checking that your [Merchant Center](https://support.google.com/merchants/answer/12159157) and [Business Profile](https://developers.google.com/search/docs/appearance/establish-business-details) information is up-to-date
+
+> [!NOTE]
+> You don't need to create new machine readable files, AI text files, or markup to appear in these features. There's also no special schema.org structured data that you need to add.
+
+
+To discover and diagnose potential technical issues quickly, [verify your site
+in Search Console](https://support.google.com/webmasters/answer/9008080).
+
+## Measuring the performance of your site
+
+
+Just like the rest of the search results page, sites appearing in AI features (such as AI Overviews
+and AI Mode) are included in the overall search traffic in
+[Search Console](https://search.google.com/search-console/about).
+In particular, they're reported on in the [Performance report](https://support.google.com/webmasters/answer/7576553),
+within the ["Web" search type](https://support.google.com/webmasters/answer/7576553#by_search_type).
+Learn more about how [AI Overviews](https://support.google.com/webmasters/answer/7042828#ai-overviews&zippy=%2Ct%2Cai-overviews)
+and [AI Mode](https://support.google.com/webmasters/answer/7042828#ai-mode&zippy=%2Ct%2Cai-mode) are counted
+towards the overall data in Search Console, how to
+[analyze traffic changes](https://developers.google.com/search/docs/monitor-debug/debugging-search-traffic-drops)
+overall, and how to [combine Search Console and Analytics data](https://developers.google.com/search/docs/monitor-debug/google-analytics-search-console).
+
+
+In addition to Search Console, you could also track conversions and time spent on your site in
+other tools, such as Google Analytics. We've seen that when people click from search results
+pages with AI Overviews, these clicks are higher quality (meaning, users are more likely to spend
+more time on the site).
+
+## Controlling your content in AI features in Search
+
+
+AI is built into Search and integral to how Search functions, which is why robots.txt directives
+for [Googlebot](https://developers.google.com/search/docs/crawling-indexing/overview-google-crawlers) is the control
+for site owners to manage access to how their sites are crawled for Search. To limit the
+information shown from your pages in Search, use [`nosnippet`,
+`data-nosnippet`, `max-snippet`](https://developers.google.com/search/docs/crawling-indexing/robots-meta-tag), or
+[`noindex`](https://developers.google.com/search/docs/crawling-indexing/block-indexing) controls.
+
+
+To limit AI training and grounding in some of Google's other systems, read more
+[about Google-Extended](https://developers.google.com/search/docs/crawling-indexing/google-common-crawlers#google-extended).
+
+### Troubleshooting preview controls
+
+
+If you implemented [preview controls](https://developers.google.com/search/docs/appearance/snippet#nosnippet) and
+you're still seeing your content appear in AI features on Search, try the following steps:
+
+1. Make sure that the preview control is correct and visible to Googlebot. To test if your implementation is correct, use the [URL
+   Inspection tool](https://support.google.com/webmasters/answer/9012289) to see the HTML that Googlebot received while crawling the page.
+2. Allow time for Google to recrawl and process the change in preview controls. Remember that crawling can take anywhere from several days to several months, depending on how often our systems determine a page needs to be refreshed. If you've made changes, you can [request
+   that Google recrawl your pages](https://developers.google.com/search/docs/crawling-indexing/ask-google-to-recrawl).
+
+
+If you tried the troubleshooting steps and still find issues, post in the
+[Google Search Central Help Community](https://support.google.com/webmasters/thread/227739087).
+
+
+# AI Features and Your Website | Google Search Central
+
+# AI features and your website
+
+
+This guide covers how AI features like AI Overviews and AI Mode work in Google Search from a site
+owner's perspective and how to approach your content's inclusion in these experiences.
+The best practices for SEO remain relevant for AI features in Google Search (such as AI Overviews and AI Mode). **There are no additional requirements to appear in AI Overviews or AI Mode,
+nor other special optimizations necessary.** That said, it's always good to review the [fundamental SEO best practices](https://developers.google.com/search/docs/essentials).
+
+## How AI features work in Search
+
+
+As with Search overall, the AI features [AI Overviews](https://support.google.com/websearch/answer/14901683)
+and [AI Mode](https://support.google.com/websearch/answer/16011537) surface relevant links to help people find the information they're
+looking for quickly and reliably, as well as to help them explore content they may not have
+discovered before. These features offer unique opportunities for more types of sites to appear.
+
+
+**AI Overviews** help people get to the gist of a complicated topic or question more
+quickly, and provide a jumping off point to explore links to learn more. They were designed to
+show up on queries where they can add additional benefits beyond what people might already get on
+Search. With AI Overviews, people have been visiting a greater diversity of websites for help with
+more complex questions.
+
+
+**AI Mode** is particularly helpful for queries where further exploration, reasoning,
+or complex comparisons are needed. People can ask nuanced questions that might have previously
+taken multiple searches --- from exploring a new concept, to comparing options, and beyond --- and
+get a comprehensive AI-powered response with links to supporting websites.
+[Video](https://www.youtube.com/watch?v=AnKaUXbwL20)
+
+
+Both AI Overviews and AI Mode may use a "query fan-out" technique --- issuing multiple related
+searches across subtopics and data sources --- to develop a response. While responses are being
+generated, our advanced models identify more supporting web pages, allowing us to
+**display a wider and more diverse set of helpful links** associated with the
+response than with a classic web search, enabling new opportunities for exploration.
+
+
+AI Mode and AI Overviews may use different models and techniques, so the set of responses and
+links they show will vary. AI Overviews are only shown when our systems determine that it is
+additive to classic Search, and as such, often don't trigger.
+
+## How to appear in AI features
+
+
+You can apply the same [foundational SEO best practices](https://developers.google.com/search/docs/essentials) for
+AI features as you do for Google Search overall: making sure the page meets the
+[technical requirements for Google Search](https://developers.google.com/search/docs/essentials/technical),
+following [Search policies](https://support.google.com/websearch/answer/10622781),
+and focusing on the [key best practices](https://developers.google.com/search/docs/essentials#key-best-practices),
+such as [creating helpful, reliable, people-first content](https://developers.google.com/search/docs/fundamentals/creating-helpful-content).
+
+### Technical requirements for appearing in AI features
+
+
+To be eligible to be shown as a supporting link in AI Overviews or AI Mode, a page must be indexed
+and eligible to be shown in Google Search with a snippet, fulfilling the
+[Search technical requirements](https://developers.google.com/search/docs/essentials/technical). There are no
+additional technical requirements.
+Just because a page meets all requirements, best practices, and complies with the policies, doesn't mean that Google will crawl, index, or serve its content. Indexing and serving isn't guaranteed. Learn more about [How Search Works](https://developers.google.com/search/docs/fundamentals/how-search-works).
+
+### SEO best practices
+
+
+While specific optimization isn't required for AI Overviews and AI Mode, all existing
+[SEO fundamentals](https://developers.google.com/search/docs/fundamentals/seo-starter-guide) continue to be
+worthwhile, for example:
+
+- Ensuring that crawling is allowed in robots.txt, and by any CDN or hosting infrastructure
+- Making your content easily findable through [internal links](https://developers.google.com/search/docs/crawling-indexing/links-crawlable#internal-links) on your website
+- Providing a great [page experience](https://developers.google.com/search/docs/appearance/page-experience) for users
+- Making sure that important content is available in textual form
+- Supporting your textual content with high-quality [images](https://developers.google.com/search/docs/appearance/google-images) and [videos](https://developers.google.com/search/docs/appearance/video), when applicable
+- Making sure your [structured data](https://developers.google.com/search/docs/appearance/structured-data/sd-policies) matches the visible text on the page
+- Checking that your [Merchant Center](https://support.google.com/merchants/answer/12159157) and [Business Profile](https://developers.google.com/search/docs/appearance/establish-business-details) information is up-to-date
+
+> [!NOTE]
+> You don't need to create new machine readable files, AI text files, or markup to appear in these features. There's also no special schema.org structured data that you need to add.
+
+
+To discover and diagnose potential technical issues quickly, [verify your site
+in Search Console](https://support.google.com/webmasters/answer/9008080).
+
+## Measuring the performance of your site
+
+
+Just like the rest of the search results page, sites appearing in AI features (such as AI Overviews
+and AI Mode) are included in the overall search traffic in
+[Search Console](https://search.google.com/search-console/about).
+In particular, they're reported on in the [Performance report](https://support.google.com/webmasters/answer/7576553),
+within the ["Web" search type](https://support.google.com/webmasters/answer/7576553#by_search_type).
+Learn more about how [AI Overviews](https://support.google.com/webmasters/answer/7042828#ai-overviews&zippy=%2Ct%2Cai-overviews)
+and [AI Mode](https://support.google.com/webmasters/answer/7042828#ai-mode&zippy=%2Ct%2Cai-mode) are counted
+towards the overall data in Search Console, how to
+[analyze traffic changes](https://developers.google.com/search/docs/monitor-debug/debugging-search-traffic-drops)
+overall, and how to [combine Search Console and Analytics data](https://developers.google.com/search/docs/monitor-debug/google-analytics-search-console).
+
+
+In addition to Search Console, you could also track conversions and time spent on your site in
+other tools, such as Google Analytics. We've seen that when people click from search results
+pages with AI Overviews, these clicks are higher quality (meaning, users are more likely to spend
+more time on the site).
+
+## Controlling your content in AI features in Search
+
+
+AI is built into Search and integral to how Search functions, which is why robots.txt directives
+for [Googlebot](https://developers.google.com/search/docs/crawling-indexing/overview-google-crawlers) is the control
+for site owners to manage access to how their sites are crawled for Search. To limit the
+information shown from your pages in Search, use [`nosnippet`,
+`data-nosnippet`, `max-snippet`](https://developers.google.com/search/docs/crawling-indexing/robots-meta-tag), or
+[`noindex`](https://developers.google.com/search/docs/crawling-indexing/block-indexing) controls.
+
+
+To limit AI training and grounding in some of Google's other systems, read more
+[about Google-Extended](https://developers.google.com/search/docs/crawling-indexing/google-common-crawlers#google-extended).
+
+### Troubleshooting preview controls
+
+
+If you implemented [preview controls](https://developers.google.com/search/docs/appearance/snippet#nosnippet) and
+you're still seeing your content appear in AI features on Search, try the following steps:
+
+1. Make sure that the preview control is correct and visible to Googlebot. To test if your implementation is correct, use the [URL
+   Inspection tool](https://support.google.com/webmasters/answer/9012289) to see the HTML that Googlebot received while crawling the page.
+2. Allow time for Google to recrawl and process the change in preview controls. Remember that crawling can take anywhere from several days to several months, depending on how often our systems determine a page needs to be refreshed. If you've made changes, you can [request
+   that Google recrawl your pages](https://developers.google.com/search/docs/crawling-indexing/ask-google-to-recrawl).
+
+
+If you tried the troubleshooting steps and still find issues, post in the
+[Google Search Central Help Community](https://support.google.com/webmasters/thread/227739087).
+
+
+# Featured Snippets and Your Website | Google Search Central
+
+# Featured snippets and your website
+
+Featured snippets are special boxes where the format of a regular search result is reversed, showing
+the descriptive [snippet](https://developers.google.com/search/docs/appearance/snippet)
+first. They can also appear within a [related questions group](https://developers.google.com/search/docs/appearance/visual-elements-gallery#related-questions-group) (also known as "People Also Ask").
+[Read more about how Google's Featured Snippets work.](https://support.google.com/websearch/answer/9351707)
+An illustration of a featured snippet in search results 7-10 minutes
+[How to make a hard-boiled egg](https://wikipedia.org/wiki/Boiled_egg)
+
+## How can I opt out of featured snippets?
+
+There are two ways that you can opt out of featured snippets:
+
+- [Block both featured and regular search snippets](https://developers.google.com/search/docs/appearance/featured-snippets#block-both)
+- [Block featured snippets only](https://developers.google.com/search/docs/appearance/featured-snippets#block-fs)
+
+### Block all snippets
+
+To block all snippets (including featured snippets and regular snippets) from appearing for
+a given page, add the [`nosnippet` rule](https://developers.google.com/search/docs/crawling-indexing/robots-meta-tag#nosnippet)
+to that page.
+
+- Text marked by the [`data-nosnippet` HTML attribute](https://developers.google.com/search/docs/crawling-indexing/robots-meta-tag#data-nosnippet-attr) won't appear in featured snippets or regular snippets either.
+- If both `nosnippet` and `data-nosnippet` rules appear in a page, `nosnippet` takes priority, and snippets won't be shown for the page.
+
+### Block featured snippets only
+
+If you want to retain snippets in regularly-formatted search results, but you don't want to appear in
+featured snippets, experiment with setting the
+[`max-snippet` rule](https://developers.google.com/search/docs/crawling-indexing/robots-meta-tag#max-snippet)
+to lower lengths. Featured snippets will only appear if enough text can be shown to generate a
+useful featured snippet.
+
+Keep lowering the value if pages continue to show for featured snippets. In general, the
+shorter your `max-snippet` rule setting, the less likely the page
+will appear as a featured snippet.
+
+Google does not provide an exact minimum length required to appear as a featured snippet.
+This is because the minimum length is variable based on a number of factors, including---but not
+limited to---the information in the snippet, the language, and the platform (mobile device, app,
+or desktop).
+Using a low `max-snippet` setting doesn't guarantee that Google will stop showing featured snippets for your page. If you need a guaranteed solution, use the `nosnippet` rule.
+
+## How can I mark my page as a featured snippet?
+
+You can't. Google systems determine whether a page would make a good featured snippet for a
+user's search request, and if so, elevates it.
+
+## What happens when a user clicks a featured snippet?
+
+Clicking a featured snippet takes the user directly to the section of the page that appeared
+in the featured snippet. Scrolling to the position that appeared in the snippet happens
+automatically, without any additional annotation by the site. If a browser doesn't support the
+underlying technology needed, or if our systems can't confidently determine exactly where
+within a page to direct a click, clicking a featured snippet will take a user to the top of
+the source web page.
+
+
+# Featured Snippets and Your Website | Google Search Central
+
+# Featured snippets and your website
+
+Featured snippets are special boxes where the format of a regular search result is reversed, showing
+the descriptive [snippet](https://developers.google.com/search/docs/appearance/snippet)
+first. They can also appear within a [related questions group](https://developers.google.com/search/docs/appearance/visual-elements-gallery#related-questions-group) (also known as "People Also Ask").
+[Read more about how Google's Featured Snippets work.](https://support.google.com/websearch/answer/9351707)
+An illustration of a featured snippet in search results 7-10 minutes
+[How to make a hard-boiled egg](https://wikipedia.org/wiki/Boiled_egg)
+
+## How can I opt out of featured snippets?
+
+There are two ways that you can opt out of featured snippets:
+
+- [Block both featured and regular search snippets](https://developers.google.com/search/docs/appearance/featured-snippets#block-both)
+- [Block featured snippets only](https://developers.google.com/search/docs/appearance/featured-snippets#block-fs)
+
+### Block all snippets
+
+To block all snippets (including featured snippets and regular snippets) from appearing for
+a given page, add the [`nosnippet` rule](https://developers.google.com/search/docs/crawling-indexing/robots-meta-tag#nosnippet)
+to that page.
+
+- Text marked by the [`data-nosnippet` HTML attribute](https://developers.google.com/search/docs/crawling-indexing/robots-meta-tag#data-nosnippet-attr) won't appear in featured snippets or regular snippets either.
+- If both `nosnippet` and `data-nosnippet` rules appear in a page, `nosnippet` takes priority, and snippets won't be shown for the page.
+
+### Block featured snippets only
+
+If you want to retain snippets in regularly-formatted search results, but you don't want to appear in
+featured snippets, experiment with setting the
+[`max-snippet` rule](https://developers.google.com/search/docs/crawling-indexing/robots-meta-tag#max-snippet)
+to lower lengths. Featured snippets will only appear if enough text can be shown to generate a
+useful featured snippet.
+
+Keep lowering the value if pages continue to show for featured snippets. In general, the
+shorter your `max-snippet` rule setting, the less likely the page
+will appear as a featured snippet.
+
+Google does not provide an exact minimum length required to appear as a featured snippet.
+This is because the minimum length is variable based on a number of factors, including---but not
+limited to---the information in the snippet, the language, and the platform (mobile device, app,
+or desktop).
+Using a low `max-snippet` setting doesn't guarantee that Google will stop showing featured snippets for your page. If you need a guaranteed solution, use the `nosnippet` rule.
+
+## How can I mark my page as a featured snippet?
+
+You can't. Google systems determine whether a page would make a good featured snippet for a
+user's search request, and if so, elevates it.
+
+## What happens when a user clicks a featured snippet?
+
+Clicking a featured snippet takes the user directly to the section of the page that appeared
+in the featured snippet. Scrolling to the position that appeared in the snippet happens
+automatically, without any additional annotation by the site. If a browser doesn't support the
+underlying technology needed, or if our systems can't confidently determine exactly where
+within a page to direct a click, clicking a featured snippet will take a user to the top of
+the source web page.
+
+
+# Featured Snippets and Your Website | Google Search Central
+
+# Featured snippets and your website
+
+Featured snippets are special boxes where the format of a regular search result is reversed, showing
+the descriptive [snippet](https://developers.google.com/search/docs/appearance/snippet)
+first. They can also appear within a [related questions group](https://developers.google.com/search/docs/appearance/visual-elements-gallery#related-questions-group) (also known as "People Also Ask").
+[Read more about how Google's Featured Snippets work.](https://support.google.com/websearch/answer/9351707)
+An illustration of a featured snippet in search results 7-10 minutes
+[How to make a hard-boiled egg](https://wikipedia.org/wiki/Boiled_egg)
+
+## How can I opt out of featured snippets?
+
+There are two ways that you can opt out of featured snippets:
+
+- [Block both featured and regular search snippets](https://developers.google.com/search/docs/appearance/featured-snippets#block-both)
+- [Block featured snippets only](https://developers.google.com/search/docs/appearance/featured-snippets#block-fs)
+
+### Block all snippets
+
+To block all snippets (including featured snippets and regular snippets) from appearing for
+a given page, add the [`nosnippet` rule](https://developers.google.com/search/docs/crawling-indexing/robots-meta-tag#nosnippet)
+to that page.
+
+- Text marked by the [`data-nosnippet` HTML attribute](https://developers.google.com/search/docs/crawling-indexing/robots-meta-tag#data-nosnippet-attr) won't appear in featured snippets or regular snippets either.
+- If both `nosnippet` and `data-nosnippet` rules appear in a page, `nosnippet` takes priority, and snippets won't be shown for the page.
+
+### Block featured snippets only
+
+If you want to retain snippets in regularly-formatted search results, but you don't want to appear in
+featured snippets, experiment with setting the
+[`max-snippet` rule](https://developers.google.com/search/docs/crawling-indexing/robots-meta-tag#max-snippet)
+to lower lengths. Featured snippets will only appear if enough text can be shown to generate a
+useful featured snippet.
+
+Keep lowering the value if pages continue to show for featured snippets. In general, the
+shorter your `max-snippet` rule setting, the less likely the page
+will appear as a featured snippet.
+
+Google does not provide an exact minimum length required to appear as a featured snippet.
+This is because the minimum length is variable based on a number of factors, including---but not
+limited to---the information in the snippet, the language, and the platform (mobile device, app,
+or desktop).
+Using a low `max-snippet` setting doesn't guarantee that Google will stop showing featured snippets for your page. If you need a guaranteed solution, use the `nosnippet` rule.
+
+## How can I mark my page as a featured snippet?
+
+You can't. Google systems determine whether a page would make a good featured snippet for a
+user's search request, and if so, elevates it.
+
+## What happens when a user clicks a featured snippet?
+
+Clicking a featured snippet takes the user directly to the section of the page that appeared
+in the featured snippet. Scrolling to the position that appeared in the snippet happens
+automatically, without any additional annotation by the site. If a browser doesn't support the
+underlying technology needed, or if our systems can't confidently determine exactly where
+within a page to direct a click, clicking a featured snippet will take a user to the top of
+the source web page.
+
+
+# Image SEO Best Practices | Google Search Central
+
+# Google image SEO best practices
+
+
+Google provides several Search features and products that help users visually discover information
+on the web, such as the
+[text result images](https://developers.google.com/search/docs/appearance/visual-elements-gallery#text-result-image),
+Google Discover,
+and Google Images. While each feature and product looks different, the general recommendations
+for getting images to appear in them is the same.
+![An illustration that shows images in Google search results, the images tab, and Discover](https://developers.google.com/static/search/docs/images/images-on-google.png)
+
+
+You can optimize your images to appear in Google's search results by following these best
+practices:
+
+1. [Help us discover and index your images](https://developers.google.com/search/docs/appearance/google-images#discover-images)
+2. [Optimize the image landing pages](https://developers.google.com/search/docs/appearance/google-images#optimize-landing-page)
+
+## Help us discover and index your images
+
+[Video](https://www.youtube.com/watch?v=SfC27XgelgE)
+
+
+The [technical requirements](https://developers.google.com/search/docs/essentials/technical) for getting your
+content in Google's search results applies to images too. Since images are a substantially
+different format compared to HTML, it means there are additional requirements for getting images
+indexed; for example, finding the images on your site is different, and the presentation of the
+images also influences whether an image is indexed at all, and for the right keywords.
+
+### Use HTML image elements to embed images
+
+
+Using standard HTML image elements helps crawlers find and process images. Google can find images
+in `src` attribute of `<img>` element (even when it's a child of other elements,
+such as the `<picture>` element). Google doesn't index CSS images.
+
+
+**Good:**
+> \<img src="puppy.jpg" alt="A golden retriever puppy" /\>
+
+
+**Bad:**
+> \<div style="background-image:url(puppy.jpg)"\>A golden retriever puppy\</div\>
+
+### Use an image sitemap
+
+
+You can provide the URL of images we might not have otherwise discovered by
+[submitting an image sitemap](https://developers.google.com/search/docs/crawling-indexing/sitemaps/image-sitemaps).
+
+
+Unlike regular sitemaps, you can include URLs from other domains in the
+`<image:loc>` elements of the image sitemaps. This lets you use CDNs (content
+delivery networks) to host images. If you're using a CDN, we encourage you to
+[verify ownership](https://support.google.com/webmasters/answer/9008080)
+of the CDN's domain name in Search Console so that we can inform you of any crawl errors that we
+may find.
+
+### Responsive images
+
+
+Designing responsive web pages leads to better user experience, since people can access them
+across a plethora of device types. Refer to our
+[guide to responsive images](https://web.dev/articles/responsive-images)
+to learn about the best practices for handling images on your website.
+
+
+Web pages use the `<picture>` element or the `srcset` attribute of an
+`img` element to specify responsive images. However, some browsers and crawlers don't
+understand these attributes. We recommend that you always specify a fallback URL using the
+`src` attribute.
+
+
+The `srcset` attribute allows specifying different versions of the same image,
+specifically for different screen sizes. For example:
+
+```
+<img
+  srcset="maine-coon-nap-320w.jpg 320w, maine-coon-nap-480w.jpg 480w, maine-coon-nap-800w.jpg 800w"
+  sizes="(max-width: 320px) 280px, (max-width: 480px) 440px, 800px"
+  src="maine-coon-nap-800w.jpg"
+  alt="A watercolor illustration of a maine coon napping leisurely in front of a fireplace">
+```
+
+
+The `<picture>` element is a container that is used to group different
+`<source>` versions of the same image. It offers a fallback approach so the
+browser can choose the right image depending on device capabilities, like pixel density and screen
+size. The `picture` element also comes in handy for using new image formats with
+built-in graceful degradation for clients that may not yet support the new formats.
+
+
+Per
+[section 4.8.1 of the HTML Standard](https://html.spec.whatwg.org/multipage/embedded-content.html#the-picture-element),
+make sure that you provide an `img` element as a fallback with a `src`
+attribute when using the `picture` element using the following format:
+
+```
+<picture>
+  <source type="image/svg+xml" srcset="pyramid.svg">
+  <source type="image/webp" srcset="pyramid.webp">
+  <img src="pyramid.png" alt="An 1800s oil painting of The Great Pyramid">
+</picture>
+```
+
+### Use supported image formats
+
+
+Google Search supports images referenced in the `src` attribute of `img` in
+the following file formats:
+BMP, GIF, JPEG, PNG, WebP, SVG, and AVIF. It's also a good idea to have the
+extension of your filename match with the file type.
+
+
+You can also inline images as Data URIs. Data URIs provide a way to include a file, such as an
+image, inline by setting the `src` attribute of an `img` element as a
+Base64-encoded string using the following format:
+
+```
+<img src="data:image/svg+xml;base64,[*data*]">
+```
+
+
+While inlining images can reduce HTTP requests, carefully judge when to use them since it can
+considerably increase the size of the page. For more on this, refer to the
+[section on the advantage and disadvantages of inlining images on our web.dev page](https://web.dev/articles/responsive-images#inlining_pros_cons).
+
+### Optimize for speed and quality
+
+[Video](https://www.youtube.com/watch?v=_6Tz_-3_4ok)
+
+
+High-quality photos appeal to users more than blurry, unclear images. Also, sharp images are more
+appealing to users in the result thumbnail and can increase the likelihood of getting traffic from
+users. That said, images are often the largest contributor to overall page size, which can make
+pages slow and expensive to load. Make sure to apply the
+[latest image optimization](https://web.dev/fast#optimize-your-images)
+and [responsive image techniques](https://web.dev/learn/design)
+to provide a high quality and fast user experience.
+
+
+Analyze your site speed with
+[PageSpeed Insights](https://pagespeed.web.dev/)
+and visit our
+[Why does speed matter?](https://web.dev/learn/performance/why-speed-matters)
+to learn about best practices and techniques to improve website performance.
+
+## Optimize the image landing pages
+
+
+While not immediately obvious, the content and metadata of the pages where an image is embedded
+can have a great influence on how and where the image may appear in Google's search results.
+
+### Specify a preferred image with metadata
+
+
+Google's selection of an image preview is completely automated and takes into account a number
+of different sources to select which image on a given page is shown on Google (for example, a
+[text result image](https://developers.google.com/search/docs/appearance/visual-elements-gallery#text-result-image)
+or the preview image in Discover).
+
+
+You can influence which image gets selected by providing your preferred image through one of the
+following metadata sources:
+
+- Specify the schema.org [`primaryImageOfPage`](https://schema.org/primaryImageOfPage) property with a `URL` or `ImageObject`.
+
+  ```
+  <script type="application/ld+json">{
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "url": "https://example.com/url",
+    "primaryImageOfPage": "https://example.com/images/cat.png"
+  }</script>
+  ```
+
+  Or specify an image `URL` or `ImageObject` property and attach it to the main entity (using the
+  schema.org [`mainEntity`](https://schema.org/mainEntity)
+  or [`mainEntityOfPage`](https://schema.org/mainEntityOfPage) properties):
+
+  ```
+  <script type="application/ld+json">{
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "mainEntityOfPage": "https://example.com/url",
+    "image": "https://example.com/images/cat.png"
+  }</script>
+  ```
+- Specify the [`og:image`](https://ogp.me/) `meta` tag.
+
+  ```
+  <meta property="og:image" content="https://example.com/images/cat.png">
+  ```
+
+
+When choosing your preferred image for use in schema.org markup or the
+`og:image` `meta` tag, follow these best practices:
+
+- Choose an image that's relevant and representative of the page.
+- Avoid using a generic image (for example, your site logo) or an image with text in the schema.org markup or `og:image` `meta` tag.
+- Avoid using an image with an extreme aspect ratio (such as images that are too narrow or overly wide).
+- Use a high resolution, if possible.
+
+### Check your page title and description
+
+
+Google Search automatically generates a title link and snippet to best explain each result and
+how it relates to the user query. This helps users decide whether or not to click a result.
+Here are two examples how the title links and snippet might look like on a Google Search results
+page:
+![An illustration that shows titles and descriptions in image search results](https://developers.google.com/static/search/docs/images/titles-descriptions-in-image-results.png)
+
+
+We use a number of different sources for this information, including information in the
+`title` and `meta` tags for each page.
+
+
+You can help us improve the quality of the title link and snippet displayed for your pages by
+following Google's [title](https://developers.google.com/search/docs/appearance/title-link) and
+[snippet](https://developers.google.com/search/docs/appearance/snippet) guidelines.
+
+### Add structured data
+
+
+If you include structured data, Google can display your images in certain
+[rich results](https://developers.google.com/search/docs/appearance/structured-data/search-gallery), including a
+[prominent badge](https://developers.google.com/search/blog/2017/08/badges-on-image-search-help-users-find) in
+Google Images, which give users relevant information about your page and can drive better targeted
+traffic to your site.
+
+
+Follow the [general structured data guidelines](https://developers.google.com/search/docs/appearance/structured-data/sd-policies)
+as well as any guidelines specific to your structured data type; otherwise your structured data
+might be ineligible for rich result display in Google Images. In each of these structured data
+types, the image attribute is a required field to be eligible for a badge and rich result in Google
+Images. Here are two examples how rich results might look like on Google Images:
+![An illustration that shows how rich results can appear in Google Images](https://developers.google.com/static/search/docs/images/structured-data-in-image-results.png)
+
+### Use descriptive filenames, titles, and alt text
+
+
+Google extracts information about the subject matter of the image from the content of the
+page, including captions and image titles. Wherever possible, make sure images are placed near
+relevant text and on pages that are relevant to the image subject matter.
+
+
+Likewise, the filename can give Google very light clues about the subject matter of the image.
+When possible, use filenames that are short, but descriptive. For example,
+`my-new-black-kitten.jpg` is better than `IMG00023.JPG`. Avoid using generic
+filenames like `image1.jpg`, `pic.gif`, `1.jpg` when possible.
+If your site has thousands of images, you might want to consider automating the naming of the
+images. If you localize your images, remember to also translate the filenames, keeping in mind the
+[URL encoding guidelines](https://developers.google.com/search/docs/crawling-indexing/url-structure) if you're using
+non-latin or special characters.
+[Video](https://www.youtube.com/watch?v=3NbuDpB_BTc)
+
+
+The most important attribute when it comes to providing more metadata for an image is the alt text
+(text that describes an image), which also improves accessibility for people who can't see images
+on web pages, including users who use screen readers or have low-bandwidth connections.
+
+
+Google uses alt text along with computer vision algorithms and the contents of the page to
+understand the subject matter of the image. Also, alt text in images is useful as anchor text if
+you decide to use an image as a link.
+
+
+When writing alt text, focus on creating useful, information-rich content that uses keywords
+appropriately and is in context of the content of the page. Avoid filling `alt`
+attributes with keywords (also known as
+[keyword stuffing](https://developers.google.com/search/docs/essentials/spam-policies#keyword-stuffing))
+as it results in a negative user experience and may cause your site to be seen as spam.
+
+
+**Bad (missing alt text)**:
+> \<img src="puppy.jpg"/\>
+
+
+**Bad (keyword stuffing)**:
+> \<img src="puppy.jpg" alt="puppy dog baby dog pup pups puppies doggies pups litter puppies dog retriever labrador wolfhound setter pointer puppy jack russell terrier puppies dog food cheap dogfood puppy food"/\>
+
+
+**Better**:
+> \<img src="puppy.jpg" alt="puppy"/\>
+
+
+**Best**:
+> \<img src="puppy.jpg" alt="Dalmatian puppy playing fetch"/\>
+
+
+Also consider the accessibility of your alt text, per
+[W3 guidelines](https://www.w3.org/WAI/tutorials/images/).
+For the `<img>` element, you can add the `alt` attribute of the
+element, while for inline `<svg>` elements, you can use the
+`<title>` element. For example:
+
+```
+<svg aria-labelledby="svgtitle1">
+  <title id="svgtitle1">Googlebot wearing an apron and chef hat, struggling to make pancakes on the stovetop</title>
+</svg>
+```
+
+
+We recommend testing your content by
+[auditing for accessibility](https://developer.chrome.com/docs/devtools/accessibility/reference)
+and
+[using a slow network connection emulator](https://developer.chrome.com/docs/devtools/network/reference#throttling).
+
+
+If an image is referenced on multiple pages within a larger website, consider the
+[site's overall crawl budget](https://developers.google.com/search/docs/crawling-indexing/large-site-managing-crawl-budget).
+In particular, consistently reference the image with the same URL, so that Google can
+cache and reuse the image without needing to request it multiple times.
+
+## Opt out of Google Images inline linking
+
+
+If you choose, you can prevent the full-sized image from appearing in the Google Images search
+results page by opting out of inline linking in Google Images search results.
+**To opt out of inline linking:**
+
+1. When your image is requested, examine the [HTTP referrer header](https://en.wikipedia.org/wiki/HTTP_referer) in the request.
+2. If the request is coming from a Google domain, reply with a `200` HTTP status code, or a `204` HTTP status code and no content.
+
+
+Google will still crawl your page and see the image, but will display a thumbnail image generated
+at crawl time in search results. This opt-out is possible at any time, and doesn't require
+re-processing of a website's images. This behavior isn't considered image
+[cloaking](https://developers.google.com/search/docs/essentials/spam-policies#cloaking) and won't result in manual
+actions.
+
+
+Alternatively, you can
+[prevent the image from appearing in search results entirely.](https://developers.google.com/search/docs/crawling-indexing/prevent-images-on-your-page)
+
+## Optimize for SafeSearch
+
+
+SafeSearch is a setting in Google user accounts that specifies whether to show, blur, or block
+explicit images, videos, and websites in Google Search results. Make sure Google understands the
+nature of your site so that Google can apply SafeSearch filters to your site if appropriate.
+[Learn more about labeling pages for SafeSearch](https://developers.google.com/search/docs/crawling-indexing/safesearch).
