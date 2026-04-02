@@ -1,10 +1,13 @@
 import json
 import logging
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from langchain_groq import ChatGroq
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+
+from backend.core.rate_limiter import limiter
+from backend.core.redis_client import get_cache, set_cache
 
 from backend.core.config import get_settings
 from backend.core.security import get_current_user
@@ -26,8 +29,10 @@ class ChatMessage(BaseModel):
 
 
 @router.post("/{bot_id}")
+@limiter.limit("20/minute")
 async def chat_with_bot(
     bot_id: str,
+    request: Request,
     body: ChatMessage,
     user: dict = Depends(get_current_user),
 ):
@@ -73,12 +78,21 @@ async def chat_with_bot(
     )
 
     # 4. Fetch recent chat history for context (Top 5 messages)
-    history = await get_recent_messages(
-        user_id=user["id"], 
-        bot_id=bot_id, 
-        limit=5, 
-        token=user.get("_token")
-    )
+    cache_key = f"chat_history:{bot_id}:{user['id']}"
+    history = await get_cache(cache_key)
+    
+    if history is None:
+        logger.info(f"[CHAT] Cache MISS for {cache_key}. Querying Supabase...")
+        history = await get_recent_messages(
+            user_id=user["id"], 
+            bot_id=bot_id, 
+            limit=5, 
+            token=user.get("_token")
+        )
+        # Store in redis with an expiration (e.g. 1 hour of inactivity)
+        await set_cache(cache_key, history, expire=3600)
+    else:
+        logger.info(f"[CHAT] ⚡ Cache HIT for {cache_key}. Using fast Redis memory.")
     
     # Format history for LangChain
     history_messages = []
@@ -96,6 +110,14 @@ async def chat_with_bot(
         content=user_message,
         token=user.get("_token")
     )
+    # Optimistically append to cache immediately
+    history.append({
+        "role": "user",
+        "content": user_message
+    })
+    # Maintain rolling window size
+    history = history[-5:]
+    await set_cache(cache_key, history, expire=3600)
 
     # 6. Stream response via langchain_groq ChatGroq
     async def generate():
@@ -132,8 +154,15 @@ async def chat_with_bot(
                     content=full_response,
                     token=user.get("_token")
                 )
+                # Update redis cache with AI response
+                history.append({
+                    "role": "assistant",
+                    "content": full_response
+                })
+                history = history[-5:]
+                await set_cache(cache_key, history, expire=3600)
             
-            logger.info(f"[CHAT] ✅ Stream complete & history saved for bot {bot_id}")
+            logger.info(f"[CHAT] ✅ Stream complete & history saved (and cached) for bot {bot_id}")
 
         except Exception as e:
             logger.error(f"[CHAT] ❌ LLM streaming failed: {e}")

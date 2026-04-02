@@ -1,8 +1,3 @@
-# Docker Compose for PersonaBot
-# This orchestrates both the frontend and backend services
-
-version: '3.8'
-
 services:
   backend:
     build: ./backend
@@ -12,17 +7,21 @@ services:
     env_file:
       - ./backend/.env
     environment:
-      - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
+      - CELERY_BROKER_URL=amqp://personabot:persona_pass@rabbitmq:5672/personabot_vhost
+      - REDIS_URL=redis://redis:6379/0
     depends_on:
       - rabbitmq
+      - redis
     restart: always
 
   rabbitmq:
-    image: rabbitmq:3-management
+    build: ./rabbitmq_broker
     container_name: personabot-broker
     ports:
       - "5672:5672"   # AMQP
       - "15672:15672" # Management Plugin UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
     restart: always
 
   celery_worker:
@@ -31,27 +30,43 @@ services:
     env_file:
       - ./backend/.env
     environment:
-      - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
+      - CELERY_BROKER_URL=amqp://personabot:persona_pass@rabbitmq:5672/personabot_vhost
     depends_on:
       - rabbitmq
+    restart: always
+
+  redis:
+    build: ./redis_worker
+    container_name: personabot-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
     restart: always
 
   frontend:
     build:
       context: ./frontend
+      # Pass the frontend's local env file directly into the build process
+      # This fixes the static generation step for _not-found and auth templates
       args:
-        - NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_URL}
-        - NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_KEY}
+        - NEXT_PUBLIC_SUPABASE_URL=https://tfqlilrofahvduvxhrkm.supabase.co
+        - NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRmcWxpbHJvZmFodmR1dnhocmttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NjQ0NTgsImV4cCI6MjA5MDA0MDQ1OH0.Gi-T-_2mymkrox7OJm-FTCz63WUpjWPvfwyS6_H-A4g
         - NEXT_PUBLIC_API_URL=http://localhost:8000/api
+    env_file:
+      - ./frontend/.env.local
     container_name: personabot-web
     ports:
       - "3000:3000"
+    # The `env_file` above handles the runtime environment, but we can be explicit:
     environment:
-      - NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_URL}
-      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_KEY}
+      - NEXT_PUBLIC_SUPABASE_URL=https://tfqlilrofahvduvxhrkm.supabase.co
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRmcWxpbHJvZmFodmR1dnhocmttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NjQ0NTgsImV4cCI6MjA5MDA0MDQ1OH0.Gi-T-_2mymkrox7OJm-FTCz63WUpjWPvfwyS6_H-A4g
       - NEXT_PUBLIC_API_URL=http://localhost:8000/api
     depends_on:
       - backend
     restart: always
 
-
+volumes:
+  rabbitmq_data:
+  redis_data:

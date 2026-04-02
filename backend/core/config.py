@@ -49,8 +49,9 @@ class Settings(BaseSettings):
     WEB_SCRAPER_TIMEOUT: float = 30.0
     TESSERACT_PATH: str = "tesseract"
 
-    # Worker Queue
+    # Worker Queue & Redis
     CELERY_BROKER_URL: str = "amqp://guest:guest@localhost:5672//"
+    REDIS_URL: str = "redis://localhost:6379/0"
 
     # CORS
     ALLOWED_ORIGINS: list[str] = ["http://localhost:3000"]

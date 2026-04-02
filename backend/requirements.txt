@@ -45,3 +45,7 @@ httpx==0.27.2
 pytest==8.3.3
 celery==5.3.6
 amqp==5.2.0
+
+# Redis & Rate Limiting
+redis>=5.0.1
+slowapi>=0.1.9

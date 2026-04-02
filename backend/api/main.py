@@ -4,7 +4,12 @@ import os
 import asyncio
 import httpx
 
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+
 from backend.core.config import get_settings
+from backend.core.rate_limiter import limiter
+from backend.core.redis_client import close_redis_pool
 from backend.api.routers import auth, bots, ingestion, chat, voice, users, worker
 
 settings = get_settings()
@@ -14,6 +19,10 @@ app = FastAPI(
     version=settings.APP_VERSION,
     description="Human Persona AI Platform – Create and interact with personalized AI chatbots",
 )
+
+# Rate Limiter Configuration
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS
 app.add_middleware(
@@ -79,3 +88,8 @@ async def self_ping():
 async def startup_event():
     """Start the self-ping background task on server startup."""
     asyncio.create_task(self_ping())
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Cleanup global resources like Redis mapping on shutdown."""
+    await close_redis_pool()
