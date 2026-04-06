@@ -12,7 +12,7 @@ celery_app = get_celery_app()
 async def perform_ocr_with_fallback(
     img_bytes: bytes, 
     source_id: str = "unknown",
-    timeout: float = 5.0
+    timeout: float = 30.0  # Increased for Render Free Tier (from 5s to 30s)
 ) -> str:
     """
     Attempt to offload OCR to the Celery worker.
@@ -20,7 +20,7 @@ async def perform_ocr_with_fallback(
     """
     # 1. Try Celery Worker First (Isolated OCR)
     try:
-        logger.info(f"[OCR_FALLBACK] 📤 Attempting async OCR for source {source_id} via worker...")
+        logger.info(f"[OCR_FALLBACK] 📤 Attempting async OCR for source {source_id} via worker (timeout={timeout}s)...")
         
         # Encode image to Base64 for the AMQP payload
         b64_str = base64.b64encode(img_bytes).decode('utf-8')
@@ -35,16 +35,16 @@ async def perform_ocr_with_fallback(
         # Using .get() for the result; task.status will be tracked
         text_result = task.get(timeout=timeout)
         
-        if text_result and not text_result.startswith("ERROR:"):
+        if text_result and not str(text_result).startswith("ERROR:"):
             logger.info(f"[OCR_FALLBACK] ✅ Worker OCR successful for source {source_id}")
             return text_result
         else:
-            logger.warning(f"[OCR_FALLBACK] ⚠️ Worker returned an error: {text_result}. Falling back...")
+            logger.warning(f"[OCR_FALLBACK] ⚠️ Worker returned empty or error result: '{text_result}'. Falling back...")
             
     except CeleryTimeoutError:
-        logger.warning(f"[OCR_FALLBACK] ⚠️ Worker task timed out after {timeout}s for source {source_id}. Falling back...")
+        logger.warning(f"[OCR_FALLBACK] ⚠️ Worker task TIMED OUT after {timeout}s for source {source_id}. Falling back to local...")
     except Exception as e:
-        logger.warning(f"[OCR_FALLBACK] ⚠️ Worker dispatch failed (Is RabbitMQ up?): {str(e)}. Falling back locally...")
+        logger.warning(f"[OCR_FALLBACK] ⚠️ Worker dispatch/return failed: {str(e)}. Falling back locally...")
 
     # 2. Local Fallback (Host Tesseract)
     try:

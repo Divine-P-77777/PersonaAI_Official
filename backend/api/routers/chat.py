@@ -29,7 +29,7 @@ class ChatMessage(BaseModel):
 
 
 @router.post("/{bot_id}")
-@limiter.limit("20/minute")
+@limiter.limit("10000/minute")  # TODO: Revert to "20/minute" after load testing
 async def chat_with_bot(
     bot_id: str,
     request: Request,

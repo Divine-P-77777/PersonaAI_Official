@@ -23,8 +23,16 @@ celery_app.conf.update(
     accept_content=["json"],
     result_serializer="json",
     result_backend="rpc://",
-    broker_connection_retry_on_startup=True,  # Silences startup crash if broker is down
-    broker_transport_options={"max_retries": 0},  # Don't retry in local dev
+    broker_connection_retry_on_startup=True,
+    # Stability fixes for CloudAMQP on Render
+    broker_heartbeat=10,                      # Prevent Render from killing idle broker connection
+    broker_use_ssl=True if "amqps://" in (settings.CELERY_BROKER_URL or "") else False,
+    broker_transport_options={
+        "max_retries": 3,
+        "interval_start": 0,
+        "interval_step": 0.2,
+        "interval_max": 0.5,
+    },
     task_time_limit=60,
     task_soft_time_limit=50,
 )

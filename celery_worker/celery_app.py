@@ -31,7 +31,16 @@ celery_app.conf.update(
     timezone="UTC",
     enable_utc=True,
     broker_connection_retry_on_startup=True,
-    result_backend="rpc://"
+    result_backend="rpc://",
+    # Stability fixes for CloudAMQP on Render
+    broker_heartbeat=10,                      # Prevent Render from killing idle broker connection
+    broker_use_ssl=True if "amqps://" in (broker_url or "") else False,
+    broker_transport_options={
+        "max_retries": 10,
+        "interval_start": 0,
+        "interval_step": 0.2,
+        "interval_max": 2,
+    },
 )
 
 
