@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { Bot, Plus, ArrowUpRight, Search, Zap, Clock, User, LogOut, LayoutDashboard, Settings, MessageSquare, FileText } from "lucide-react"
+import { Bot, Plus, ArrowUpRight, Search, Zap, Clock, User, LogOut, LayoutDashboard, Settings, MessageSquare, FileText, Share2 } from "lucide-react"
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { api } from "@/services/api"
@@ -42,6 +42,22 @@ export default function DashboardPage() {
     await supabase.auth.signOut()
     router.push("/signin")
   }
+
+  const handleShare = (e: React.MouseEvent, bot: any) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const url = `${window.location.origin}/chat/${bot.id}`;
+    if (navigator.share) {
+      navigator.share({
+        title: `Chat with ${bot.name}`,
+        text: `Check out my AI persona: ${bot.name}`,
+        url: url
+      }).catch(console.error);
+    } else {
+      navigator.clipboard.writeText(url);
+      import("react-toastify").then(({ toast }) => toast.success("Link copied to clipboard!"));
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-orange-50 to-white text-gray-900 font-sans selection:bg-orange-200">
@@ -165,8 +181,14 @@ export default function DashboardPage() {
                       <span className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center text-orange-600 hover:bg-orange-100 transition-colors">
                         <MessageSquare size={16} />
                       </span>
-                      <span className="w-8 h-8 rounded-lg bg-pink-50 flex items-center justify-center text-pink-600 hover:bg-pink-100 transition-colors">
+                      <span className="w-8 h-8 rounded-lg bg-pink-50 flex items-center justify-center text-pink-600 hover:bg-pink-100 transition-colors cursor-pointer">
                         <LayoutDashboard size={16} />
+                      </span>
+                      <span 
+                        onClick={(e) => handleShare(e, bot)}
+                        className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 hover:bg-blue-100 transition-colors cursor-pointer z-10 relative"
+                      >
+                        <Share2 size={14} />
                       </span>
                     </div>
                     <div className="w-12 h-12 rounded-2xl bg-gray-50 border-2 border-transparent flex items-center justify-center text-gray-400 group-hover:bg-gradient-to-br from-orange-400 to-pink-500 group-hover:text-white group-hover:border-white transition-all duration-300 shadow-sm group-hover:shadow-lg">

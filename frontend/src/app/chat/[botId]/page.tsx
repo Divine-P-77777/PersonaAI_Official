@@ -1,90 +1,62 @@
-"use client";
+import type { Metadata, ResolvingMetadata } from 'next'
+import PublicChatClient from './chat-client'
 
-import { use, useEffect, useState } from "react";
-import { api } from "../../../services/api";
-import { Bot } from "../../../types";
-import { ChatInterface } from "../../../components/chat/ChatInterface";
-import { motion } from "framer-motion";
-import { Loader2, ShieldAlert } from "lucide-react";
-import Link from "next/link";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
 
-export default function PublicChatPage({ params }: { params: Promise<{ botId: string }> }) {
-    const { botId } = use(params);
-    const [bot, setBot] = useState<Bot | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+type Props = {
+  params: Promise<{ botId: string }>
+}
 
-    useEffect(() => {
-        const fetchBot = async () => {
-            try {
-                const data = await api.getBot(botId);
-                // Check if bot is ready or private
-                if (data.status !== 'ready') {
-                    setError("This persona is currently in draft mode or private.");
-                } else {
-                    setBot(data);
-                }
-            } catch (err) {
-                console.error("Failed to fetch bot:", err);
-                setError("Persona not found or inaccessible.");
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchBot();
-    }, [botId]);
-
-    if (loading) {
-        return (
-            <div className="h-screen w-full flex flex-col items-center justify-center bg-zinc-50">
-                <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-                    className="mb-4"
-                >
-                    <Loader2 size={40} className="text-orange-500" />
-                </motion.div>
-                <p className="text-gray-500 font-medium animate-pulse">Entering Persona Space...</p>
-            </div>
-        );
+export async function generateMetadata(
+  { params }: Props,
+  parent: ResolvingMetadata
+): Promise<Metadata> {
+  const { botId } = await params;
+  
+  try {
+    const res = await fetch(`${API_URL}/bots/${botId}`);
+    if (!res.ok) {
+        return {
+           title: 'Persona Unavailable',
+           description: 'This persona is currently in draft mode, private, or not found.'
+        }
+    }
+    const bot = await res.json();
+    
+    if (bot.status !== 'ready') {
+        return {
+           title: 'Persona Not Ready',
+           description: 'This persona is currently in draft mode or private.'
+        }
     }
 
-    if (error || !bot) {
-        return (
-            <div className="h-screen w-full flex flex-col items-center justify-center bg-white px-6 text-center">
-                <div className="w-20 h-20 bg-red-50 text-red-500 rounded-3xl flex items-center justify-center mb-6 shadow-sm border border-red-100">
-                    <ShieldAlert size={32} />
-                </div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-3 tracking-tight">Persona Unavailable</h1>
-                <p className="text-gray-600 max-w-md mb-8 leading-relaxed">
-                    {error || "We couldn't find the professional persona you're looking for."}
-                </p>
-                <div className="flex flex-col sm:flex-row gap-3">
-                    <Link 
-                        href="/explore"
-                        className="px-8 py-3.5 bg-gray-900 text-white rounded-2xl font-bold hover:shadow-xl hover:scale-105 transition-all"
-                    >
-                        Explore Personas
-                    </Link>
-                    <Link 
-                        href="/"
-                        className="px-8 py-3.5 bg-gray-50 text-gray-700 rounded-2xl font-bold border border-gray-100 hover:bg-gray-100 transition-all"
-                    >
-                        Back to Home
-                    </Link>
-                </div>
-            </div>
-        );
-    }
+    const previousImages = (await parent).openGraph?.images || [];
+    const imageUrl = bot.avatar_url || '/apple-touch-icon.png'; 
 
-    return (
-        <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
-            className="h-screen"
-        >
-            <ChatInterface bot={bot} />
-        </motion.div>
-    );
+    return {
+      title: `${bot.name} | Persona AI`,
+      description: bot.description || `Chat with ${bot.name}, an AI persona.`,
+      openGraph: {
+        title: `${bot.name} | Persona AI`,
+        description: bot.description || `Chat with ${bot.name}, an AI persona.`,
+        images: [imageUrl, ...previousImages],
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: `${bot.name} | Persona AI`,
+        description: bot.description || `Chat with ${bot.name}, an AI persona.`,
+        images: [imageUrl],
+      }
+    };
+  } catch (err) {
+    return {
+      title: 'Persona AI',
+      description: 'Chat with professional AI personas'
+    }
+  }
+}
+
+export default async function PublicChatPage({ params }: Props) {
+    const { botId } = await params;
+    return <PublicChatClient botId={botId} />;
 }

@@ -22,6 +22,7 @@ export const ChatInterface = ({ bot }: ChatInterfaceProps) => {
   ]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const lenisRef = useRef<Lenis | null>(null);
@@ -172,16 +173,33 @@ export const ChatInterface = ({ bot }: ChatInterfaceProps) => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleShare}
-            className="p-3 rounded-2xl bg-orange-50 text-orange-600 hover:bg-orange-100 transition-all active:scale-95"
+        <div className="flex items-center gap-2 relative">
+          <button 
+             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+             className="p-3 rounded-2xl hover:bg-gray-100 text-gray-400 transition-all active:scale-95"
           >
-            <Share2 size={18} />
-          </button>
-          <button className="p-3 rounded-2xl hover:bg-gray-100 text-gray-400 transition-all active:scale-95">
             <MoreVertical size={18} />
           </button>
+          
+          <AnimatePresence>
+            {isDropdownOpen && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                transition={{ duration: 0.15 }}
+                className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-100 shadow-xl rounded-2xl overflow-hidden py-1 z-50"
+              >
+                <div 
+                   onClick={() => { handleShare(); setIsDropdownOpen(false); }}
+                   className="px-4 py-3 hover:bg-orange-50 hover:text-orange-600 text-gray-700 flex items-center gap-3 cursor-pointer transition-colors"
+                >
+                  <Share2 size={16} />
+                  <span className="font-semibold text-sm">Share Persona</span>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </header>
 
