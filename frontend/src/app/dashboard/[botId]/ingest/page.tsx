@@ -147,26 +147,10 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
 
   const startPolling = (id: string, total: number) => {
     try {
-      const wsUrl = `${api.getWsUrl()}/ingestion/batch/${id}/ws`;
-      const ws = new WebSocket(wsUrl);
-
-      ws.onmessage = (event) => {
-        try {
-          const batch = JSON.parse(event.data);
-          
-          if (batch.error) {
-            showError(batch.error);
-            ws.close();
-            return;
-          }
-
+      const cleanup = api.connectIngestionWebSocket(
+        id,
+        (batch) => {
           // ── Sub-step progress calculation ──────────────────────
-          // Instead of just processed_files/total which only gives 0% or 100%
-          // for a single file, we use per-source statuses for granular feedback:
-          //   pending    = 0 points
-          //   processing = 0.5 points (extraction or embedding in progress)
-          //   completed  = 1.0 points
-          //   failed     = 1.0 points (done, just with error)
           const sourceStatuses: Array<{ status: string }> = batch.sources || [];
           const effectiveTotal = Math.max(total, sourceStatuses.length, 1);
           
@@ -177,16 +161,12 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
             } else if (src.status === "processing") {
               weightedProgress += 0.5;
             }
-            // pending = 0
           }
           
-          // If all sources are processing but none completed yet,
-          // check for embedding phase note → bump to ~60%
           const errorLog = batch.error_log || [];
           const isEmbedding = errorLog.some((e: any) => e.note);
           
           if (isEmbedding && weightedProgress < effectiveTotal) {
-            // During embedding, artificially push to ~60-70%
             weightedProgress = Math.max(weightedProgress, effectiveTotal * 0.65);
           }
           
@@ -195,7 +175,6 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
             batch.status === "completed" ? 100 : 99
           );
           
-          // Force 100% only when truly completed
           const finalPct = batch.status === "completed" ? 100 : pct;
           setBatchProgress(finalPct);
           setBatchStatus(batch.status);
@@ -215,25 +194,27 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
           } else {
             setPhaseLabel("OCR → Chunking → Embedding → Vector DB write...");
           }
-          
-          if (batch.status === "completed" || batch.status === "failed") {
-            ws.close();
-            if (batch.status === "completed") {
-              showSuccess("All sources processed successfully! 🎉");
-            } else {
-              showError("Some sources failed to process. Check logs.");
-            }
+        },
+        (batch) => {
+          // This is called when status is "completed" or "failed"
+          if (batch.status === "completed") {
+            setBatchProgress(100);
+            setBatchStatus("completed");
+            setPhaseLabel("All sources embedded into knowledge base! ✅");
+            showSuccess("All sources processed successfully! 🎉");
+          } else {
+            setBatchStatus("failed");
+            setPhaseLabel("Some sources failed during processing.");
+            showError("Some sources failed to process. Check logs.");
           }
-        } catch (err) {
-          console.error("WS Parse error", err);
+        },
+        (err) => {
+          console.error("WebSocket Error:", err);
+          showError(err || "Connection failed for live progress.");
         }
-      };
+      );
 
-      ws.onerror = (error) => {
-        console.error("WebSocket Error:", error);
-      };
-
-      pollRef.current = ws as any;
+      pollRef.current = cleanup as any;
     } catch (err) {
       console.error("Failed to establish WebSocket:", err);
       showError("Connection failed for live progress.");

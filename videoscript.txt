@@ -1,0 +1,57 @@
+# PersonaBot: Video Presentation Script
+
+## Part 1: Product Walkthrough - Creating a Persona
+
+**(Visual: Screen recording showing the Persona creation dashboard)**
+
+**Speaker:**
+"Welcome! Today I’m going to show you how we create a fully customized AI Persona using our platform. The first step is giving our bot an identity—a name, a description, and an avatar. But an AI is only as smart as the knowledge we give it. 
+
+Our system is designed to seamlessly absorb information from multiple formats. Let's look at the data sources we can use:
+1. **PDFs:** We can upload entire documents, research papers, or books. The system parses them effortlessly.
+2. **Web Links:** Have a website or an article? Just paste the URL, and the platform will scrape and ingest the text.
+3. **Images (OCR):** If you have scanned notes or diagrams with text, simply upload the image. Our system uses Optical Character Recognition to extract the words.
+4. **Long Text:** You can also manually paste large blocks of text or raw data directly into the system.
+
+**(Visual: Show the real-time ingestion progress bar moving as files upload)**
+
+**Speaker:**
+"Once we hit submit, the platform begins 'ingesting' this data. It breaks the information down and stores it so the Persona can instantly recall it during a chat. Now, let's take a look under the hood to see how this magic happens."
+
+---
+
+## Part 2: System Architecture
+
+**(Visual: High-level Architecture Diagram showing Next.js -> FastAPI -> Supabase -> Groq)**
+
+**Speaker:**
+"Our architecture is built for speed and scalability, completely decoupling the frontend from the backend. 
+
+- **Frontend:** We use **Next.js** with modern styling to ensure a fluid, app-like user experience.
+- **Backend:** Our core API is built on **FastAPI**, which is incredibly fast. When you chat with the bot, we use **Server-Sent Events (SSE)** to stream the AI's response token-by-token in real-time, completely eliminating loading screens.
+- **RAG Engine (Retrieval-Augmented Generation):** To make the bot 'smart', we take your uploaded files, chunk the text, and convert them into vectors using **Nomic Embeddings**. We store these in a **Supabase PostgreSQL database** using the `pgvector` extension. This allows for sub-millisecond semantic search.
+- **AI Brain:** When you ask a question, the system retrieves the most relevant chunks of knowledge and feeds them to our LLM—**Groq running Llama 3.3 70B**—for lightning-fast, accurate answers.
+- **Storage:** We use **Cloudinary** for heavy document storage and **Supabase Buckets** for profile avatars."
+
+---
+
+## Part 3: Deep Dive into Asynchronous Workers
+
+**(Visual: Diagram focusing on FastAPI passing tasks to RabbitMQ, which feeds into Celery Workers and Redis)**
+
+**Speaker:**
+"Now, processing large PDFs or running image recognition (OCR) takes a lot of computing power. If our main FastAPI server did this, it would freeze and other users wouldn't be able to chat. To solve this, we use an asynchronous worker architecture using three key cloud-based technologies:
+
+1. **Celery Worker & Its Role:**
+Celery is our asynchronous task queue. Its main role is to do the 'heavy lifting' in the background. For example, when you upload an image, the main server hands the image off to a Celery Worker. The worker runs the Tesseract OCR engine to extract the text, entirely separate from the main API. This keeps the user interface snappy and responsive.
+
+2. **RabbitMQ (Cloud-based Message Broker):**
+But how does the main server talk to Celery? Through RabbitMQ. RabbitMQ acts as a post office. When you upload a file, the FastAPI server drops a 'message' into RabbitMQ. RabbitMQ safely holds this message in a queue until a Celery worker is free to process it. By using a cloud-based instance, we ensure that no tasks are ever lost, even under heavy traffic.
+
+3. **Redis (Cloud-based In-Memory Store):**
+While RabbitMQ manages the line of tasks, we use Redis for extreme speed. Redis is an in-memory data structure store. It is typically used as a 'Result Backend'—meaning once Celery finishes extracting text from a massive PDF, it temporarily stores the result in Redis. The main API can instantly grab it from Redis without querying a slow hard drive. We also use it to cache active streaming states, ensuring our real-time chat never misses a beat.
+
+**(Visual: Final overview slide of the PersonaBot logo)**
+
+**Speaker:**
+"By combining a lightning-fast API, advanced vector search, and a robust background worker system, we've built a scalable platform capable of bringing any knowledge base to life through conversation. Thank you!"

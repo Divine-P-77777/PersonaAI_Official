@@ -53,6 +53,41 @@ Backend
 /voice: ElevenLabs integration.
 /workers: Background tasks (likely for document processing).
 
+---
+
+## Deep Dive: API Flows
+
+### 1. Ingestion API Flow (`/api/routers/ingestion.py`)
+The ingestion process is heavily optimized for fast API responses and robust background processing:
+1. **Endpoint Initialization**: A `POST /{bot_id}/batch` request receives a batch of data sources (PDFs, images, links, text) via multipart form data alongside a JSON metadata payload.
+2. **Security & Validation**: Checks `alumni` role authorization and verifies bot ownership via JWT tracking.
+3. **Storage & Caching**: 
+   - Media files (PDFs/Images) are read into memory.
+   - The files are asynchronously uploaded to **Cloudinary** for permanent storage.
+   - The raw byte streams are cached in a temporary memory dictionary (`file_payloads`) to avoid re-downloading them in the worker layer.
+4. **Database State**: Creates a `pending` batch record and individual source records in Supabase.
+5. **Background Handoff**: The heavy lifting is delegated to a FastAPI `BackgroundTasks` function (`process_batch`), which hands the cached bytes directly to the **Celery worker queue** (via RabbitMQ) for OCR (Tesseract), chunking (LangChain), and vector embeddings (Nomic). The API returns immediately.
+6. **Real-Time Updates Flow**: A dedicated WebSocket endpoint (`/batch/{batch_id}/ws`) polls the database every 1.5 seconds and emits live status updates (processed vs total files, individual source status, errors) to the frontend until the batch hits a terminal state (completed/failed).
+7. **Data Deletion**: `DELETE` endpoints utilize Postgres `ON DELETE CASCADE` to cleanly wipe vector chunks automatically when a source is removed.
+
+### 2. Retrieval & Chat API Flow (`/api/routers/chat.py`)
+The chat API prioritizes extremely low-latency, real-time responses using streaming and aggressive caching:
+1. **Endpoint Initialization**: A `POST /{bot_id}` request is hit. It is protected by a robust **SlowAPI Rate Limiter** (`@limiter.limit`). This limiter utilizes a custom `FallbackStorage` class that primarily uses **Redis** for distributed rate-limiting, but gracefully degrades to local memory (`MemoryStorage`) if the Redis connection drops, ensuring the API remains highly available.
+2. **Verification**: Validates that the persona is active ("ready") or belongs to the author.
+3. **Semantic Search (RAG)**: The user's query is converted to an embedding and queried against Supabase `pgvector` (`retrieve_similar_chunks`), retrieving the top `K` most relevant knowledge chunks via cosine similarity.
+4. **Rolling Memory via Redis Cache**:
+   - Queries a **Redis cache** for the user's last 5 messages with this specific bot.
+   - **Cache Miss**: Hits Supabase `get_recent_messages`, then writes the result to Redis with a 1-hour expiration.
+   - **Cache Hit**: Instantly loads the conversation history.
+5. **Prompt Engineering**: The retrieved text chunks and the bot's custom `persona_config` (identity, rules, tone) are compiled into a strict LangChain System Prompt using `build_context`.
+6. **Optimistic Persistence**: The incoming user message is saved to Supabase and optimistically appended to the Redis history cache to maintain strict ordering.
+7. **SSE Streaming Flow**: 
+   - Groq's Llama 3.3 70B model (`ChatGroq`) is invoked with the combined context + history + query.
+   - Tokens are yielded back to the Next.js frontend in real-time via **Server-Sent Events** (`text/event-stream`).
+8. **Final State Save**: Upon stream completion, the full AI response is saved to Supabase and pushed to the Redis rolling window cache to persist context for the next query.
+
+---
+
 ### Backend Authentication & Storage RLS
 
 For a secure, production-level implementation using **Supabase + FastAPI** (without a Service Role key), follow these patterns:

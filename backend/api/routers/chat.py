@@ -37,8 +37,18 @@ async def chat_with_bot(
     user: dict = Depends(get_current_user),
 ):
     """Send a message and receive a streaming RAG-powered response from a bot."""
-    # 1. Verify bot access
-    bot = await get_bot_by_id(bot_id, token=user.get("_token"))
+    # 1. Verify bot access (with Redis caching)
+    bot_cache_key = f"bot_config:{bot_id}"
+    bot = await get_cache(bot_cache_key)
+    
+    if bot is None:
+        logger.info(f"[CHAT] Cache MISS for {bot_cache_key}. Querying Supabase...")
+        bot = await get_bot_by_id(bot_id, token=user.get("_token"))
+        if bot:
+            await set_cache(bot_cache_key, bot, expire=3600)
+    else:
+        logger.info(f"[CHAT] ⚡ Cache HIT for {bot_cache_key}. Using fast Redis memory.")
+
     if not bot:
         raise HTTPException(status_code=404, detail="Bot not found or inaccessible")
 
@@ -184,7 +194,14 @@ async def get_chat_history(
     user: dict = Depends(get_current_user),
 ):
     """Get chat history for a bot session."""
-    bot = await get_bot_by_id(bot_id, token=user.get("_token"))
+    bot_cache_key = f"bot_config:{bot_id}"
+    bot = await get_cache(bot_cache_key)
+    
+    if bot is None:
+        bot = await get_bot_by_id(bot_id, token=user.get("_token"))
+        if bot:
+            await set_cache(bot_cache_key, bot, expire=3600)
+
     if not bot:
         raise HTTPException(status_code=404, detail="Bot not found or inaccessible")
 

@@ -11,6 +11,7 @@ from backend.database.queries import (
     update_bot as db_update_bot,
     delete_bot as db_delete_bot
 )
+from backend.core.redis_client import invalidate_cache
 
 router = APIRouter()
 
@@ -78,6 +79,10 @@ async def update_bot(
     updated_bot = await db_update_bot(str(bot_id), updates, token=user.get("_token"))
     if not updated_bot:
         raise HTTPException(status_code=404, detail="Bot not found or unauthorized")
+        
+    # Invalidate Redis cache to ensure chat endpoint gets fresh config
+    await invalidate_cache(f"bot_config:{bot_id}")
+    
     return updated_bot
 
 @router.delete("/{bot_id}")
@@ -89,4 +94,8 @@ async def delete_bot(
     success = await db_delete_bot(str(bot_id), user["id"], token=user.get("_token"))
     if not success:
         raise HTTPException(status_code=404, detail="Bot not found or unauthorized")
+        
+    # Invalidate Redis cache
+    await invalidate_cache(f"bot_config:{bot_id}")
+    
     return {"status": "deleted", "bot_id": bot_id}
