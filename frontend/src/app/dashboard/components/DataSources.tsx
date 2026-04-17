@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { FileText, Image as ImageIcon, Type, Link as LinkIcon, Video, Upload, X, Plus } from 'lucide-react';
+import { FileText, Image as ImageIcon, AlertCircle, Type, Link as LinkIcon, Video, Upload, X, Plus, Loader2 } from 'lucide-react';
+import imageCompression from 'browser-image-compression';
 import { BotFormData } from './CreateBot';
 import { FileDropZone } from './FileDropZone';
 
@@ -14,6 +15,14 @@ export function DataSources({ formData, updateFormData }: DataSourcesProps) {
     const [activeTab, setActiveTab] = useState<SourceType>('pdf');
     const [textInput, setTextInput] = useState({ title: '', content: '' });
     const [linkInput, setLinkInput] = useState({ title: '', url: '' });
+    const [isCompressing, setIsCompressing] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const PDF_MAX_MB = 50;
+    const IMAGE_MAX_MB = 10;
+    const PDF_MAX_BYTES = PDF_MAX_MB * 1024 * 1024;
+    const IMAGE_MAX_BYTES = IMAGE_MAX_MB * 1024 * 1024;
+    const TEXT_MAX_CHARS = 50000;
 
     const sourceTypes = [
         { type: 'pdf' as SourceType, label: 'PDF', icon: FileText, color: 'from-red-400 to-red-500' },
@@ -23,15 +32,55 @@ export function DataSources({ formData, updateFormData }: DataSourcesProps) {
         { type: 'video_link' as SourceType, label: 'Videos', icon: Video, color: 'from-pink-400 to-pink-500' }
     ];
 
-    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'pdf' | 'image') => {
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'pdf' | 'image') => {
         const files = e.target.files;
-        if (files) {
-            const newSources = Array.from(files).map(file => ({
-                type,
-                title: file.name,
-                file
-            }));
-            updateFormData({ dataSources: [...formData.dataSources, ...newSources] });
+        if (!files) return;
+
+        const fileArray = Array.from(files);
+        const newSources: any[] = [];
+        setError(null);
+
+        if (type === 'image') setIsCompressing(true);
+
+        try {
+            for (const file of fileArray) {
+                if (type === 'pdf') {
+                    if (file.size > PDF_MAX_BYTES) {
+                        setError(`PDF "${file.name}" exceeds ${PDF_MAX_MB}MB limit.`);
+                        continue;
+                    }
+                    newSources.push({ type, title: file.name, file });
+                } else if (type === 'image') {
+                    let fileToUpload = file;
+                    if (file.size > IMAGE_MAX_BYTES) {
+                        try {
+                            const options = {
+                                maxSizeMB: IMAGE_MAX_MB,
+                                maxWidthOrHeight: 4096,
+                                useWebWorker: true,
+                            };
+                            const compressedFile = await imageCompression(file, options);
+                            fileToUpload = new File([compressedFile], file.name, { type: file.type });
+
+                            if (fileToUpload.size > IMAGE_MAX_BYTES) {
+                                setError(`Image "${file.name}" is too large even after compression.`);
+                                continue;
+                            }
+                        } catch (err) {
+                            setError(`Failed to compress "${file.name}".`);
+                            continue;
+                        }
+                    }
+                    newSources.push({ type, title: fileToUpload.name, file: fileToUpload });
+                }
+            }
+
+            if (newSources.length > 0) {
+                updateFormData({ dataSources: [...formData.dataSources, ...newSources] });
+            }
+        } finally {
+            setIsCompressing(false);
+            if (e.target) e.target.value = '';
         }
     };
 
@@ -40,6 +89,11 @@ export function DataSources({ formData, updateFormData }: DataSourcesProps) {
     };
 
     const addTextSource = () => {
+        if (textInput.content.length > TEXT_MAX_CHARS) {
+            setError(`Text exceeds the maximum limit of ${TEXT_MAX_CHARS} characters.`);
+            return;
+        }
+
         if (textInput.title && textInput.content) {
             updateFormData({
                 dataSources: [
@@ -52,6 +106,7 @@ export function DataSources({ formData, updateFormData }: DataSourcesProps) {
                 ]
             });
             setTextInput({ title: '', content: '' });
+            setError(null);
         }
     };
 
@@ -136,7 +191,7 @@ export function DataSources({ formData, updateFormData }: DataSourcesProps) {
                                 <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                                 <p className="text-gray-700 mb-2">Click to upload PDF files</p>
                                 <p className="text-sm text-gray-500">
-                                    Resume, research papers, articles, or any PDF documents
+                                    Resume, research papers, articles, or any PDF documents (Max {PDF_MAX_MB}MB)
                                 </p>
                             </div>
                             <input
@@ -147,6 +202,14 @@ export function DataSources({ formData, updateFormData }: DataSourcesProps) {
                                 className="hidden"
                             />
                         </label>
+
+                        {activeTab === 'pdf' && error && (
+                            <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm font-medium flex items-center gap-2">
+                                <AlertCircle size={16} className="shrink-0" />
+                                <span className="flex-1">{error}</span>
+                                <X className="w-4 h-4 cursor-pointer hover:text-red-800" onClick={() => setError(null)} />
+                            </div>
+                        )}
 
                         {getSourcesByType('pdf').length > 0 && (
                             <div className="space-y-2">
@@ -178,21 +241,36 @@ export function DataSources({ formData, updateFormData }: DataSourcesProps) {
                 {activeTab === 'image' && (
                     <div className="space-y-4">
                         <label className="block">
-                            <div className="border-2 border-dashed border-gray-300 rounded-2xl p-12 text-center hover:border-orange-400 hover:bg-orange-50 transition-all cursor-pointer">
-                                <ImageIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                                <p className="text-gray-700 mb-2">Click to upload images</p>
+                            <div className={`border-2 border-dashed border-gray-300 rounded-2xl p-12 text-center hover:border-orange-400 hover:bg-orange-50 transition-all cursor-pointer ${isCompressing ? 'opacity-50 cursor-wait' : ''}`}>
+                                {isCompressing ? (
+                                    <Loader2 className="w-12 h-12 text-orange-500 mx-auto mb-4 animate-spin" />
+                                ) : (
+                                    <ImageIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                                )}
+                                <p className="text-gray-700 mb-2">
+                                    {isCompressing ? 'Compressing...' : 'Click to upload images'}
+                                </p>
                                 <p className="text-sm text-gray-500">
-                                    Certificates, screenshots, diagrams, or any images with text
+                                    Max {IMAGE_MAX_MB}MB (Auto-compressed if larger)
                                 </p>
                             </div>
                             <input
                                 type="file"
                                 accept="image/*"
                                 multiple
+                                disabled={isCompressing}
                                 onChange={(e) => handleFileUpload(e, 'image')}
                                 className="hidden"
                             />
                         </label>
+
+                        {activeTab === 'image' && error && (
+                            <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm font-medium flex items-center gap-2">
+                                <AlertCircle size={16} className="shrink-0" />
+                                <span className="flex-1">{error}</span>
+                                <X className="w-4 h-4 cursor-pointer hover:text-red-800" onClick={() => setError(null)} />
+                            </div>
+                        )}
 
                         {getSourcesByType('image').length > 0 && (
                             <div className="space-y-2">
@@ -235,11 +313,23 @@ export function DataSources({ formData, updateFormData }: DataSourcesProps) {
                             />
                             <textarea
                                 value={textInput.content}
-                                onChange={(e) => setTextInput({ ...textInput, content: e.target.value })}
+                                onChange={(e) => {
+                                    const newContent = e.target.value;
+                                    if (newContent.length <= TEXT_MAX_CHARS) {
+                                        setTextInput({ ...textInput, content: newContent });
+                                    } else {
+                                        setError(`Text exceeds the maximum limit of ${TEXT_MAX_CHARS} characters.`);
+                                    }
+                                }}
                                 placeholder="Paste or type your content here..."
                                 rows={10}
                                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-orange-400 focus:ring-4 focus:ring-orange-100 outline-none transition-all resize-none text-gray-900 placeholder-gray-500"
                             />
+                            <div className="flex justify-end mt-2">
+                                <span className={`text-xs font-medium ${textInput.content.length > TEXT_MAX_CHARS ? 'text-red-500' : 'text-gray-500'}`}>
+                                    {textInput.content.length.toLocaleString()} / {TEXT_MAX_CHARS.toLocaleString()} characters
+                                </span>
+                            </div>
                             <button
                                 type="button"
                                 onClick={addTextSource}
@@ -249,6 +339,14 @@ export function DataSources({ formData, updateFormData }: DataSourcesProps) {
                                 Add Text Block
                             </button>
                         </div>
+
+                        {activeTab === 'long_text' && error && (
+                            <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm font-medium flex items-center gap-2">
+                                <AlertCircle size={16} className="shrink-0" />
+                                <span className="flex-1">{error}</span>
+                                <X className="w-4 h-4 cursor-pointer hover:text-red-800" onClick={() => setError(null)} />
+                            </div>
+                        )}
 
                         {getSourcesByType('long_text').length > 0 && (
                             <div className="space-y-2">
@@ -414,9 +512,9 @@ export function DataSources({ formData, updateFormData }: DataSourcesProps) {
                     })}
                 </div>
                 <div className="mt-6 pt-6 border-t border-orange-100 flex justify-center">
-                   <div className="px-6 py-2 bg-orange-600 text-white rounded-full text-xs font-black uppercase tracking-widest">
-                       Total: {formData.dataSources.length} items
-                   </div>
+                    <div className="px-6 py-2 bg-orange-600 text-white rounded-full text-xs font-black uppercase tracking-widest">
+                        Total: {formData.dataSources.length} items
+                    </div>
                 </div>
             </div>
         </div>

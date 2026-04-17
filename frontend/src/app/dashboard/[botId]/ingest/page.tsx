@@ -24,6 +24,7 @@ import { api } from "@/services/api"
 import { useToast } from "@/hooks/useToast"
 import { useRouter } from "next/navigation"
 import { FileDropZone } from "../../components/FileDropZone"
+import imageCompression from 'browser-image-compression'
 
 type SourceType = "pdf" | "image" | "long_text" | "web_link"
 
@@ -47,6 +48,13 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
   const pollRef = useRef<NodeJS.Timeout | null>(null)
   const { showSuccess, showError } = useToast()
   const router = useRouter()
+  const [compressingId, setCompressingId] = useState<string | null>(null)
+
+  const PDF_MAX_MB = 50
+  const IMAGE_MAX_MB = 10
+  const PDF_MAX_BYTES = PDF_MAX_MB * 1024 * 1024
+  const IMAGE_MAX_BYTES = IMAGE_MAX_MB * 1024 * 1024
+  const TEXT_MAX_CHARS = 50000
 
   const addSource = (type: SourceType) => {
     const newSource: StagedSource = {
@@ -94,10 +102,44 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
     setSources(sources.map(s => s.id === id ? { ...s, ...updates } : s))
   }
 
-  const handleFileUpload = (id: string, e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (id: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) {
+    if (!file) return
+
+    const source = sources.find(s => s.id === id)
+    if (!source) return
+
+    if (source.type === 'pdf') {
+      if (file.size > PDF_MAX_BYTES) {
+        showError(`PDF exceeds ${PDF_MAX_MB}MB limit.`)
+        return
+      }
       updateSource(id, { file, title: file.name })
+    } else if (source.type === 'image') {
+      setCompressingId(id)
+      try {
+        let fileToUpload = file
+        if (file.size > IMAGE_MAX_BYTES) {
+          showSuccess("Compressing image...")
+          const options = {
+            maxSizeMB: IMAGE_MAX_MB,
+            maxWidthOrHeight: 4096,
+            useWebWorker: true,
+          }
+          const compressedFile = await imageCompression(file, options)
+          fileToUpload = new File([compressedFile], file.name, { type: file.type })
+          
+          if (fileToUpload.size > IMAGE_MAX_BYTES) {
+            showError("Image is too large even after compression.")
+            return
+          }
+        }
+        updateSource(id, { file: fileToUpload, title: fileToUpload.name })
+      } catch (err) {
+        showError("Failed to compress image.")
+      } finally {
+        setCompressingId(null)
+      }
     }
   }
 
@@ -359,12 +401,26 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
                             value={source.title}
                             onChange={(e) => updateSource(source.id, { title: e.target.value })}
                           />
-                          <textarea
-                            placeholder="Paste or write your text here..."
-                            className="w-full h-40 bg-gray-50 border-2 border-orange-50 rounded-2xl px-5 py-4 outline-none focus:border-orange-200 transition-colors resize-none text-gray-700 font-medium"
-                            value={source.content}
-                            onChange={(e) => updateSource(source.id, { content: e.target.value })}
-                          />
+                          <div className="relative">
+                            <textarea
+                              placeholder="Paste or write your text here..."
+                              className="w-full h-40 bg-gray-50 border-2 border-orange-50 rounded-2xl px-5 py-4 pb-8 outline-none focus:border-orange-200 transition-colors resize-none text-gray-700 font-medium"
+                              value={source.content}
+                              onChange={(e) => {
+                                const newContent = e.target.value;
+                                if (newContent.length <= TEXT_MAX_CHARS) {
+                                  updateSource(source.id, { content: newContent })
+                                } else {
+                                  showError(`Text exceeds the maximum limit of ${TEXT_MAX_CHARS} characters.`)
+                                }
+                              }}
+                            />
+                            <div className="absolute bottom-3 right-4">
+                                <span className={`text-xs font-medium ${(source.content?.length || 0) >= TEXT_MAX_CHARS ? 'text-red-500' : 'text-gray-400'}`}>
+                                    {(source.content?.length || 0).toLocaleString()} / {TEXT_MAX_CHARS.toLocaleString()}
+                                </span>
+                            </div>
+                          </div>
                         </div>
                       ) : (
                         <div className="space-y-4 min-w-0">
@@ -377,9 +433,16 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
                               readOnly
                             />
                             {!source.file && (
-                                <label className="h-12 w-full sm:w-auto px-6 bg-gradient-to-r from-orange-400 to-pink-500 text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-orange-100 hover:scale-105 transition-all shrink-0">
-                                  <Upload size={16} /> Browse
-                                  <input type="file" className="hidden" accept={source.type === 'pdf' ? '.pdf' : 'image/*'} onChange={(e) => handleFileUpload(source.id, e)} />
+                                <label className={`h-12 w-full sm:w-auto px-6 bg-gradient-to-r from-orange-400 to-pink-500 text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-orange-100 hover:scale-105 transition-all shrink-0 ${compressingId === source.id ? 'opacity-50 cursor-wait' : ''}`}>
+                                  {compressingId === source.id ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+                                  {compressingId === source.id ? 'Optimizing...' : 'Browse'}
+                                  <input 
+                                    type="file" 
+                                    className="hidden" 
+                                    accept={source.type === 'pdf' ? '.pdf' : 'image/*'} 
+                                    disabled={compressingId === source.id}
+                                    onChange={(e) => handleFileUpload(source.id, e)} 
+                                  />
                                 </label>
                             )}
                           </div>

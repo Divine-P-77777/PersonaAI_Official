@@ -82,8 +82,12 @@ export const ChatInterface = ({ bot }: ChatInterfaceProps) => {
         url: url
       }).catch(console.error);
     } else {
-      navigator.clipboard.writeText(url);
-      toast.success("Link copied to clipboard!");
+      navigator.clipboard.writeText(url)
+        .then(() => toast.success("Link copied to clipboard!"))
+        .catch((err: any) => {
+          console.error("Clipboard write failed:", err);
+          toast.error("Failed to copy link.");
+        });
     }
   };
 
@@ -176,28 +180,35 @@ export const ChatInterface = ({ bot }: ChatInterfaceProps) => {
         <div className="flex items-center gap-2 relative">
           <button 
              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-             className="p-3 rounded-2xl hover:bg-gray-100 text-gray-400 transition-all active:scale-95"
+             className="p-3 rounded-2xl hover:bg-gray-100 text-gray-400 transition-all active:scale-95 z-50 relative"
           >
             <MoreVertical size={18} />
           </button>
           
           <AnimatePresence>
             {isDropdownOpen && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                transition={{ duration: 0.15 }}
-                className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-100 shadow-xl rounded-2xl overflow-hidden py-1 z-50"
-              >
+              <>
+                {/* Invisible overlay for click-outside to close */}
                 <div 
-                   onClick={() => { handleShare(); setIsDropdownOpen(false); }}
-                   className="px-4 py-3 hover:bg-orange-50 hover:text-orange-600 text-gray-700 flex items-center gap-3 cursor-pointer transition-colors"
+                  className="fixed inset-0 z-40" 
+                  onClick={() => setIsDropdownOpen(false)} 
+                />
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-100 shadow-xl rounded-2xl overflow-hidden py-1 z-50"
                 >
-                  <Share2 size={16} />
-                  <span className="font-semibold text-sm">Share Persona</span>
-                </div>
-              </motion.div>
+                  <div 
+                     onClick={() => { handleShare(); setIsDropdownOpen(false); }}
+                     className="px-4 py-3 hover:bg-orange-50 hover:text-orange-600 text-gray-700 flex items-center gap-3 cursor-pointer transition-colors"
+                  >
+                    <Share2 size={16} />
+                    <span className="font-semibold text-sm">Share Persona</span>
+                  </div>
+                </motion.div>
+              </>
             )}
           </AnimatePresence>
         </div>

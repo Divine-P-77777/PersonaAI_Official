@@ -54,8 +54,12 @@ export default function DashboardPage() {
         url: url
       }).catch(console.error);
     } else {
-      navigator.clipboard.writeText(url);
-      import("react-toastify").then(({ toast }) => toast.success("Link copied to clipboard!"));
+      navigator.clipboard.writeText(url)
+        .then(() => import("react-toastify").then(({ toast }) => toast.success("Link copied to clipboard!")))
+        .catch((err: any) => {
+           console.error("Clipboard write failed:", err);
+           import("react-toastify").then(({ toast }) => toast.error("Failed to copy link."));
+        });
     }
   };
 

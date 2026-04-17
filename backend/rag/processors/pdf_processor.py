@@ -27,12 +27,12 @@ async def extract_text_from_pdf(file_content: bytes) -> str:
         # 2. If no text found, use OCR
         if not page_text:
             logger.info(f"[PDF_OCR] 📷 Page {page_num+1} appears to be an image. Triggering OCR fallback...")
-            # Increase resolution for better OCR
-            pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+            # Increase resolution to 3.0 (approx 300 DPI) for better OCR accuracy
+            pix = page.get_pixmap(matrix=fitz.Matrix(3, 3))
             img_bytes = pix.tobytes("png")  # Convert to PNG bytes for the OCR utility
             
-            # Use the unified fallback (Worker or Local)
-            page_text = await perform_ocr_with_fallback(img_bytes, source_id=f"pdf_page_{page_num+1}", timeout=5.0)
+            # Use the unified fallback (Worker or Local) with a longer timeout
+            page_text = await perform_ocr_with_fallback(img_bytes, source_id=f"pdf_page_{page_num+1}", timeout=30.0)
         
         full_text.append(page_text)
 

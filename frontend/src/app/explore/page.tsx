@@ -13,11 +13,13 @@ import {
   TrendingUp,
   Gem,
   LayoutGrid,
-  Zap
+  Zap,
+  Share2
 } from "lucide-react";
 import { api } from "../../services/api";
 import { Bot } from "../../types";
 import Link from 'next/link';
+import { toast } from "react-toastify";
 
 export default function ExplorePage() {
   const [bots, setBots] = useState<Bot[]>([]);
@@ -38,6 +40,26 @@ export default function ExplorePage() {
     };
     fetchBots();
   }, []);
+
+  const handleShare = (e: React.MouseEvent, bot: Bot) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const url = `${window.location.origin}/chat/${bot.id}`;
+    if (navigator.share) {
+      navigator.share({
+        title: `Chat with ${bot.name}`,
+        text: `Check out this AI persona of ${bot.name} on PersonaBot!`,
+        url: url
+      }).catch(console.error);
+    } else {
+      navigator.clipboard.writeText(url)
+        .then(() => toast.success("Link copied to clipboard!"))
+        .catch((err: any) => {
+           console.error("Clipboard write failed:", err);
+           toast.error("Failed to copy link.");
+        });
+    }
+  };
 
   const categories = ["All", "Technology", "Business", "Design", "Marketing", "Education", "Healthcare"];
 
@@ -241,12 +263,20 @@ export default function ExplorePage() {
                         </div>
                       </div>
 
-                      <Link
-                        href={`/chat/${bot.id}`}
-                        className="w-14 h-14 rounded-[1.8rem] bg-gray-900 text-white flex items-center justify-center hover:bg-orange-600 hover:scale-110 active:scale-95 transition-all duration-300 shadow-xl"
-                      >
-                        <MessageSquare className="w-6 h-6" />
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={(e) => handleShare(e, bot)}
+                          className="w-12 h-12 rounded-[1.5rem] bg-orange-50 text-orange-600 flex items-center justify-center hover:bg-orange-100 transition-all shadow-sm"
+                        >
+                          <Share2 className="w-5 h-5" />
+                        </button>
+                        <Link
+                          href={`/chat/${bot.id}`}
+                          className="w-14 h-14 rounded-[1.8rem] bg-gray-900 text-white flex items-center justify-center hover:bg-orange-600 hover:scale-110 active:scale-95 transition-all duration-300 shadow-xl"
+                        >
+                          <MessageSquare className="w-6 h-6" />
+                        </Link>
+                      </div>
                     </div>
                   </div>
 

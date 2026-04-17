@@ -1,10 +1,16 @@
 import io
+import os
 import base64
 import logging
 import pytesseract
 from PIL import Image, UnidentifiedImageError
 
 from celery_worker.celery_app import celery_app
+
+# Configure Tesseract Path for Windows
+tesseract_path = os.environ.get("TESSERACT_PATH")
+if tesseract_path:
+    pytesseract.pytesseract.tesseract_cmd = tesseract_path
 
 logger = logging.getLogger(__name__)
 

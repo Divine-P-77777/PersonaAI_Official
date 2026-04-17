@@ -4,7 +4,11 @@ import logging
 import threading
 import httpx
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from dotenv import load_dotenv
 from celery import Celery
+
+# Load environment variables from .env file
+load_dotenv()
 from celery.signals import worker_ready
 
 # --- Production Logging Setup ---

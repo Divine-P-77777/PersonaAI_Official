@@ -102,9 +102,11 @@ async def create_ingestion_batch_endpoint(
                     source_entry["file_size"] = len(content)
                     logger.info(f"[INGESTION] ✅ File '{file_obj.filename}' uploaded to Cloudinary successfully (cached {len(content)} bytes)")
                 except Exception as e:
-                    source_entry["status"] = IngestionStatus.failed
-                    source_entry["error_message"] = f"File upload failed: {str(e)}"
-                    logger.error(f"[INGESTION] ❌ File upload failed for '{src.title}': {str(e)}")
+                    # SOFT FAIL: If Cloudinary fails (e.g. file too large), we still proceed 
+                    # with ingestion if we have the bytes cached in memory.
+                    source_entry["url"] = None
+                    source_entry["error_message"] = f"Permanent storage upload failed: {str(e)}. Proceeding with memory-cached bytes."
+                    logger.warning(f"[INGESTION] ⚠️  Cloudinary upload failed for '{src.title}': {str(e)}. Proceeding with cached bytes.")
             elif not src.url:
                 source_entry["status"] = IngestionStatus.failed
                 source_entry["error_message"] = "File missing in upload and no URL provided"

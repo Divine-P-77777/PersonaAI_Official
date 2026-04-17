@@ -12,26 +12,26 @@ export async function generateMetadata(
   parent: ResolvingMetadata
 ): Promise<Metadata> {
   const { botId } = await params;
-  
+
   try {
     const res = await fetch(`${API_URL}/bots/${botId}`);
     if (!res.ok) {
-        return {
-           title: 'Persona Unavailable',
-           description: 'This persona is currently in draft mode, private, or not found.'
-        }
+      return {
+        title: 'Persona Unavailable',
+        description: 'This persona is currently in draft mode, private, or not found.'
+      }
     }
     const bot = await res.json();
-    
+
     if (bot.status !== 'ready') {
-        return {
-           title: 'Persona Not Ready',
-           description: 'This persona is currently in draft mode or private.'
-        }
+      return {
+        title: 'Persona Not Ready',
+        description: 'This persona is currently in draft mode or private.'
+      }
     }
 
     const previousImages = (await parent).openGraph?.images || [];
-    const imageUrl = bot.avatar_url || '/apple-touch-icon.png'; 
+    const imageUrl = bot.avatar_url || '/apple-touch-icon.png';
 
     return {
       title: `${bot.name} | Persona AI`,
@@ -57,6 +57,6 @@ export async function generateMetadata(
 }
 
 export default async function PublicChatPage({ params }: Props) {
-    const { botId } = await params;
-    return <PublicChatClient botId={botId} />;
+  const { botId } = await params;
+  return <PublicChatClient botId={botId} />;
 }

@@ -6,6 +6,7 @@ import { Footer } from "@/components/home/Footer";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { SmoothScroll } from "@/components/ui/SmoothScroll";
+import { ServerDownBanner } from "@/components/ui/ServerDownBanner";
 
 interface LayoutProviderProps {
   children: React.ReactNode;
@@ -24,6 +25,9 @@ export default function LayoutProvider({ children }: LayoutProviderProps) {
 
   return (
     <>
+      {/* Global Supabase health watcher — visible on every page */}
+      <ServerDownBanner />
+
       {showHeaderFooter && <Navbar />}
       <SmoothScroll>
         <main className="flex-grow">
