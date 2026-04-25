@@ -5,6 +5,21 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Loader } from "@/components/ui/Loader";
 
+// Generates a gender-aware DiceBear avatar URL for a given first name
+async function buildGenderAvatar(firstName: string): Promise<string> {
+  const base = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(firstName)}`;
+  try {
+    const res = await fetch(`https://api.genderize.io/?name=${encodeURIComponent(firstName)}`);
+    const data = await res.json();
+    if (data.gender === "male") {
+      return base + "&top=shortHair,shortCurly,shortFlat,shortRound,shortWaved,sides,theCaesar&facialHairProbability=40";
+    } else if (data.gender === "female") {
+      return base + "&top=longHair,bob,curly,curvy,straight01,straight02&facialHairProbability=0";
+    }
+  } catch { /* network error — fall through to generic */ }
+  return base;
+}
+
 export default function AuthCallback() {
   const router = useRouter();
 
@@ -19,15 +34,31 @@ export default function AuthCallback() {
       }
 
       if (data?.session) {
-        // Store the access token for the custom ApiService
         localStorage.setItem("token", data.session.access_token);
         
-        // Check if onboarding is completed
+        // Fetch the user's profile row
         const { data: profile } = await supabase
           .from("users")
-          .select("onboarding_completed")
+          .select("onboarding_completed, avatar_url, display_name")
           .eq("id", data.session.user.id)
           .single();
+
+        // If this is a brand-new user with no avatar, assign a gender-smart cartoon one
+        if (profile && !profile.avatar_url) {
+          const rawName =
+            profile.display_name ||
+            data.session.user.user_metadata?.full_name ||
+            data.session.user.email?.split("@")[0] ||
+            "user";
+          const firstName = rawName.split(" ")[0];
+          const cartoonUrl = await buildGenderAvatar(firstName);
+
+          // Persist the cartoon avatar so onboarding/profile show it immediately
+          await supabase
+            .from("users")
+            .update({ avatar_url: cartoonUrl })
+            .eq("id", data.session.user.id);
+        }
 
         if (profile?.onboarding_completed) {
           router.push("/dashboard");

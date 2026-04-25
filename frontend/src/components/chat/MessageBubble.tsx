@@ -67,6 +67,7 @@ export const MessageBubble = ({ message, isStreaming }: MessageBubbleProps) => {
                 ),
                 ul: ({node, ...props}) => <ul className="list-disc ml-5 my-2 space-y-1" {...props} />,
                 ol: ({node, ...props}) => <ul className="list-decimal ml-5 my-2 space-y-1" {...props} />,
+                a: ({node, ...props}) => <a target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:underline" {...props} />,
             }}
           >
             {message.content}

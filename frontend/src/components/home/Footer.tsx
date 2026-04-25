@@ -12,9 +12,7 @@ export function Footer() {
                     {/* Brand */}
                     <div className="md:col-span-1">
                         <div className="flex items-center gap-2 mb-4">
-                            <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-pink-500 rounded-lg flex items-center justify-center">
-                                <span className="text-white font-bold text-lg">P</span>
-                            </div>
+                            <img src="/logo.png" alt="PersonaBot" className="w-8 h-8 object-contain" />
                             <span className="font-semibold text-xl text-white">PersonaBot</span>
                         </div>
                         <p className="text-sm text-gray-400 leading-relaxed">

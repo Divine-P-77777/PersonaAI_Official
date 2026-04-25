@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from typing import List, Dict, Any, Optional
 from uuid import UUID
+import uuid
 
 from backend.core.security import get_current_user, require_alumni_role
 from backend.api.schemas.bot import BotCreate, BotUpdate, BotResponse
@@ -12,6 +13,7 @@ from backend.database.queries import (
     delete_bot as db_delete_bot
 )
 from backend.core.redis_client import invalidate_cache
+from backend.core.storage import upload_to_supabase
 
 router = APIRouter()
 
@@ -99,3 +101,41 @@ async def delete_bot(
     await invalidate_cache(f"bot_config:{bot_id}")
     
     return {"status": "deleted", "bot_id": bot_id}
+
+@router.post("/{bot_id}/avatar", response_model=BotResponse)
+async def upload_bot_avatar(
+    bot_id: UUID,
+    file: UploadFile = File(...),
+    user: Dict[str, Any] = Depends(require_alumni_role)
+):
+    """Upload an avatar image for a bot."""
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Only image files are allowed")
+        
+    bot = await get_bot_by_id(str(bot_id), token=user.get("_token"))
+    if not bot or bot["owner_id"] != user["id"]:
+        raise HTTPException(status_code=404, detail="Bot not found or unauthorized")
+        
+    # Extract token
+    token = user.get("_token")
+        
+    try:
+        content = await file.read()
+        file_ext = file.filename.split(".")[-1] if "." in file.filename else "jpg"
+        # Upload under the owner's user folder so the avatars bucket RLS passes:
+        # RLS rule: storage.foldername(name)[1] = auth.uid()
+        # Path = {user_id}/bot-{bot_id}.ext
+        file_path = f"{user['id']}/bot-{bot_id}.{file_ext}"
+        
+        avatar_url = await upload_to_supabase(content, file_path, token=token)
+        
+        # Update bot record
+        updated_bot = await db_update_bot(str(bot_id), {"avatar_url": avatar_url}, token=token)
+        
+        # Invalidate cache
+        await invalidate_cache(f"bot_config:{bot_id}")
+        
+        return updated_bot
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Avatar upload failed: {str(e)}")
+

@@ -38,9 +38,7 @@ export function Navbar() {
                     {/* Logo */}
                     <Link href="/" className="flex items-center">
                         <div className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                            <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-pink-500 rounded-lg flex items-center justify-center">
-                                <span className="text-white font-bold text-lg">P</span>
-                            </div>
+                            <img src="/logo.png" alt="PersonaBot" className="w-9 h-9 object-contain" />
                             <span className="font-semibold text-xl text-gray-900">PersonaBot</span>
                         </div>
                     </Link>

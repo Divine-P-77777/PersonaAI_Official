@@ -7,7 +7,7 @@ import {
    Bot,
    ArrowLeft,
    MessageSquare,
-   Zap,
+   Pencil,
    Settings,
    BarChart3,
    Globe,
@@ -19,7 +19,9 @@ import {
    Trash2,
    Image as ImageIcon,
    Link as LinkIcon,
-   Type
+   Type,
+   Camera,
+   Loader2
 } from "lucide-react"
 import { api } from "@/services/api"
 import { useToast } from "@/hooks/useToast"
@@ -33,8 +35,31 @@ export default function BotDetailPage({ params }: { params: Promise<{ botId: str
    const [sources, setSources] = useState<DataSource[]>([])
    const [loading, setLoading] = useState(true)
    const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
+   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
+   const fileInputRef = React.useRef<HTMLInputElement>(null)
    const { showError, showSuccess } = useToast()
    const router = useRouter()
+
+   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      if (!file || !bot) return
+
+      if (file.size > 5 * 1024 * 1024) {
+         showError("Image size must be less than 5MB")
+         return
+      }
+
+      try {
+         setIsUploadingAvatar(true)
+         const updatedBot = await api.uploadBotAvatar(bot.id, file)
+         setBot(updatedBot)
+         showSuccess("Persona avatar updated successfully!")
+      } catch (err: any) {
+         showError(err.message || "Failed to upload avatar.")
+      } finally {
+         setIsUploadingAvatar(false)
+      }
+   }
 
    const handleToggleStatus = async () => {
       if (!bot || isUpdatingStatus) return;
@@ -202,16 +227,35 @@ export default function BotDetailPage({ params }: { params: Promise<{ botId: str
                <div className="lg:col-span-1 space-y-8">
                   <section className="bg-white rounded-[40px] p-8 border border-orange-100 shadow-sm">
                      <div className="flex flex-col items-center text-center">
-                        <div className="w-32 h-32 rounded-3xl bg-gradient-to-br from-orange-100 to-pink-100 p-1 mb-6 shadow-xl relative group">
+                        <div className="w-32 h-32 rounded-full bg-gradient-to-br from-orange-100 to-pink-100 p-0.5 mb-6 shadow-xl relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                           {/* Always render base: uploaded photo or bot icon */}
                            {bot.avatar_url ? (
-                              <img src={bot.avatar_url} alt={bot.name} className="w-full h-full object-cover rounded-[22px]" />
+                              <img src={bot.avatar_url} alt={bot.name} className="w-full h-full object-cover rounded-full" />
                            ) : (
-                              <div className="w-full h-full bg-white rounded-[22px] flex items-center justify-center text-orange-400">
+                              <div className="w-full h-full bg-white rounded-full flex items-center justify-center text-orange-400">
                                  <Bot size={48} />
                               </div>
                            )}
-                           <div className={`absolute -bottom-2 -right-2 w-10 h-10 border-4 border-white rounded-full flex items-center justify-center text-white ${bot.status === 'ready' ? 'bg-green-600' : 'bg-gray-500'}`} title={bot.status === 'ready' ? 'Active' : 'Paused'}>
-                              <Zap size={16} fill="white" />
+                            
+                           {/* Hover camera overlay */}
+                           <div className="absolute inset-0 rounded-full bg-black/40 text-white flex flex-col items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm z-10 pointer-events-none">
+                              {isUploadingAvatar
+                                ? <Loader2 className="w-8 h-8 animate-spin" />
+                                : <><Camera className="w-7 h-7" /><span className="text-[9px] font-bold uppercase tracking-widest">Update</span></>
+                              }
+                           </div>
+                            
+                           {/* Hidden file input */}
+                           <input
+                              type="file"
+                              ref={fileInputRef}
+                              className="hidden"
+                              accept="image/*"
+                              onChange={handleAvatarChange}
+                           />
+
+                           <div className={`absolute -bottom-2 -right-2 w-10 h-10 border-4 border-white rounded-full flex items-center justify-center text-white z-20 ${bot.status === 'ready' ? 'bg-green-600' : 'bg-gray-500'}`} title={bot.status === 'ready' ? 'Active' : 'Paused'}>
+                              <Pencil size={14} />
                            </div>
                         </div>
                         <h2 className="text-2xl font-black text-gray-900 mb-2">{bot.name}</h2>

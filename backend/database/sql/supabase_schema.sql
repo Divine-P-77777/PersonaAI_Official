@@ -61,6 +61,7 @@ CREATE TABLE IF NOT EXISTS bots (
     --   "links":       {"linkedin": "...", "github": "...", "portfolio": "..."}
     -- }
     status         bot_status NOT NULL DEFAULT 'draft',
+    avatar_url     TEXT,
     created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

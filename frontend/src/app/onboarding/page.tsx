@@ -245,7 +245,7 @@ export default function OnboardingPage() {
       </div>
 
       <div className="fixed bottom-10 left-10 flex items-center gap-2 opacity-30">
-        <Zap size={16} fill="black" />
+        <img src="/logo.png" alt="Logo" className="w-5 h-5 grayscale object-contain" />
         <span className="text-xs font-black uppercase tracking-[0.2em] text-gray-900">PersonaBot Alpha</span>
       </div>
     </div>

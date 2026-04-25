@@ -46,10 +46,16 @@ async def upload_to_supabase(file_bytes: bytes, file_name: str, bucket: str = No
     bucket_name = bucket or settings.SUPABASE_AVATAR_BUCKET
     upload_url = f"{settings.SUPABASE_URL}/storage/v1/object/{bucket_name}/{file_name}"
     
+    # Detect content type from extension
+    ext = file_name.rsplit(".", 1)[-1].lower() if "." in file_name else "jpg"
+    content_type_map = {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png", "gif": "image/gif", "webp": "image/webp"}
+    content_type = content_type_map.get(ext, "image/jpeg")
+
     headers = {
         "apikey": settings.SUPABASE_ANON_KEY,
         "Authorization": f"Bearer {token}" if token else f"Bearer {settings.SUPABASE_ANON_KEY}",
-        "Content-Type": "image/jpeg",  # Storage requires explicit content type
+        "Content-Type": content_type,
+        "x-upsert": "true",   # ← correct Supabase Storage upsert header (NOT a query param)
     }
     
     try:
@@ -58,7 +64,7 @@ async def upload_to_supabase(file_bytes: bytes, file_name: str, bucket: str = No
                 upload_url,
                 headers=headers,
                 content=file_bytes,
-                params={"upsert": "true"},
+                # no params needed — upsert is header-based
             )
             
             if response.status_code not in (200, 201):

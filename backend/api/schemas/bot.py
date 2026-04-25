@@ -34,6 +34,7 @@ class BotResponse(BaseModel):
     description: Optional[str] = None
     persona_config: Dict[str, Any]
     status: BotStatus
+    avatar_url: Optional[str] = None  # Bot-specific uploaded profile picture
     created_at: datetime
     updated_at: datetime
     owner: Optional[Dict[str, Any]] = None  # Added for Explore page context

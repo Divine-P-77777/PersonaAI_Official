@@ -7,15 +7,28 @@ import { ChatInterface } from "../../../components/chat/ChatInterface";
 import { motion } from "framer-motion";
 import { Loader2, ShieldAlert } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { toast } from "react-toastify";
+import { supabase } from "@/lib/supabase";
 
 export default function PublicChatClient({ botId }: { botId: string }) {
     const [bot, setBot] = useState<Bot | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const router = useRouter();
 
     useEffect(() => {
-        const fetchBot = async () => {
+        const checkAuthAndFetchBot = async () => {
             try {
+                // 1. Check if user is authenticated
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session) {
+                    toast.error("You have to login to use the bot.");
+                    router.push("/signin");
+                    return; // Stop execution
+                }
+
+                // 2. Fetch bot details
                 const data = await api.getBot(botId);
                 // Check if bot is ready or private
                 if (data.status !== 'ready') {
@@ -30,8 +43,8 @@ export default function PublicChatClient({ botId }: { botId: string }) {
                 setLoading(false);
             }
         };
-        fetchBot();
-    }, [botId]);
+        checkAuthAndFetchBot();
+    }, [botId, router]);
 
     if (loading) {
         return (

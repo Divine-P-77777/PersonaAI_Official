@@ -31,9 +31,7 @@ export function AuthBranding({ type }: AuthBrandingProps) {
       {/* Glassmorphism Card */}
       <div className="relative z-10 w-full max-w-sm bg-white/10 backdrop-blur-xl rounded-[2.5rem] border border-white/20 p-10 text-white shadow-2xl">
         <div className="flex items-center gap-2 mb-8">
-          <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center">
-            <span className="text-gray-900 font-bold text-xl">P</span>
-          </div>
+          <img src="/logo.png" alt="PersonaBot" className="w-10 h-10 object-contain" />
           <span className="font-bold text-2xl tracking-tight">PersonaBot</span>
         </div>
 

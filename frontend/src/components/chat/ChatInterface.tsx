@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useLayoutEffect } from "react";
-import { Send, Share2, ArrowLeft, MoreVertical, ShieldCheck, User } from "lucide-react";
+import { Send, Share2, ArrowLeft, MoreVertical, ShieldCheck, User, RefreshCcw, Mic, Paperclip } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageBubble } from "./MessageBubble";
 import { api } from "../../services/api";
@@ -11,18 +11,19 @@ import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { clsx } from "clsx";
 import Lenis from "lenis";
+import { BotAvatar } from "../../app/explore/components/BotAvatar";
+
 
 interface ChatInterfaceProps {
   bot: Bot;
 }
 
 export const ChatInterface = ({ bot }: ChatInterfaceProps) => {
-  const [messages, setMessages] = useState<Array<{ role: "user" | "assistant"; content: string }>>([
-    { role: "assistant", content: `Hi, I'm ${bot.name}. ${bot.description || "How can I help you today?"}` }
-  ]);
+  const [messages, setMessages] = useState<Array<{ role: "user" | "assistant"; content: string }>>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const lenisRef = useRef<Lenis | null>(null);
@@ -59,6 +60,33 @@ export const ChatInterface = ({ bot }: ChatInterfaceProps) => {
     };
   }, []);
 
+  // Fetch Chat History on mount
+  useEffect(() => {
+    const loadHistory = async () => {
+      try {
+        const data = await api.getChatHistory(bot.id);
+        if (data.history && data.history.length > 0) {
+          setMessages(data.history);
+        } else {
+          // Default greeting if no history
+          setMessages([
+            { role: "assistant", content: `Hi, I'm ${bot.name}. ${bot.description || "How can I help you today?"}` }
+          ]);
+        }
+      } catch (err) {
+        console.error("Failed to load history:", err);
+        // Fallback to greeting
+        setMessages([
+          { role: "assistant", content: `Hi, I'm ${bot.name}. ${bot.description || "How can I help you today?"}` }
+        ]);
+      } finally {
+        setIsLoadingHistory(false);
+      }
+    };
+
+    loadHistory();
+  }, [bot.id, bot.name, bot.description]);
+
   // Intelligent Auto-scroll on new messages
   useEffect(() => {
     if (lenisRef.current) {
@@ -89,6 +117,35 @@ export const ChatInterface = ({ bot }: ChatInterfaceProps) => {
           toast.error("Failed to copy link.");
         });
     }
+  };
+
+  const handleFreshSession = async () => {
+    if (!confirm("Are you sure you want to clear your chat history? This cannot be undone.")) return;
+    
+    try {
+      await api.clearChatHistory(bot.id);
+      setMessages([
+        { role: "assistant", content: `Hi, I'm ${bot.name}. ${bot.description || "How can I help you today?"}` }
+      ]);
+      toast.success("Started fresh session!");
+    } catch (err) {
+      console.error("Failed to clear history:", err);
+      toast.error("Failed to start fresh session.");
+    } finally {
+      setIsDropdownOpen(false);
+    }
+  };
+
+  const handleComingSoon = (feature: string) => {
+    toast.info(`${feature} coming soon! 🚀`, {
+      position: "bottom-center",
+      autoClose: 2000,
+      hideProgressBar: true,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      theme: "light",
+    });
   };
 
   const handleSend = async () => {
@@ -151,13 +208,9 @@ export const ChatInterface = ({ bot }: ChatInterfaceProps) => {
 
           <div className="flex items-center gap-3">
             <div className="relative group">
-              <div className="w-11 h-11 rounded-[1.25rem] bg-gradient-to-br from-orange-400 to-pink-500 p-0.5 shadow-lg group-hover:scale-105 transition-transform duration-300">
-                <div className="w-full h-full rounded-[1.1rem] bg-white overflow-hidden p-0.5">
-                  <img
-                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${bot.name}`}
-                    alt={bot.name}
-                    className="w-full h-full object-cover rounded-[1rem]"
-                  />
+              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 p-0.5 shadow-lg group-hover:scale-105 transition-transform duration-300">
+                <div className="w-full h-full rounded-full bg-white overflow-hidden">
+                  <BotAvatar bot={bot} className="w-full h-full" />
                 </div>
               </div>
               <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full shadow-sm" />
@@ -207,6 +260,13 @@ export const ChatInterface = ({ bot }: ChatInterfaceProps) => {
                     <Share2 size={16} />
                     <span className="font-semibold text-sm">Share Persona</span>
                   </div>
+                  <div 
+                     onClick={handleFreshSession}
+                     className="px-4 py-3 hover:bg-red-50 hover:text-red-600 text-gray-700 flex items-center gap-3 cursor-pointer transition-colors border-t border-gray-50"
+                  >
+                    <RefreshCcw size={16} />
+                    <span className="font-semibold text-sm">Fresh Session</span>
+                  </div>
                 </motion.div>
               </>
             )}
@@ -222,13 +282,20 @@ export const ChatInterface = ({ bot }: ChatInterfaceProps) => {
       >
         <div className="max-w-4xl mx-auto py-8">
           <AnimatePresence mode="popLayout">
-            {messages.map((msg, idx) => (
-              <MessageBubble
-                key={idx}
-                message={msg}
-                isStreaming={isStreaming && idx === messages.length - 1}
-              />
-            ))}
+            {isLoadingHistory ? (
+              <div className="flex flex-col items-center justify-center py-20 gap-4">
+                <div className="w-10 h-10 border-4 border-orange-500/20 border-t-orange-500 rounded-full animate-spin" />
+                <p className="text-gray-400 font-medium animate-pulse">Loading conversation...</p>
+              </div>
+            ) : (
+              messages.map((msg, idx) => (
+                <MessageBubble
+                  key={idx}
+                  message={msg}
+                  isStreaming={isStreaming && idx === messages.length - 1}
+                />
+              ))
+            )}
           </AnimatePresence>
         </div>
       </main>
@@ -242,7 +309,24 @@ export const ChatInterface = ({ bot }: ChatInterfaceProps) => {
 
             {/* The Floating Bubble */}
             <div className="relative bg-white/80 backdrop-blur-2xl rounded-[2.5rem] border border-white/50 shadow-[0_20px_50px_rgba(0,0,0,0.1)] p-2">
-              <div className="flex items-end gap-3 px-2">
+              <div className="flex items-end gap-2 px-2">
+                <div className="flex items-center gap-1 pb-1.5 pl-1">
+                  <button
+                    onClick={() => handleComingSoon("Voice talk")}
+                    className="w-10 h-10 rounded-2xl flex items-center justify-center text-gray-400 hover:text-orange-500 hover:bg-orange-50 transition-all active:scale-90"
+                    title="Voice Talk"
+                  >
+                    <Mic size={20} />
+                  </button>
+                  <button
+                    onClick={() => handleComingSoon("File upload")}
+                    className="w-10 h-10 rounded-2xl flex items-center justify-center text-gray-400 hover:text-orange-500 hover:bg-orange-50 transition-all active:scale-90"
+                    title="Upload File"
+                  >
+                    <Paperclip size={20} />
+                  </button>
+                </div>
+
                 <textarea
                   rows={1}
                   value={input}
@@ -254,7 +338,7 @@ export const ChatInterface = ({ bot }: ChatInterfaceProps) => {
                     }
                   }}
                   placeholder={`Ask ${bot.name} anything...`}
-                  className="flex-1 bg-transparent px-4 py-4 outline-none text-gray-800 resize-none max-h-48 scrollbar-hide text-[15px] font-medium placeholder:text-gray-400"
+                  className="flex-1 bg-transparent px-2 py-4 outline-none text-gray-800 resize-none max-h-48 scrollbar-hide text-[15px] font-medium placeholder:text-gray-400"
                 />
 
                 <div className="pb-1.5 pr-1.5">

@@ -157,8 +157,8 @@ export function Hero() {
                                     <Sparkles className="w-6 h-6 md:w-8 md:h-8" />
                                 </div>
                                 <div>
-                                    <div className="text-sm md:text-lg font-bold text-gray-900 truncate">Dr. Sarah Chen</div>
-                                    <div className="text-[10px] md:text-sm font-semibold text-gray-500">CS Professor @ MIT</div>
+                                    <div className="text-sm md:text-lg font-bold text-gray-900 truncate">Dr. Anjali Desai</div>
+                                    <div className="text-[10px] md:text-sm font-semibold text-gray-500">CS Professor @ IIT</div>
                                 </div>
                             </div>
                         </div>
@@ -168,7 +168,7 @@ export function Hero() {
                                     <MessageCircle className="w-6 h-6 md:w-8 md:h-8" />
                                 </div>
                                 <div>
-                                    <div className="text-sm md:text-lg font-bold text-gray-900 truncate">Alex Kumar</div>
+                                    <div className="text-sm md:text-lg font-bold text-gray-900 truncate">Vikram Singh</div>
                                     <div className="text-[10px] md:text-sm font-semibold text-gray-500">Senior Tech Lead</div>
                                 </div>
                             </div>

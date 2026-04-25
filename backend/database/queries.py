@@ -384,3 +384,20 @@ async def save_message(user_id: str, bot_id: str, role: str, content: str, token
     except Exception as e:
         logger.error(f"[DB] Failed to save message: {e}")
         return None
+
+async def clear_chat_history(user_id: str, bot_id: str, token: str = None) -> bool:
+    """Delete all chat history between a user and a specific bot."""
+    try:
+        client = get_authed_client(token) if token else get_supabase_client()
+        result = (
+            client
+            .table("messages")
+            .delete()
+            .eq("user_id", user_id)
+            .eq("bot_id", bot_id)
+            .execute()
+        )
+        return True
+    except Exception as e:
+        logger.error(f"[DB] Failed to clear chat history: {e}")
+        return False

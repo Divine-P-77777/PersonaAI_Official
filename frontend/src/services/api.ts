@@ -90,6 +90,12 @@ class ApiService {
     return this.request<Bot>("/bots/", "POST", data);
   }
 
+  async uploadBotAvatar(botId: string, file: File): Promise<Bot> {
+    const formData = new FormData();
+    formData.append("file", file);
+    return this.request<Bot>(`/bots/${botId}/avatar`, "POST", formData, true);
+  }
+
   async updateBot(botId: string, data: Partial<Bot>): Promise<Bot> {
     return this.request<Bot>(`/bots/${botId}`, "PUT", data);
   }
@@ -215,6 +221,14 @@ class ApiService {
 
   async deleteDataSourcesBulk(sourceIds: string[]): Promise<{status: string, message: string}> {
     return this.request<{status: string, message: string}>("/ingestion/sources/bulk", "DELETE", sourceIds);
+  }
+
+  async getChatHistory(botId: string): Promise<{ bot_id: string; history: Array<{ role: "user" | "assistant"; content: string }> }> {
+    return this.request<{ bot_id: string; history: Array<{ role: "user" | "assistant"; content: string }> }>(`/chat/${botId}/history`);
+  }
+
+  async clearChatHistory(botId: string): Promise<{ status: string; message: string }> {
+    return this.request<{ status: string; message: string }>(`/chat/${botId}/history`, "DELETE");
   }
 
   // Chat (SSE Streaming)

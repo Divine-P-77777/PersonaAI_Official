@@ -19,7 +19,10 @@ import {
 import { api } from "../../services/api";
 import { Bot } from "../../types";
 import Link from 'next/link';
+import { BotAvatar } from "./components/BotAvatar";
 import { toast } from "react-toastify";
+
+
 
 export default function ExplorePage() {
   const [bots, setBots] = useState<Bot[]>([]);
@@ -211,28 +214,9 @@ export default function ExplorePage() {
 
                     {/* Bot Visual Section */}
                     <div className="relative mb-6 pt-2">
-                      <div className="w-20 h-20 rounded-[2.2rem] bg-gradient-to-br from-gray-50 to-white p-1 shadow-2xl transition-transform duration-500 group-hover:scale-110">
-                        <div className="w-full h-full rounded-[1.8rem] bg-white p-1 overflow-hidden ring-1 ring-gray-100">
-                          {(() => {
-                            const realAvatar = bot.avatar_url || bot.owner?.avatar_url;
-                            return realAvatar ? (
-                              <img
-                                src={realAvatar}
-                                alt={bot.name}
-                                className="w-full h-full object-cover rounded-[1.5rem]"
-                                onError={(e) => {
-                                  // If real image fails to load, swap to cartoon fallback
-                                  (e.currentTarget as HTMLImageElement).src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${bot.name}`;
-                                }}
-                              />
-                            ) : (
-                              <img
-                                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${bot.name}`}
-                                alt={bot.name}
-                                className="w-full h-full object-cover rounded-[1.5rem]"
-                              />
-                            );
-                          })()}
+                      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-gray-50 to-white p-0.5 shadow-2xl transition-transform duration-500 group-hover:scale-110">
+                        <div className="w-full h-full rounded-full bg-white overflow-hidden">
+                          <BotAvatar bot={bot} className="w-full h-full" />
                         </div>
                       </div>
 

@@ -7,15 +7,16 @@ from langchain_groq import ChatGroq
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
 from backend.core.rate_limiter import limiter
-from backend.core.redis_client import get_cache, set_cache
-
+from backend.core.redis_client import get_cache, set_cache, invalidate_cache
 from backend.core.config import get_settings
 from backend.core.security import get_current_user
 from backend.database.queries import (
     get_bot_by_id, 
     get_recent_messages, 
-    save_message
+    save_message,
+    clear_chat_history
 )
+
 from backend.rag.retrieval import retrieve_similar_chunks
 from backend.rag.context_builder import build_context
 
@@ -128,6 +129,9 @@ async def chat_with_bot(
     # Maintain rolling window size
     history = history[-5:]
     await set_cache(cache_key, history, expire=3600)
+    
+    # Invalidate full history cache so the next GET /history call reflects this new message
+    await invalidate_cache(f"full_history:{bot_id}:{user['id']}")
 
     # 6. Stream response via langchain_groq ChatGroq
     async def generate():
@@ -165,12 +169,15 @@ async def chat_with_bot(
                     token=user.get("_token")
                 )
                 # Update redis cache with AI response
-                history.append({
+                new_history = history + [{
                     "role": "assistant",
                     "content": full_response
-                })
-                history = history[-5:]
-                await set_cache(cache_key, history, expire=3600)
+                }]
+                new_history = new_history[-5:]
+                await set_cache(cache_key, new_history, expire=3600)
+                
+                # Invalidate full history cache
+                await invalidate_cache(f"full_history:{bot_id}:{user['id']}")
             
             logger.info(f"[CHAT] ✅ Stream complete & history saved (and cached) for bot {bot_id}")
 
@@ -211,7 +218,47 @@ async def get_chat_history(
             detail="This persona is currently paused by the author."
         )
 
-    return {"bot_id": bot_id, "history": []}
+    # Try Redis first for the full history
+    full_cache_key = f"full_history:{bot_id}:{user['id']}"
+    cached_history = await get_cache(full_cache_key)
+    if cached_history is not None:
+        logger.info(f"[CHAT] ⚡ Full History Cache HIT for {full_cache_key}")
+        return {"bot_id": bot_id, "history": cached_history}
+
+    logger.info(f"[CHAT] Full History Cache MISS for {full_cache_key}. Querying Supabase...")
+    history = await get_recent_messages(
+        user_id=user["id"], 
+        bot_id=bot_id, 
+        limit=50, 
+        token=user.get("_token")
+    )
+    
+    # Cache the full history (expire in 1 hour)
+    await set_cache(full_cache_key, history, expire=3600)
+    
+    return {"bot_id": bot_id, "history": history}
+
+@router.delete("/{bot_id}/history")
+async def delete_chat_history_endpoint(
+    bot_id: str,
+    user: dict = Depends(get_current_user),
+):
+    """Delete chat history for a bot session."""
+    # 1. Clear database
+    success = await clear_chat_history(
+        user_id=user["id"], 
+        bot_id=bot_id, 
+        token=user.get("_token")
+    )
+    
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to clear chat history")
+
+    # 2. Invalidate redis caches
+    await invalidate_cache(f"chat_history:{bot_id}:{user['id']}")
+    await invalidate_cache(f"full_history:{bot_id}:{user['id']}")
+    
+    return {"status": "success", "message": "Chat history cleared"}
 
 
 @router.get("/{bot_id}/debug-retrieval")
