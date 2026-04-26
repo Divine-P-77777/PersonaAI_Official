@@ -6,6 +6,7 @@ All processors return `str` — the downstream chunker is type-agnostic.
 """
 
 from __future__ import annotations
+from typing import Optional
 
 from backend.database.models import SourceType
 
@@ -21,6 +22,7 @@ async def extract_text(
     content:  str | None = None,
     url:      str | None = None,
     raw_bytes: bytes | None = None,
+    on_progress: Optional[callable] = None,
 ) -> str:
     """
     Dispatch to the correct processor based on source_type.
@@ -37,7 +39,7 @@ async def extract_text(
     if source_type == SourceType.pdf:
         if not raw_bytes:
             raise ValueError("raw_bytes required for pdf source type")
-        return await extract_text_from_pdf(raw_bytes)
+        return await extract_text_from_pdf(raw_bytes, on_progress=on_progress)
 
     if source_type == SourceType.image:
         if not raw_bytes:

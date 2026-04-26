@@ -18,7 +18,7 @@ export interface IngestionUpdate {
   status: "pending" | "processing" | "completed" | "failed";
   total_files: number;
   processed_files: number;
-  error_log: Array<{ source_id?: string; title?: string; error: string }>;
+  error_log: Array<{ source_id?: string; title?: string; error?: string; note?: string }>;
   sources: IngestionSourceStatus[];
   error?: string; // WebSocket-level error
 }
@@ -170,6 +170,7 @@ class ApiService {
       };
 
       ws.onmessage = (event) => {
+        if (isClosed) return;
         try {
           const data = JSON.parse(event.data) as IngestionUpdate;
 

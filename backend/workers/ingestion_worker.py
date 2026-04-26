@@ -54,13 +54,11 @@ async def process_batch(
             return
 
         total_files = len(sources)
-        error_log: list[dict] = []
+        current_errors: list[dict] = []
         logger.info(f"[WORKER] 📦 {total_files} source(s) in batch {batch_id}")
 
         # ─────────────────────────────────────────────────────────────────────
         # PASS 1 — Concurrent text extraction and chunking
-        # FIX: Each source is marked 'processing' BEFORE extraction starts.
-        # This way the WebSocket immediately shows the item as active.
         # ─────────────────────────────────────────────────────────────────────
         semaphore = asyncio.Semaphore(5)
         source_chunks: dict[str, list[str]] = {}  # source_id → chunks
@@ -71,7 +69,6 @@ async def process_batch(
             source_title = source.get("title", source_id)
 
             async with semaphore:
-                # FIX 1: Mark as 'processing' immediately so WebSocket sees activity
                 try:
                     await update_data_source_status(
                         source_id,
@@ -83,11 +80,19 @@ async def process_batch(
 
                 try:
                     raw_bytes = file_payloads.get(source_id)
-                    if raw_bytes:
-                        logger.info(
-                            f"[WORKER P1] [{source_title}] "
-                            f"Using memory-cached bytes ({len(raw_bytes)} bytes)"
-                        )
+                    
+                    async def on_page_progress(current: int, total: int):
+                        # Update batch status with a 'note' (preserving current errors)
+                        try:
+                            await update_batch_status(
+                                batch_id,
+                                {
+                                    "error_log": current_errors + [{"note": f"Extracting {source_title}: Page {current}/{total}..."}]
+                                },
+                                token=token
+                            )
+                        except Exception:
+                            pass
 
                     chunks = await extract_and_chunk_source(
                         source_id=source_id,
@@ -96,16 +101,14 @@ async def process_batch(
                         url=source.get("url"),
                         raw_bytes=raw_bytes,
                         token=token,
+                        on_progress=on_page_progress if source_type == SourceType.pdf else None
                     )
                     source_chunks[source_id] = chunks
-                    logger.info(
-                        f"[WORKER P1] ✂️  [{source_title}] → {len(chunks)} chunks"
-                    )
+                    logger.info(f"[WORKER P1] ✂️  [{source_title}] → {len(chunks)} chunks")
 
                 except Exception as e:
                     err_msg = str(e) or type(e).__name__
-                    full_tb = traceback.format_exc()
-                    error_log.append({
+                    current_errors.append({
                         "source_id": source_id,
                         "title": source_title,
                         "error": err_msg,
@@ -117,17 +120,17 @@ async def process_batch(
                             error=err_msg,
                             token=token,
                         )
+                        # Push actual error to batch log immediately
+                        await update_batch_status(
+                            batch_id,
+                            {"error_log": current_errors},
+                            token=token
+                        )
                     except Exception:
                         pass
                     logger.error(f"[WORKER P1] ❌ [{source_title}] Extract failed: {err_msg}")
-                    logger.debug(f"[WORKER P1] Traceback:\n{full_tb}")
 
         await asyncio.gather(*[_extract_source(s) for s in sources])
-
-        logger.info(
-            f"[WORKER P1] 🏁 Extract phase done — "
-            f"{len(source_chunks)}/{total_files} sources succeeded"
-        )
 
         if not source_chunks:
             await update_batch_status(
@@ -135,7 +138,7 @@ async def process_batch(
                 {
                     "status": IngestionStatus.failed,
                     "processed_files": 0,
-                    "error_log": error_log,
+                    "error_log": current_errors,
                     "updated_at": datetime.utcnow().isoformat(),
                 },
                 token=token,
@@ -144,13 +147,9 @@ async def process_batch(
 
         # ─────────────────────────────────────────────────────────────────────
         # PASS 2 — Single batch embed in ONE Nomic API call
-        # FIX 2: This call can take 30–90s. Since it's a synchronous block,
-        # we can't push updates during it. But we pre-mark all eligible sources
-        # as 'processing' (already done in Pass 1) and set a batch-level
-        # 'embedding' message so the WS clients know something is happening.
         # ─────────────────────────────────────────────────────────────────────
         all_texts: list[str] = []
-        chunk_slices: dict[str, tuple[int, int]] = {}  # source_id → (start_idx, end_idx)
+        chunk_slices: dict[str, tuple[int, int]] = {}
 
         for source_id, chunks in source_chunks.items():
             start = len(all_texts)
@@ -160,35 +159,24 @@ async def process_batch(
         total_chunks = len(all_texts)
         num_sources_to_embed = len(source_chunks)
 
-        # Signal to the WS that embedding is running (still 0 processed but not stalled)
-        # We use a special field note in error_log that the frontend can detect
+        # Signal embedding start (preserving errors)
         await update_batch_status(
             batch_id,
             {
-                "processed_files": 0,
-                "error_log": [{"note": f"Embedding {total_chunks} text chunks across {num_sources_to_embed} documents..."}],
+                "error_log": current_errors + [{"note": f"Embedding {total_chunks} text chunks across {num_sources_to_embed} documents..."}],
             },
             token=token,
         )
 
-        logger.info(
-            f"[WORKER P2] 🧠 Batch-embedding {total_chunks} total chunks "
-            f"from {num_sources_to_embed} sources in ONE API call..."
-        )
-
         embeddings_manager = get_embeddings()
-        # CRITICAL FIX: embed_documents() is synchronous (LangChain/Nomic).
-        # Running it directly in an async function blocks the entire event loop
-        # for 30-90s, starving the WebSocket handler and preventing progress updates.
-        # asyncio.to_thread() offloads it to a thread pool so the event loop stays free.
         all_embeddings = await asyncio.to_thread(
             embeddings_manager.embed_documents, all_texts
         )
 
-        # Clear the embedding note now that we're done
+        # Clear notes but keep errors
         await update_batch_status(
             batch_id,
-            {"error_log": []},
+            {"error_log": current_errors},
             token=token,
         )
 
@@ -296,7 +284,7 @@ async def process_batch(
             {
                 "status": final_status,
                 "processed_files": processed_files,
-                "error_log": error_log,
+                "error_log": current_errors,
                 "updated_at": datetime.utcnow().isoformat(),
             },
             token=token,

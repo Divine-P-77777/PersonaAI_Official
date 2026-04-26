@@ -1,4 +1,5 @@
 import logging
+import asyncio
 import traceback
 import uuid
 from datetime import datetime
@@ -24,6 +25,7 @@ async def extract_and_chunk_source(
     url: Optional[str] = None,
     raw_bytes: Optional[bytes] = None,
     token: Optional[str] = None,
+    on_progress: Optional[callable] = None,
 ) -> list[str]:
     """Pass 1 of 3: Extract raw text from a source and split it into chunks.
     
@@ -67,6 +69,7 @@ async def extract_and_chunk_source(
         content=content,
         url=url,
         raw_bytes=raw_bytes,
+        on_progress=on_progress,
     )
 
     if not extracted_text.strip():
@@ -168,7 +171,7 @@ async def ingest_source(
         # Pass 2: Embed (single source, single API call)
         logger.info(f"[INGEST] Generating embeddings for {len(chunks)} chunks (source {source_id})...")
         embeddings_manager = get_embeddings()
-        embeddings = embeddings_manager.embed_documents(chunks)
+        embeddings = await asyncio.to_thread(embeddings_manager.embed_documents, chunks)
         logger.info(f"[INGEST] Embeddings generated (dim={len(embeddings[0])} each)")
 
         # Pass 3: Store

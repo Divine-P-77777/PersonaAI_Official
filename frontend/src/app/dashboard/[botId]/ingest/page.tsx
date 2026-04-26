@@ -45,7 +45,7 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
   const [batchId, setBatchId] = useState<string | null>(null)
   const [batchProgress, setBatchProgress] = useState(0)
   const [batchStatus, setBatchStatus] = useState<"pending" | "processing" | "completed" | "failed">("pending")
-  const pollRef = useRef<NodeJS.Timeout | null>(null)
+  const pollRef = useRef<(() => void) | null>(null)
   const { showSuccess, showError } = useToast()
   const router = useRouter()
   const [compressingId, setCompressingId] = useState<string | null>(null)
@@ -83,13 +83,12 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
     return () => {
       if (pollRef.current) {
         try {
-          // If it's a websocket, close it
-          if (typeof (pollRef.current as any).close === 'function') {
-            (pollRef.current as any).close();
-          } else {
-            clearInterval(pollRef.current as any);
-          }
-        } catch (e) {}
+          // pollRef.current is the cleanup function returned by api.connectIngestionWebSocket
+          pollRef.current();
+          pollRef.current = null;
+        } catch (e) {
+          console.error("Failed to cleanup ingestion polling:", e);
+        }
       }
     };
   }, []);
@@ -154,20 +153,25 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
           const sourceStatuses: Array<{ status: string }> = batch.sources || [];
           const effectiveTotal = Math.max(total, sourceStatuses.length, 1);
           
+          const errorLog = batch.error_log || [];
+          const noteEntry = errorLog.find(e => e.note);
+          const currentNote = noteEntry?.note || null;
+          
           let weightedProgress = 0;
           for (const src of sourceStatuses) {
             if (src.status === "completed" || src.status === "failed") {
               weightedProgress += 1.0;
             } else if (src.status === "processing") {
-              weightedProgress += 0.5;
+              // Try to be granular if we have a note like "Page 5/20"
+              const noteMatch = currentNote?.match(/Page (\d+)\/(\d+)/);
+              if (noteMatch) {
+                const current = parseInt(noteMatch[1]);
+                const total = parseInt(noteMatch[2]);
+                weightedProgress += (current / total) * 0.9; // 0.9 because we still need embedding phase
+              } else {
+                weightedProgress += 0.5;
+              }
             }
-          }
-          
-          const errorLog = batch.error_log || [];
-          const isEmbedding = errorLog.some((e: any) => e.note);
-          
-          if (isEmbedding && weightedProgress < effectiveTotal) {
-            weightedProgress = Math.max(weightedProgress, effectiveTotal * 0.65);
           }
           
           const pct = Math.min(
@@ -184,8 +188,9 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
             setPhaseLabel("All sources embedded into knowledge base! ✅");
           } else if (batch.status === "failed") {
             setPhaseLabel("Some sources failed during processing.");
-          } else if (isEmbedding) {
-            setPhaseLabel("🧠 Generating AI embeddings — this is the slowest step...");
+          } else if (currentNote) {
+            // Display real-time notes from the worker (OCR page progress, etc.)
+            setPhaseLabel(currentNote);
           } else if (sourceStatuses.some((s: any) => s.status === "processing")) {
             const processingCount = sourceStatuses.filter((s: any) => s.status === "processing").length;
             setPhaseLabel(`📄 Extracting & chunking ${processingCount} document${processingCount > 1 ? 's' : ''}...`);
@@ -214,7 +219,7 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
         }
       );
 
-      pollRef.current = cleanup as any;
+      pollRef.current = cleanup;
     } catch (err) {
       console.error("Failed to establish WebSocket:", err);
       showError("Connection failed for live progress.");

@@ -119,10 +119,10 @@ export default function OnboardingPage() {
               </div>
               
               <h1 className="text-5xl md:text-7xl font-black tracking-tight mb-6 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 bg-clip-text text-transparent">
-                Choose your path
+                Who are you?
               </h1>
               <p className="text-gray-500 text-xl mb-16 max-w-xl mx-auto leading-relaxed font-medium">
-                Connect with the world's leading minds or scale your own wisdom through AI.
+                Are you a student looking to learn, or a mentor ready to share?
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
@@ -135,9 +135,9 @@ export default function OnboardingPage() {
                     <div className="w-16 h-16 rounded-2xl bg-orange-50 flex items-center justify-center mb-8 group-hover:bg-orange-500 group-hover:text-white transition-all shadow-sm">
                       <User size={32} />
                     </div>
-                    <h3 className="text-2xl font-black mb-3 tracking-tight text-gray-900">Explorer</h3>
+                    <h3 className="text-2xl font-black mb-3 tracking-tight text-gray-900">Student</h3>
                     <p className="text-gray-500 text-lg leading-relaxed font-medium">
-                      Interact with elite AI personas and gain insights from industry leaders.
+                      Learn from experienced mentors and their AI personas.
                     </p>
                   </div>
                   <div className="absolute top-0 right-0 p-8 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">
@@ -154,9 +154,9 @@ export default function OnboardingPage() {
                     <div className="w-16 h-16 rounded-2xl bg-pink-50 flex items-center justify-center mb-8 group-hover:bg-pink-500 group-hover:text-white transition-all shadow-sm">
                       <Briefcase size={32} />
                     </div>
-                    <h3 className="text-2xl font-black mb-3 tracking-tight text-gray-900">Creator</h3>
+                    <h3 className="text-2xl font-black mb-3 tracking-tight text-gray-900">Mentor</h3>
                     <p className="text-gray-500 text-lg leading-relaxed font-medium">
-                      Build your AI persona. Share your knowledge and scale your impact globally.
+                      Share your knowledge and create an AI persona to help students.
                     </p>
                   </div>
                   <div className="absolute top-0 right-0 p-8 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">

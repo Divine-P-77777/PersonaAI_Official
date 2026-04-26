@@ -110,19 +110,45 @@ export function DataSources({ formData, updateFormData }: DataSourcesProps) {
         }
     };
 
+    const handleUrlChange = (val: string) => {
+        // Real-time cleanup for common paste errors (e.g. "https:// https://google.com")
+        let cleaned = val;
+        const protocolRegex = /^(https?:\/\/)\s*(https?:\/\/)/i;
+        if (protocolRegex.test(cleaned)) {
+            cleaned = cleaned.replace(protocolRegex, '$2');
+        }
+        setLinkInput({ ...linkInput, url: cleaned });
+    };
+
     const addLinkSource = (type: 'web_link' | 'video_link') => {
         if (linkInput.title && linkInput.url) {
+            // Normalize URL: remove duplicate https://, handle missing protocol, and trim whitespace
+            let normalizedUrl = linkInput.url.trim();
+            
+            // Remove redundant protocols (e.g., "https:// https://google.com")
+            // This regex finds occurrences of http(s):// followed by optional spaces and another http(s)://
+            const protocolRegex = /^(https?:\/\/)\s*(https?:\/\/)/i;
+            while (protocolRegex.test(normalizedUrl)) {
+                normalizedUrl = normalizedUrl.replace(protocolRegex, '$2');
+            }
+
+            // Ensure it starts with a protocol
+            if (!/^https?:\/\//i.test(normalizedUrl)) {
+                normalizedUrl = `https://${normalizedUrl}`;
+            }
+
             updateFormData({
                 dataSources: [
                     ...formData.dataSources,
                     {
                         type,
                         title: linkInput.title,
-                        url: linkInput.url
+                        url: normalizedUrl
                     }
                 ]
             });
             setLinkInput({ title: '', url: '' });
+            setError(null);
         }
     };
 
@@ -391,7 +417,7 @@ export function DataSources({ formData, updateFormData }: DataSourcesProps) {
                             <input
                                 type="url"
                                 value={linkInput.url}
-                                onChange={(e) => setLinkInput({ ...linkInput, url: e.target.value })}
+                                onChange={(e) => handleUrlChange(e.target.value)}
                                 placeholder="https://example.com"
                                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-orange-400 focus:ring-4 focus:ring-orange-100 outline-none transition-all text-gray-900 placeholder-gray-500"
                             />
@@ -448,7 +474,7 @@ export function DataSources({ formData, updateFormData }: DataSourcesProps) {
                             <input
                                 type="url"
                                 value={linkInput.url}
-                                onChange={(e) => setLinkInput({ ...linkInput, url: e.target.value })}
+                                onChange={(e) => handleUrlChange(e.target.value)}
                                 placeholder="YouTube or video URL"
                                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-orange-400 focus:ring-4 focus:ring-orange-100 outline-none transition-all text-gray-900 placeholder-gray-500"
                             />

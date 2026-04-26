@@ -1,5 +1,6 @@
 import base64
 import logging
+import asyncio
 import pytesseract
 import traceback
 from typing import Optional
@@ -12,7 +13,7 @@ celery_app = get_celery_app()
 async def perform_ocr_with_fallback(
     img_bytes: bytes, 
     source_id: str = "unknown",
-    timeout: float = 30.0  # Increased for Render Free Tier (from 5s to 30s)
+    timeout: float = 60.0  # Increased to 60s to handle larger PDFs/Images
 ) -> str:
     """
     Attempt to offload OCR to the Celery worker.
@@ -31,9 +32,8 @@ async def perform_ocr_with_fallback(
             args=[b64_str]
         )
         
-        # Wait for the result from the worker (with timeout)
-        # Using .get() for the result; task.status will be tracked
-        text_result = task.get(timeout=timeout)
+        # Wait for the result from the worker (offloaded to thread to avoid blocking event loop)
+        text_result = await asyncio.to_thread(task.get, timeout=timeout)
         
         if text_result and not str(text_result).startswith("ERROR:"):
             logger.info(f"[OCR_FALLBACK] ✅ Worker OCR successful for source {source_id}")
@@ -50,17 +50,28 @@ async def perform_ocr_with_fallback(
     try:
         logger.info(f"[OCR_FALLBACK] 📥 Running LOCAL Tesseract OCR for source {source_id}...")
         
-        # Import local processing logic (already in backend/rag/processors/image_processor.py)
-        # We perform it directly here to ensure local extraction is synchronous and guaranteed.
+        # ── Cross-Platform Binary Path Correction ──
+        # If the path in settings doesn't exist, it's likely a Windows path in a Linux env (or vice versa).
+        # We try to use the system 'tesseract' command instead.
+        import os
+        from backend.core.config import get_settings
+        settings = get_settings()
+        
+        current_cmd = pytesseract.pytesseract.tesseract_cmd
+        if not os.path.exists(current_cmd) and current_cmd != "tesseract":
+            logger.warning(f"[OCR_FALLBACK] ⚠️ Configured Tesseract path '{current_cmd}' NOT FOUND. Trying system default 'tesseract'...")
+            pytesseract.pytesseract.tesseract_cmd = "tesseract"
+
         import io
         from PIL import Image
         
         img = Image.open(io.BytesIO(img_bytes))
         img = img.convert("RGB")
-        text = pytesseract.image_to_string(img)
+        # Offload CPU-intensive Tesseract call to thread pool
+        text = await asyncio.to_thread(pytesseract.image_to_string, img)
         
         if text.strip():
-            logger.info(f"[OCR_FALLBACK] 🏁 LOCAL OCR successful for source {source_id}")
+            logger.info(f"[OCR_FALLBACK] 🏁 LOCAL OCR successful for source {source_id} ({len(text)} chars)")
             return text
         else:
             logger.warning(f"[OCR_FALLBACK] ⚠️ LOCAL OCR resulted in empty text for source {source_id}")
@@ -69,6 +80,6 @@ async def perform_ocr_with_fallback(
     except Exception as local_err:
         tb = traceback.format_exc()
         logger.error(f"[OCR_FALLBACK] ❌ LOCAL OCR also failed for source {source_id}: {str(local_err)}")
-        logger.debug(f"Local OCR Traceback:\n{tb}")
-        # If even local fails, we bubble up the error or return empty
+        # Restore the original command if we changed it, just in case
+        pytesseract.pytesseract.tesseract_cmd = settings.TESSERACT_PATH
         raise RuntimeError(f"OCR failed for source {source_id} (both Worker and Local attempts): {local_err}")

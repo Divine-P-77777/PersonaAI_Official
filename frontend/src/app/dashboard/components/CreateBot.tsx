@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Check, ArrowRight, ArrowLeft, User, Sparkles, Upload, Eye, X } from 'lucide-react';
 import { BasicInfo } from './BasicInfo';
 import { PersonaConfig } from './PersonaConfig';
@@ -74,6 +74,21 @@ export function CreateBot() {
         dataSources: []
     });
 
+    // Auto-populate avatar from user profile if available
+    useEffect(() => {
+        const fetchUserProfile = async () => {
+            try {
+                const user = await api.getCurrentUser();
+                if (user.avatar_url) {
+                    setFormData(prev => ({ ...prev, avatarUrl: user.avatar_url || "" }));
+                }
+            } catch (err) {
+                console.error("Failed to fetch user profile for default avatar:", err);
+            }
+        };
+        fetchUserProfile();
+    }, []);
+
     const updateFormData = (data: Partial<BotFormData>) => {
         setFormData(prev => ({ ...prev, ...data }));
     };
@@ -133,6 +148,19 @@ export function CreateBot() {
             });
 
             const botId = botResponse.id;
+
+            // 1.5 Upload Avatar if present (Fix: Bot avatar was ignored during creation)
+            if (formData.avatarUrl && formData.avatarUrl.startsWith("data:")) {
+                try {
+                    const response = await fetch(formData.avatarUrl);
+                    const blob = await response.blob();
+                    const file = new File([blob], "avatar.jpg", { type: "image/jpeg" });
+                    await api.uploadBotAvatar(botId, file);
+                } catch (avatarErr) {
+                    console.error("Failed to upload bot avatar during creation:", avatarErr);
+                    // We don't fail the whole process if just the avatar fails
+                }
+            }
 
             // 2. Handle Data Sources (if any)
             if (formData.dataSources.length > 0) {
@@ -259,9 +287,9 @@ export function CreateBot() {
                         <Review formData={formData} />
                     )}
                     {currentStep === 5 && (createdBotId || batchId) && (
-                        <IngestionProgress 
-                            botId={createdBotId || ''} 
-                            batchId={batchId} 
+                        <IngestionProgress
+                            botId={createdBotId || ''}
+                            batchId={batchId}
                         />
                     )}
                 </div>

@@ -90,24 +90,24 @@ async def chat_with_bot(
 
     # 4. Fetch recent chat history for context (Top 5 messages)
     cache_key = f"chat_history:{bot_id}:{user['id']}"
-    history = await get_cache(cache_key)
+    llm_history = await get_cache(cache_key)
     
-    if history is None:
+    if llm_history is None:
         logger.info(f"[CHAT] Cache MISS for {cache_key}. Querying Supabase...")
-        history = await get_recent_messages(
+        llm_history = await get_recent_messages(
             user_id=user["id"], 
             bot_id=bot_id, 
             limit=5, 
             token=user.get("_token")
         )
         # Store in redis with an expiration (e.g. 1 hour of inactivity)
-        await set_cache(cache_key, history, expire=3600)
+        await set_cache(cache_key, llm_history, expire=3600)
     else:
         logger.info(f"[CHAT] ⚡ Cache HIT for {cache_key}. Using fast Redis memory.")
     
     # Format history for LangChain
     history_messages = []
-    for msg in history:
+    for msg in llm_history:
         if msg["role"] == "user":
             history_messages.append(HumanMessage(content=msg["content"]))
         else:
@@ -122,13 +122,13 @@ async def chat_with_bot(
         token=user.get("_token")
     )
     # Optimistically append to cache immediately
-    history.append({
+    llm_history.append({
         "role": "user",
         "content": user_message
     })
     # Maintain rolling window size
-    history = history[-5:]
-    await set_cache(cache_key, history, expire=3600)
+    llm_history = llm_history[-5:]
+    await set_cache(cache_key, llm_history, expire=3600)
     
     # Invalidate full history cache so the next GET /history call reflects this new message
     await invalidate_cache(f"full_history:{bot_id}:{user['id']}")
@@ -169,12 +169,12 @@ async def chat_with_bot(
                     token=user.get("_token")
                 )
                 # Update redis cache with AI response
-                new_history = history + [{
+                final_history = llm_history + [{
                     "role": "assistant",
                     "content": full_response
                 }]
-                new_history = new_history[-5:]
-                await set_cache(cache_key, new_history, expire=3600)
+                final_history = final_history[-5:]
+                await set_cache(cache_key, final_history, expire=3600)
                 
                 # Invalidate full history cache
                 await invalidate_cache(f"full_history:{bot_id}:{user['id']}")
@@ -226,17 +226,19 @@ async def get_chat_history(
         return {"bot_id": bot_id, "history": cached_history}
 
     logger.info(f"[CHAT] Full History Cache MISS for {full_cache_key}. Querying Supabase...")
-    history = await get_recent_messages(
+    full_history = await get_recent_messages(
         user_id=user["id"], 
         bot_id=bot_id, 
         limit=50, 
         token=user.get("_token")
     )
     
-    # Cache the full history (expire in 1 hour)
-    await set_cache(full_cache_key, history, expire=3600)
+    logger.info(f"[CHAT] Retrieved {len(full_history)} messages from Supabase for history.")
     
-    return {"bot_id": bot_id, "history": history}
+    # Cache the full history (expire in 1 hour)
+    await set_cache(full_cache_key, full_history, expire=3600)
+    
+    return {"bot_id": bot_id, "history": full_history}
 
 @router.delete("/{bot_id}/history")
 async def delete_chat_history_endpoint(
