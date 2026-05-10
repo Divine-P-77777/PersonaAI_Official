@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { api } from "../../../services/api";
 import { Bot } from "../../../types";
-import { ChatInterface } from "../../../components/chat/ChatInterface";
+import { ChatInterface } from "../components/ChatInterface";
 import { motion } from "framer-motion";
 import { Loader2, ShieldAlert } from "lucide-react";
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";

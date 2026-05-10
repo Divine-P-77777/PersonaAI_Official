@@ -1,17 +1,18 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useRef, useEffect, useLayoutEffect } from "react";
 import { Send, Share2, ArrowLeft, MoreVertical, ShieldCheck, User, RefreshCcw, Mic, Paperclip } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageBubble } from "./MessageBubble";
-import { api } from "../../services/api";
-import { Bot } from "../../types";
-import Link from "next/link";
+import { api } from "../../../services/api";
+import { Bot } from "../../../types";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { clsx } from "clsx";
 import Lenis from "lenis";
-import { BotAvatar } from "../../app/explore/components/BotAvatar";
+import { BotAvatar } from "../../explore/components/BotAvatar";
+import { Radio } from 'lucide-react';
 
 
 interface ChatInterfaceProps {
@@ -94,7 +95,7 @@ export const ChatInterface = ({ bot }: ChatInterfaceProps) => {
       const timer = setTimeout(() => {
         lenisRef.current?.scrollTo("bottom", {
           duration: isStreaming ? 1.0 : 0.4,
-          lock: true, 
+          lock: true,
         });
       }, 16);
       return () => clearTimeout(timer);
@@ -121,7 +122,7 @@ export const ChatInterface = ({ bot }: ChatInterfaceProps) => {
 
   const handleFreshSession = async () => {
     if (!confirm("Are you sure you want to clear your chat history? This cannot be undone.")) return;
-    
+
     try {
       await api.clearChatHistory(bot.id);
       setMessages([
@@ -137,7 +138,7 @@ export const ChatInterface = ({ bot }: ChatInterfaceProps) => {
   };
 
   const handleComingSoon = (feature: string) => {
-    toast.info(`${feature} coming soon! 🚀`, {
+    toast.info(`${feature} coming soon! `, {
       position: "bottom-center",
       autoClose: 2000,
       hideProgressBar: true,
@@ -154,10 +155,10 @@ export const ChatInterface = ({ bot }: ChatInterfaceProps) => {
     const userMessage = input.trim();
     setInput("");
     setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
-    
+
     // Immediate scroll to show the user message
     lenisRef.current?.scrollTo("bottom", { duration: 0.4 });
-    
+
     setIsStreaming(true);
 
     // Initial assistant message for streaming
@@ -192,7 +193,7 @@ export const ChatInterface = ({ bot }: ChatInterfaceProps) => {
   };
 
   return (
-    <div 
+    <div
       data-lenis-prevent
       className="flex flex-col h-screen bg-zinc-50 overflow-hidden relative"
     >
@@ -231,20 +232,20 @@ export const ChatInterface = ({ bot }: ChatInterfaceProps) => {
         </div>
 
         <div className="flex items-center gap-2 relative">
-          <button 
-             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-             className="p-3 rounded-2xl hover:bg-gray-100 text-gray-400 transition-all active:scale-95 z-50 relative"
+          <button
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            className="p-3 rounded-2xl hover:bg-gray-100 text-gray-400 transition-all active:scale-95 z-50 relative"
           >
             <MoreVertical size={18} />
           </button>
-          
+
           <AnimatePresence>
             {isDropdownOpen && (
               <>
                 {/* Invisible overlay for click-outside to close */}
-                <div 
-                  className="fixed inset-0 z-40" 
-                  onClick={() => setIsDropdownOpen(false)} 
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setIsDropdownOpen(false)}
                 />
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -253,20 +254,22 @@ export const ChatInterface = ({ bot }: ChatInterfaceProps) => {
                   transition={{ duration: 0.15 }}
                   className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-100 shadow-xl rounded-2xl overflow-hidden py-1 z-50"
                 >
-                  <div 
-                     onClick={() => { handleShare(); setIsDropdownOpen(false); }}
-                     className="px-4 py-3 hover:bg-orange-50 hover:text-orange-600 text-gray-700 flex items-center gap-3 cursor-pointer transition-colors"
+                  <div
+                    onClick={() => { handleShare(); setIsDropdownOpen(false); }}
+                    className="px-4 py-3 hover:bg-orange-50 hover:text-orange-600 text-gray-700 flex items-center gap-3 cursor-pointer transition-colors"
                   >
                     <Share2 size={16} />
                     <span className="font-semibold text-sm">Share Persona</span>
                   </div>
-                  <div 
-                     onClick={handleFreshSession}
-                     className="px-4 py-3 hover:bg-red-50 hover:text-red-600 text-gray-700 flex items-center gap-3 cursor-pointer transition-colors border-t border-gray-50"
+                  <div
+                    onClick={handleFreshSession}
+                    className="px-4 py-3 hover:bg-red-50 hover:text-red-600 text-gray-700 flex items-center gap-3 cursor-pointer transition-colors border-t border-gray-50"
                   >
                     <RefreshCcw size={16} />
                     <span className="font-semibold text-sm">Fresh Session</span>
                   </div>
+
+
                 </motion.div>
               </>
             )}
@@ -342,6 +345,16 @@ export const ChatInterface = ({ bot }: ChatInterfaceProps) => {
                 />
 
                 <div className="pb-1.5 pr-1.5">
+                  <Link href={`/live/${bot.id}`}> 
+                    <button
+                      className=" text-white p-2 rounded-3xl shadow-lg hover:shadow-orange-500/20 hover:bg-orange-100 hover:text-white transition-all"
+                       >
+                      <Radio color="orange " />
+                    </button>
+                  </Link>
+                </div>
+
+                <div className="pb-1.5 pr-1.5">
                   <button
                     onClick={handleSend}
                     disabled={!input.trim() || isStreaming}
@@ -355,6 +368,7 @@ export const ChatInterface = ({ bot }: ChatInterfaceProps) => {
                     <Send size={20} className={clsx(isStreaming && "animate-pulse")} />
                   </button>
                 </div>
+
               </div>
 
               {/* Notice built into the float */}

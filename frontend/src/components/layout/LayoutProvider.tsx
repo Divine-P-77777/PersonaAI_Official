@@ -19,9 +19,9 @@ export default function LayoutProvider({ children }: LayoutProviderProps) {
   const isDashboardDetail = pathname.startsWith("/dashboard/") && pathname !== "/dashboard";
   const isChat = pathname.startsWith("/chat");
   const isOnboarding = pathname.startsWith("/onboarding");
-  const isAuth = pathname.startsWith("/signin") || pathname.startsWith("/signup");
+  const hideNavFoot = pathname.startsWith("/signin") || pathname.startsWith("/signup") || pathname.startsWith("/live");
 
-  const showHeaderFooter = !isDashboardDetail && !isChat && !isOnboarding && !isAuth;
+  const showHeaderFooter = !isDashboardDetail && !isChat && !isOnboarding && !hideNavFoot;
 
   return (
     <>
