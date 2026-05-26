@@ -1,10 +1,10 @@
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Create Your Account | PersonaBot",
-  description: "Join PersonaBot to digitize your intellect or find your next mentor.",
+  title: "Create Your Account | AskMentor",
+  description: "Join AskMentor to digitize your intellect or find your next mentor.",
   openGraph: {
-    title: "Sign Up | PersonaBot",
+    title: "Sign Up | AskMentor",
     description: "Start your journey in the world's first network of professional AI personas.",
   },
 };

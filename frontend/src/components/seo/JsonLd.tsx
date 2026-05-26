@@ -17,33 +17,85 @@ export function PersonaOrganization() {
   const data = {
     "@context": "https://schema.org",
     "@type": "Organization",
-    "name": "PersonaBot",
-    "url": "https://personabot.ai",
-    "logo": "https://personabot.ai/logo.png",
-    "image": "https://personabot.ai/og-image.png",
+    "name": "AskMentor",
+    "url": "https://personabot.vercel.app",
+    "logo": "https://personabot.vercel.app/logo.png",
+    "image": "https://personabot.vercel.app/og-image.png",
     "sameAs": [
-      "https://twitter.com/personabot",
-      "https://github.com/Divine-P-77777/persona_ai_capstone"
+      "https://twitter.com/askmentor",
+      "https://github.com/askmentor"
     ],
-    "description": "Connect with AI-powered personas of alumni, professors, and professionals.",
     "contactPoint": {
       "@type": "ContactPoint",
-      "contactType": "customer support",
-      "email": "support@personabot.ai"
+      "telephone": "+1-800-555-0199",
+      "contactType": "Customer Support",
+      "email": "support@askmentor.ai"
     }
   };
-  return <JsonLd data={data} />;
+
+  const searchAction = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "url": "https://personabot.vercel.app",
+    "name": "AskMentor",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "https://personabot.vercel.app/explore?q={search_term_string}",
+      "query-input": "required name=search_term_string"
+    }
+  };
+
+  const breadcrumbs = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "AskMentor",
+        "item": "https://personabot.vercel.app"
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": "Explore Experts",
+        "item": "https://personabot.vercel.app/explore"
+      }
+    ]
+  };
+
+  const website = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "AskMentor | Your AI Mentor",
+    "url": "https://personabot.vercel.app",
+    "image": {
+      "@type": "ImageObject",
+      "url": "https://personabot.vercel.app/og-image.png",
+      "width": "1200",
+      "height": "630"
+    }
+  };
+
+  return (
+    <>
+      <JsonLd data={data} />
+      <JsonLd data={searchAction} />
+      <JsonLd data={breadcrumbs} />
+      <JsonLd data={website} />
+    </>
+  );
 }
 
 export function WebsiteStructuredData() {
   const data = {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    "url": "https://personabot.ai",
-    "name": "PersonaBot",
+    "url": "https://personabot.vercel.app",
+    "name": "AskMentor",
     "potentialAction": {
       "@type": "SearchAction",
-      "target": "https://personabot.ai/explore?q={search_term_string}",
+      "target": "https://personabot.vercel.app/explore?q={search_term_string}",
       "query-input": "required name=search_term_string"
     }
   };
@@ -51,7 +103,7 @@ export function WebsiteStructuredData() {
   const softwareData = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    "name": "PersonaBot",
+    "name": "AskMentor",
     "operatingSystem": "All",
     "applicationCategory": "EducationalApplication",
     "description": "An AI-powered mentorship platform connecting users with digital personas of experts.",
@@ -65,11 +117,11 @@ export function WebsiteStructuredData() {
   const webPageData = {
     "@context": "https://schema.org",
     "@type": "WebPage",
-    "url": "https://personabot.ai",
-    "name": "PersonaBot | Your AI Mentor",
+    "url": "https://personabot.vercel.app",
+    "name": "AskMentor | Your AI Mentor",
     "primaryImageOfPage": {
       "@type": "ImageObject",
-      "url": "https://personabot.ai/og-image.png",
+      "url": "https://personabot.vercel.app/og-image.png",
       "width": "1200",
       "height": "630"
     }

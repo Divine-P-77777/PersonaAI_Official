@@ -1,5 +1,5 @@
 """
-PersonaBot — Database Query Helpers
+AskMentor — Database Query Helpers
 
 All queries enforce multi-tenant isolation.
 Only the Supabase client (anon/service-role) is used — no raw SQLAlchemy

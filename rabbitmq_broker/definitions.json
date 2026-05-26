@@ -1,7 +1,7 @@
 {
   "users": [
     {
-      "name": "personabot",
+      "name": "askmentor",
       "password_hash": "2H3a+zCAnv/4jZ2X6X4u3w==",
       "hashing_algorithm": "rabbit_password_hashing_sha256",
       "tags": [
@@ -12,13 +12,13 @@
   ],
   "vhosts": [
     {
-      "name": "personabot_vhost"
+      "name": "askmentor_vhost"
     }
   ],
   "permissions": [
     {
-      "user": "personabot",
-      "vhost": "personabot_vhost",
+      "user": "askmentor",
+      "vhost": "askmentor_vhost",
       "configure": ".*",
       "write": ".*",
       "read": ".*"
@@ -29,7 +29,7 @@
   "global_parameters": [
     {
       "name": "internal_cluster_id",
-      "value": "rabbitmq-cluster-id-personabot"
+      "value": "rabbitmq-cluster-id-askmentor"
     }
   ],
   "policies": [],

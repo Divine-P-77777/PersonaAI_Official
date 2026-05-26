@@ -11,23 +11,19 @@ DO $$ BEGIN
     CREATE TYPE bot_status      AS ENUM ('draft', 'training', 'ready', 'failed');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
+-- Gender enum for bot voice tone selection.
+-- 'transgender' maps to a female voice tone by default.
 DO $$ BEGIN
-    CREATE TYPE source_type     AS ENUM (
-        'pdf',          -- uploaded PDF files
-        'image',        -- uploaded images (JPG/PNG)
-        'long_text',    -- raw text pasted in the dashboard form
-        'web_link',     -- URL to be scraped
-        'video_link'    -- future: video transcript ingestion
-    );
+    CREATE TYPE bot_gender AS ENUM ('male', 'female', 'transgender');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+
 
 DO $$ BEGIN
     CREATE TYPE ingestion_status AS ENUM ('pending', 'processing', 'completed', 'failed');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-DO $$ BEGIN
-    CREATE TYPE message_role    AS ENUM ('user', 'assistant', 'system');
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
 
 -- Table: users
 -- Mirrors auth.users — stores role-based onboarding data.
@@ -61,6 +57,10 @@ CREATE TABLE IF NOT EXISTS bots (
     --   "links":       {"linkedin": "...", "github": "...", "portfolio": "..."}
     -- }
     status         bot_status NOT NULL DEFAULT 'draft',
+    -- voice_gender: drives TTS voice ID selection (male/female/transgender → female voice).
+    -- Stored as a typed enum column, not inside persona_config JSONB, so it
+    -- can be read cheaply without JSON parsing in the hot live-session path.
+    voice_gender   bot_gender NOT NULL DEFAULT 'female',
     avatar_url     TEXT,
     created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -105,8 +105,20 @@ CREATE TABLE IF NOT EXISTS data_sources (
     updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+DO $$ BEGIN
+    CREATE TYPE source_type     AS ENUM (
+        'pdf',          -- uploaded PDF files
+        'image',        -- uploaded images (JPG/PNG)
+        'long_text',    -- raw text pasted in the dashboard form
+        'web_link',     -- URL to be scraped
+        'video_link'    -- future: video transcript ingestion
+    );
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
 CREATE INDEX IF NOT EXISTS data_sources_bot_id_idx    ON data_sources (bot_id);
+
 CREATE INDEX IF NOT EXISTS data_sources_batch_id_idx  ON data_sources (batch_id);
+
 CREATE INDEX IF NOT EXISTS data_sources_status_idx    ON data_sources (status);
 
 -- Table: data_chunks
@@ -125,6 +137,7 @@ CREATE TABLE IF NOT EXISTS data_chunks (
 );
 
 CREATE INDEX IF NOT EXISTS data_chunks_bot_id_idx        ON data_chunks (bot_id);
+
 CREATE INDEX IF NOT EXISTS data_chunks_data_source_id_idx ON data_chunks (data_source_id);
 
 -- HNSW index for ultra-fast cosine similarity search
@@ -141,6 +154,10 @@ CREATE TABLE IF NOT EXISTS messages (
     content    TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+DO $$ BEGIN
+    CREATE TYPE message_role    AS ENUM ('user', 'assistant', 'system'); --message_role is custom data type
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 CREATE INDEX IF NOT EXISTS messages_user_bot_idx ON messages (user_id, bot_id, created_at DESC);
 

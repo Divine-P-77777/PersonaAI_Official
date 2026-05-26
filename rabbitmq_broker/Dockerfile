@@ -1,4 +1,4 @@
-# Production RabbitMQ for PersonaBot
+# Production RabbitMQ for AskMentor
 FROM rabbitmq:3.13-management
 
 # Install curl for health‑checks and Render self-ping

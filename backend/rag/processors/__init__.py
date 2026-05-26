@@ -1,5 +1,5 @@
 """
-PersonaBot — RAG Processor Factory
+AskMentor — RAG Processor Factory
 ====================================
 Each source_type has a dedicated processor that extracts plain text.
 All processors return `str` — the downstream chunker is type-agnostic.

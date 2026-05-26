@@ -51,7 +51,7 @@ export default function ExplorePage() {
     if (navigator.share) {
       navigator.share({
         title: `Chat with ${bot.name}`,
-        text: `Check out this AI persona of ${bot.name} on PersonaBot!`,
+        text: `Check out this AI persona of ${bot.name} on AskMentor!`,
         url: url
       }).catch(console.error);
     } else {

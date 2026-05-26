@@ -11,7 +11,7 @@ sleep 30
 
 while true; do
   # Ping the backend health endpoint
-  if curl -s -f -o /dev/null -H "User-Agent: PersonaBot-Redis-KeepAlive" "$URL/health"; then
+  if curl -s -f -o /dev/null -H "User-Agent: AskMentor-Redis-KeepAlive" "$URL/health"; then
     echo "$(date): ✅ Redis Keep-Alive Ping successful to $URL/health."
   else
     echo "$(date): ⚠️ Redis Keep-Alive Ping failed (Backend may be down)."

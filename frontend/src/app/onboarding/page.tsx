@@ -67,7 +67,7 @@ export default function OnboardingPage() {
         await api.uploadAvatar(file)
       }
 
-      showSuccess("Welcome to PersonaBot!")
+      showSuccess("Welcome to AskMentor!")
 
       // 3. Redirect Based on Role
       if (role === "user") {
@@ -246,7 +246,7 @@ export default function OnboardingPage() {
 
       <div className="fixed bottom-10 left-10 flex items-center gap-2 opacity-30">
         <img src="/logo.png" alt="Logo" className="w-5 h-5 grayscale object-contain" />
-        <span className="text-xs font-black uppercase tracking-[0.2em] text-gray-900">PersonaBot Alpha</span>
+        <span className="text-xs font-black uppercase tracking-[0.2em] text-gray-900">AskMentor Alpha</span>
       </div>
     </div>
   )

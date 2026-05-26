@@ -5,13 +5,21 @@ Combines persona config, retrieved chunks, and chat history into a prompt.
 from typing import Optional
 
 
-def build_context(persona_config: dict, chunks: list[str], bot_name: str = "AI Mentor") -> str:
+def build_context(
+    persona_config: dict,
+    chunks: list[str],
+    bot_name: str = "AI Mentor",
+    mode: str = "chat",
+) -> str:
     """Build the full system prompt for the LLM from persona config and retrieved chunks.
     
     Args:
         persona_config: The bot's configuration (greeting, tone, expertise, etc.)
-        chunks: Retrieved knowledge base chunks relevant to the query
-        bot_name: The bot's display name
+        chunks:         Retrieved knowledge base chunks relevant to the query
+        bot_name:       The bot's display name
+        mode:           'chat' (default) or 'live'.
+                        Live mode generates shorter, spoken responses (2-3 sentences max)
+                        with no markdown — ideal for TTS without awkward pauses.
     
     Returns:
         A complete system prompt string for the LLM.
@@ -31,8 +39,26 @@ def build_context(persona_config: dict, chunks: list[str], bot_name: str = "AI M
     if links:
         links_str = "\n- Social Links:\n" + "\n".join([f"  * {k.title()}: {v}" for k, v in links.items() if v])
 
-    # System persona block
-    system_prompt = f"""You are {bot_name}, a specialized AI mentor persona.
+    # Live mode: short conversational responses for TTS 
+    # Long responses cause TTS latency and sound unnatural when spoken aloud.
+    # Live mode suppresses markdown and caps responses at 2-3 sentences.
+    if mode == "live":
+        system_prompt = f"""You are {bot_name}, a real-time AI voice mentor.
+
+Your personality: {tone} tone. Expertise: {focus_areas}.
+
+CRITICAL VOICE RULES (you are being spoken aloud via TTS):
+1. KEEP RESPONSES SHORT — maximum 2 to 3 sentences. Never use bullet points, headers, or markdown.
+2. Speak naturally and conversationally — like a person talking, not writing.
+3. DOMAIN BOUNDARY: Only discuss your expertise ({focus_areas}). Politely redirect otherwise.
+4. Use the retrieved context as your source of truth. Do not fabricate.
+5. Never break character or refer to yourself as an AI.
+6. HINDI LANGUAGE RULE: If the user speaks or asks in Hindi or Hinglish, you MUST reply in Hindi using the Devanagari script (Hindi alphabets, like 'मैं आपकी मदद करूँगा', NOT Latin/English letters). Sarvam AI is unable to pronounce English-spelled Hindi.
+7. HINDI TONE: Do NOT use pure, stiff, formal Sanskritized Hindi (avoid "shudh" Hindi like 'मैं आपका मार्गदर्शन करने हेतु तत्पर हूँ'). Instead, speak in a friendly, youthful, conversational tone (like a younger tech buddy, e.g., 'हेलो! बिलकुल, टेंशन मत लो यार, मैं तुम्हारी हेल्प करूँगा', using common tech terms written in Devanagari like 'सपोर्ट', 'कोड', 'प्रॉब्लम').
+"""
+    else:
+        # Chat mode: detailed structured responses 
+        system_prompt = f"""You are {bot_name}, a specialized AI mentor persona.
 
 Your personality:
 - Tone: {tone}

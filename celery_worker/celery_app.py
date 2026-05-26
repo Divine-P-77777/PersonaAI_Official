@@ -17,13 +17,13 @@ logging.basicConfig(
     format='%(asctime)s [%(levelname)s] [PID:%(process)d] %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
-logger = logging.getLogger("PersonaBot-Worker")
+logger = logging.getLogger("AskMentor-Worker")
 
 # Default fallback is rabbitmq service in docker-compose
-broker_url = os.environ.get("CELERY_BROKER_URL", "amqp://personabot:persona_pass@rabbitmq:5672/personabot_vhost")
+broker_url = os.environ.get("CELERY_BROKER_URL", "amqp://askmentor:persona_pass@rabbitmq:5672/askmentor_vhost")
 
 celery_app = Celery(
-    "personabot_worker",
+    "askmentor_worker",
     broker=broker_url,
     include=["celery_worker.tasks"]
 )
@@ -77,7 +77,7 @@ def start_health_server():
 # this runs before `celery worker` CLI even tries to connect to RabbitMQ.
 _health_thread = threading.Thread(target=start_health_server, daemon=True)
 _health_thread.start()
-logger.info("🚀 Health server thread launched (Render port satisfied)")
+logger.info(" Health server thread launched (Render port satisfied)")
 
 # --- Render Self-Ping Mechanism (Production Grade) ---
 PING_INTERVAL = 14 * 60  # 14 minutes
@@ -104,7 +104,7 @@ def self_ping_loop():
     logger.info(f"✅ Worker Pinger: Initialized for {url}. Starting in {INITIAL_DELAY}s...")
     time.sleep(INITIAL_DELAY)
 
-    headers = {"User-Agent": "PersonaBot-Worker-KeepAlive"}
+    headers = {"User-Agent": "AskMentor-Worker-KeepAlive"}
 
     while True:
         try:

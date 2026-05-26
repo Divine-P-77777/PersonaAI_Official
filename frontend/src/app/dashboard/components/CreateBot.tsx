@@ -17,6 +17,7 @@ export type BotFormData = {
     // Persona Config
     greeting: string;
     tone: string;
+    voice_gender: string;
     expertise: string[];
     experience: Array<{
         title: string;
@@ -67,6 +68,7 @@ export function CreateBot() {
         avatarUrl: '',
         greeting: '',
         tone: 'professional',
+        voice_gender: 'female',
         expertise: [],
         experience: [],
         education: [],
@@ -137,9 +139,11 @@ export function CreateBot() {
             const botResponse = await api.createBot({
                 name: formData.botName,
                 description: formData.botDescription,
+                voice_gender: formData.voice_gender as "male" | "female" | "transgender",
                 persona_config: {
                     greeting: formData.greeting,
                     tone: formData.tone,
+                    voice_gender: formData.voice_gender as "male" | "female" | "transgender",
                     expertise: formData.expertise,
                     experience: formData.experience,
                     education: formData.education,

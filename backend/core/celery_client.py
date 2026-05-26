@@ -14,7 +14,7 @@ settings = get_settings()
 # broker_connection_retry_on_startup=True ensures the backend doesn't crash on
 # startup when RabbitMQ is unavailable (local dev without Docker).
 celery_app = Celery(
-    "personabot_worker",
+    "askmentor_worker",
     broker=settings.CELERY_BROKER_URL,
 )
 

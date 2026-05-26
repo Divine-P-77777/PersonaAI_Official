@@ -112,6 +112,36 @@ export function PersonaConfig({ formData, updateFormData }: PersonaConfigProps) 
                 </div>
             </div>
 
+            {/* Voice Gender */}
+            <div>
+                <label className="block text-sm text-gray-700 mb-3">
+                    Voice Gender <span className="text-red-500">*</span>
+                </label>
+                <div className="grid grid-cols-3 gap-3 max-w-md">
+                    {[
+                        { value: 'female', label: 'Female', emoji: '👩' },
+                        { value: 'male', label: 'Male', emoji: '👨' },
+                        { value: 'transgender', label: 'Gender-Neutral', emoji: '⚧' }
+                    ].map((gender) => (
+                        <button
+                            key={gender.value}
+                            type="button"
+                            onClick={() => updateFormData({ voice_gender: gender.value })}
+                            className={`p-4 rounded-xl border-2 transition-all text-center ${formData.voice_gender === gender.value
+                                    ? 'border-orange-400 bg-orange-50 shadow-md'
+                                    : 'border-gray-200 hover:border-gray-300'
+                                }`}
+                        >
+                            <div className="text-3xl mb-1">{gender.emoji}</div>
+                            <div className="text-sm text-gray-900 font-bold">{gender.label}</div>
+                        </button>
+                    ))}
+                </div>
+                <p className="text-sm text-gray-500 mt-2">
+                    Choose the voice engine gender matching this persona's vocal identity
+                </p>
+            </div>
+
             {/* Expertise */}
             <div>
                 <label className="block text-sm text-gray-700 mb-2">

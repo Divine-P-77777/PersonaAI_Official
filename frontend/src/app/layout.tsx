@@ -29,16 +29,16 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://personabot.ai'), // Replace with actual production URL
+  metadataBase: new URL('https://personabot.vercel.app'), // Replace with actual production URL
   title: {
-    default: "PersonaBot | Your AI Mentor",
-    template: "%s | PersonaBot"
+    default: "AskMentor | Your AI Mentor",
+    template: "%s | AskMentor"
   },
-  description: "Connect with AI-powered personas of alumni, professors, and professionals for personalized mentorship.",
-  keywords: ["AI Mentor", "Career Guidance", "Expert Networking", "Persona Bot", "Educational AI"],
-  authors: [{ name: "PersonaBot Team" }],
-  creator: "PersonaBot",
-  publisher: "PersonaBot",
+  description: "Connect with AI-powered personas of alumni, professors, and professionals.",
+  keywords: ["AI Mentorship", "Student Guidance", "Digital Persona", "EdTech"],
+  authors: [{ name: "AskMentor Team" }],
+  creator: "AskMentor",
+  publisher: "AskMentor",
   formatDetection: {
     email: false,
     address: false,
@@ -50,25 +50,25 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://personabot.ai",
-    siteName: "PersonaBot",
-    title: "PersonaBot | Your AI Mentor",
+    url: "https://personabot.vercel.app",
+    siteName: "AskMentor",
+    title: "AskMentor | Your AI Mentor",
     description: "Connect with AI-powered personas of alumni, professors, and professionals.",
     images: [
       {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "PersonaBot - Your AI Mentor",
+        alt: "AskMentor - Your AI Mentor",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "PersonaBot | Your AI Mentor",
+    title: "AskMentor | Your AI Mentor",
     description: "Connect with AI-powered personas of alumni, professors, and professionals.",
     images: ["/og-image.png"],
-    creator: "@personabot",
+    creator: "@askmentor",
   },
   robots: {
     index: true,

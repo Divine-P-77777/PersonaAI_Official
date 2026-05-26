@@ -2,8 +2,8 @@ import { MetadataRoute } from 'next'
  
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'PersonaBot | Your AI Mentor',
-    short_name: 'PersonaBot',
+    name: 'AskMentor | Your AI Mentor',
+    short_name: 'AskMentor',
     description: 'Connect with AI-powered personas of alumni, professors, and professionals.',
     start_url: '/',
     display: 'standalone',

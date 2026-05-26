@@ -17,13 +17,14 @@ async def init_redis_pool() -> aioredis.Redis | None:
             _redis_pool = aioredis.from_url(
                 settings.REDIS_URL,
                 decode_responses=True,
-                socket_timeout=2.0,
-                socket_connect_timeout=2.0
+                socket_timeout=5.0,          # Upstash TLS can be slow
+                socket_connect_timeout=8.0,  # Allow more time on cold start
+                retry_on_timeout=True,
             )
             await _redis_pool.ping()
-            logger.info("✅ Redis connected successfully.")
+            logger.info(" Redis connected successfully.")
         except Exception as e:
-            logger.warning(f"⚠️ Redis connection failed: {e}. Falling back to degraded mode.")
+            logger.warning(f" Redis connection failed: {e}. Falling back to degraded mode.")
             _redis_pool = None
     return _redis_pool
 

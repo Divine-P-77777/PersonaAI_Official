@@ -1,6 +1,6 @@
-# 🧠 PersonaBot – Modern AI Persona Platform
+# 🧠 AskMentor – Modern AI Persona Platform
 
-PersonaBot is a high-performance, real-time AI platform designed for alumni, professors, and professionals to create personalized AI clones. These "Personas" represent their unique knowledge, experience, and conversational style, enabling students and mentees to learn from the best—anytime, anywhere.
+AskMentor is a high-performance, real-time AI platform designed for alumni, professors, and professionals to create personalized AI clones. These "Personas" represent their unique knowledge, experience, and conversational style, enabling students and mentees to learn from the best—anytime, anywhere.
 
 ---
 
@@ -20,7 +20,7 @@ PersonaBot is a high-performance, real-time AI platform designed for alumni, pro
 
 ## 🏗️ Technical Architecture
 
-PersonaBot operates on a distributed microservices architecture designed for high availability and real-time feedback.
+AskMentor operates on a distributed microservices architecture designed for high availability and real-time feedback.
 
 ```mermaid
 graph TD
@@ -73,7 +73,7 @@ When a user uploads a document, the `ingestion_worker` handles the process in th
     - High-dimensional vectors are stored in **Supabase pgvector** for precise retrieval.
 
 ### 📡 Real-time Progress Tracking
-Unlike static upload bars, PersonaBot uses a **WebSocket + Database Polling** architecture:
+Unlike static upload bars, AskMentor uses a **WebSocket + Database Polling** architecture:
 - The **Ingestion Worker** updates granular source statuses (`extracting`, `embedding`, `completed`) in Supabase.
 - The **WebSocket Server** polls these statuses and streams synthetic sub-step progress (e.g., 0% → 50% → 65% → 100%) to the UI.
 - This ensures users see exactly what the pipeline is doing (e.g., *"Generating AI Embeddings..."*).

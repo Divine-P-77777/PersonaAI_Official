@@ -4,15 +4,15 @@ import JsonLd from '../seo/JsonLd';
 
 const faqs = [
   {
-    question: "What is PersonaBot?",
-    answer: "PersonaBot is an AI-powered mentorship platform that allows you to interact with digital personas of industry experts, alumni, and professors. These personas are trained on real experiences and knowledge to provide personalized guidance 24/7."
+    question: "What is AskMentor?",
+    answer: "AskMentor is an AI-powered mentorship platform that allows you to interact with digital personas of industry experts, alumni, and professors. These personas are trained on real experiences and knowledge to provide personalized guidance 24/7."
   },
   {
     question: "How are the AI personas created?",
     answer: "AI personas are created using our proprietary ingestion engine. Experts upload their resumes, research papers, and documents, which our system processes to create a high-fidelity digital twin that retains their expertise and personality."
   },
   {
-    question: "Is my data secure on PersonaBot?",
+    question: "Is my data secure on AskMentor?",
     answer: "Yes, security and privacy are our top priorities. All conversations and uploaded documents are encrypted. We do not share your personal data with third parties without your explicit consent."
   },
   {
@@ -53,7 +53,7 @@ export function FAQ() {
           <h2 className="text-4xl md:text-5xl font-black text-gray-900 mb-4 tracking-tight">
             Frequently Asked <span className="bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent">Questions</span>
           </h2>
-          <p className="text-xl text-gray-600">Everything you need to know about PersonaBot and how it works.</p>
+          <p className="text-xl text-gray-600">Everything you need to know about AskMentor and how it works.</p>
         </div>
 
         <div className="space-y-4">

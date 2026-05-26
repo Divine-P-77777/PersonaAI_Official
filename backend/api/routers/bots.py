@@ -3,7 +3,7 @@ from typing import List, Dict, Any, Optional
 from uuid import UUID
 import uuid
 
-from backend.core.security import get_current_user, require_alumni_role
+from backend.core.security import get_current_user, get_optional_user, require_alumni_role
 from backend.api.schemas.bot import BotCreate, BotUpdate, BotResponse
 from backend.database.queries import (
     create_bot as db_create_bot,
@@ -24,10 +24,13 @@ async def create_bot(
 ):
     """Create a new alumni/professional persona bot."""
     bot_data = {
-        "owner_id": user["id"],
-        "name": bot_in.name,
+        "owner_id":    user["id"],
+        "name":        bot_in.name,
         "description": bot_in.description,
-        "persona_config": bot_in.persona_config.model_dump() if bot_in.persona_config else {},
+        "persona_config": bot_in.persona_config.model_dump(mode="json") if bot_in.persona_config else {},
+        # voice_gender is stored as a dedicated column (not only in persona_config)
+        # so the live session can read it cheaply without parsing JSONB.
+        "voice_gender": (bot_in.voice_gender.value if bot_in.voice_gender else "female"),
     }
     return await db_create_bot(bot_data, token=user.get("_token"))
 
@@ -49,16 +52,23 @@ async def list_bots(
 @router.get("/{bot_id}", response_model=BotResponse)
 async def get_bot(
     bot_id: UUID,
-    user: Dict[str, Any] = Depends(get_current_user)
+    user: Optional[Dict[str, Any]] = Depends(get_optional_user)
 ):
     """Fetch a specific bot by ID. Allows public viewing of 'ready' bots."""
-    bot = await get_bot_by_id(str(bot_id), token=user.get("_token"))
+    # Use service role or none if user is anonymous
+    token = user.get("_token") if user else None
+    bot = await get_bot_by_id(str(bot_id), token=token)
     
     if not bot:
         raise HTTPException(status_code=404, detail="Bot not found")
         
-    # Access Control: Owner can see any status; others can only see "ready"
-    if bot["owner_id"] != user["id"] and bot["status"] != "ready":
+    # Access Control: 
+    # 1. If owner, show everything
+    if user and bot["owner_id"] == user["id"]:
+        return bot
+    
+    # 2. Otherwise, only show if "ready"
+    if bot["status"] != "ready":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, 
             detail="This persona is private or still in training"
@@ -73,10 +83,10 @@ async def update_bot(
     user: Dict[str, Any] = Depends(require_alumni_role)
 ):
     """Update a bot's configuration/persona."""
-    updates = bot_in.model_dump(exclude_unset=True)
+    updates = bot_in.model_dump(exclude_unset=True, mode="json")
     if "persona_config" in updates and updates["persona_config"]:
         # Only persona_config passed through model_dump might need careful handling if it's a sub-model
-        updates["persona_config"] = bot_in.persona_config.model_dump()
+        updates["persona_config"] = bot_in.persona_config.model_dump(mode="json")
 
     updated_bot = await db_update_bot(str(bot_id), updates, token=user.get("_token"))
     if not updated_bot:

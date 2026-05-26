@@ -38,8 +38,8 @@ export function Navbar() {
                     {/* Logo */}
                     <Link href="/" className="flex items-center">
                         <div className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                            <img src="/logo.png" alt="PersonaBot" className="w-9 h-9 object-contain" />
-                            <span className="font-semibold text-xl text-gray-900">PersonaBot</span>
+                            <img src="/logo.png" alt="AskMentor" className="w-9 h-9 object-contain" />
+                            <span className="font-semibold text-xl text-gray-900">AskMentor</span>
                         </div>
                     </Link>
 

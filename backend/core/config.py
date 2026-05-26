@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     """Application configuration loaded from environment variables."""
 
     # App
-    APP_NAME: str = "PersonaBot"
+    APP_NAME: str = "AskMentor"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
     ENVIRONMENT: str = "development"
@@ -40,6 +40,9 @@ class Settings(BaseSettings):
 
     # ElevenLabs (Voice)
     ELEVENLABS_API_KEY: str = ""
+
+    # Sarvam AI (Hindi TTS)
+    SARVAM_API_KEY: str = ""
 
     # RAG Config
     CHUNK_SIZE: int = 1000

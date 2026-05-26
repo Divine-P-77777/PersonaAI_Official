@@ -1,6 +1,6 @@
-# Capstone Project: PersonaBot PPT & Backend Analysis
+# Capstone Project: AskMentor PPT & Backend Analysis
 
-This plan outlines the analysis of the current PersonaBot backend and the structure for the Capstone Project Presentation (PPT).
+This plan outlines the analysis of the current AskMentor backend and the structure for the Capstone Project Presentation (PPT).
 
 ## User Review Required
 
@@ -46,7 +46,7 @@ This plan outlines the analysis of the current PersonaBot backend and the struct
 ## Proposed PPT Structure (10 Slides)
 
 ### 1. Title Slide
-- Project Name: **PersonaBot: AI-Powered Knowledge Base & Custom Personas**
+- Project Name: **AskMentor: AI-Powered Knowledge Base & Custom Personas**
 - Subtitle: A Multi-tenant RAG-based Chatbot Platform
 
 ### 2. Introduction & Problem Statement

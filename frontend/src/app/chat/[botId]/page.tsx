@@ -1,7 +1,7 @@
 import type { Metadata, ResolvingMetadata } from 'next'
 import PublicChatClient from './chat-client'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+const API_URL = `${process.env.NEXT_PUBLIC_API_URL}/api` || "http://localhost:8000/api";
 
 type Props = {
   params: Promise<{ botId: string }>

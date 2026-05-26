@@ -107,7 +107,7 @@ export const ChatInterface = ({ bot }: ChatInterfaceProps) => {
     if (navigator.share) {
       navigator.share({
         title: `Chat with ${bot.name}`,
-        text: `Check out this AI persona of ${bot.name} on PersonaBot!`,
+        text: `Check out this AI persona of ${bot.name} on AskMentor!`,
         url: url
       }).catch(console.error);
     } else {
@@ -374,7 +374,7 @@ export const ChatInterface = ({ bot }: ChatInterfaceProps) => {
               {/* Notice built into the float */}
               <div className="px-6 pb-2 text-center">
                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest opacity-60">
-                  PersonaBot can make mistakes. Check important info.
+                  AskMentor can make mistakes. Check important info.
                 </p>
               </div>
             </div>

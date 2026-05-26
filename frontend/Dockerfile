@@ -1,4 +1,4 @@
-# Frontend Dockerfile for PersonaBot
+# Frontend Dockerfile for AskMentor
 # Optimized for Next.js production builds
 
 # Stage 1: Dependencies

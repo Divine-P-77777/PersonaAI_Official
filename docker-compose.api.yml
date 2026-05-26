@@ -1,0 +1,113 @@
+# ─────────────────────────────────────────────────────────────────
+#  docker-compose.api.yml  ·  GCP Instance 1 — API Server
+#
+#  What runs here:
+#    • Caddy   — HTTPS reverse proxy (nip.io free domain)
+#    • FastAPI  — Backend API + WebSocket live sessions
+#    • Next.js  — Frontend (SSR)
+#
+#  What does NOT run here (cloud-managed):
+#    • Redis      → Upstash      (REDIS_URL in .env)
+#    • RabbitMQ   → CloudAMQP    (CELERY_BROKER_URL in .env)
+#
+#  Usage:
+#    export GCP_IP=34.100.200.50
+#    export GCP_IP_DASHED=34-100-200-50
+#    docker compose -f docker-compose.api.yml up -d
+#
+#  nip.io URLs after deploy:
+#    API  → https://api.34-100-200-50.nip.io
+#    App  → https://app.34-100-200-50.nip.io
+# ─────────────────────────────────────────────────────────────────
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+
+  # ── 1. Caddy Reverse Proxy ───────────────────────────────────────
+  # Terminates TLS, routes traffic to backend and frontend.
+  # Certificate is auto-obtained from Let's Encrypt via nip.io.
+  caddy:
+    image: caddy:2.8-alpine
+    container_name: askmentor-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"       # HTTP → 301 redirect to HTTPS (Caddy built-in)
+      - "443:443"     # HTTPS
+      - "443:443/udp" # HTTP/3 QUIC
+    environment:
+      GCP_IP_DASHED: "${GCP_IP_DASHED}"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data          # TLS certs — never delete this volume
+      - caddy_config:/config
+      - caddy_logs:/var/log/caddy
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_started
+    logging: *default-logging
+
+  # ── 2. FastAPI Backend ───────────────────────────────────────────
+  # Serves the REST API + WebSocket endpoint for live voice sessions.
+  # Connects to Upstash Redis and CloudAMQP externally — no local containers.
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: askmentor-api
+    restart: unless-stopped
+    expose:
+      - "8000"         # Caddy → backend (internal, never public directly)
+    env_file:
+      - ./backend/.env
+    environment:
+      DEBUG: "false"
+      ENVIRONMENT: "production"
+      # ── Cloud services (overrides any localhost values in .env) ──
+      # Upstash Redis: rediss://default:<password>@<endpoint>.upstash.io:6380
+      REDIS_URL: "${REDIS_URL}"
+      # CloudAMQP:  amqps://<user>:<password>@<host>.cloudamqp.com/<vhost>
+      CELERY_BROKER_URL: "${CELERY_BROKER_URL}"
+      # Public URL for OAuth callbacks, self-ping check, etc.
+      APP_PUBLIC_URL: "https://api.${GCP_IP_DASHED}.nip.io"
+      ALLOWED_ORIGINS: "https://app.${GCP_IP_DASHED}.nip.io,https://personabot.vercel.app"
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging: *default-logging
+
+  # ── 3. Next.js Frontend ──────────────────────────────────────────
+  # Built with the GCP API URL baked in at build time (Next.js NEXT_PUBLIC_*).
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # These are baked into the static bundle at build time
+        NEXT_PUBLIC_API_URL:           "https://api.${GCP_IP_DASHED}.nip.io/api"
+        NEXT_PUBLIC_SUPABASE_URL:      "${NEXT_PUBLIC_SUPABASE_URL}"
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: "${NEXT_PUBLIC_SUPABASE_ANON_KEY}"
+    container_name: askmentor-web
+    restart: unless-stopped
+    expose:
+      - "3000"
+    environment:
+      NODE_ENV: production
+    depends_on:
+      - backend
+    logging: *default-logging
+
+volumes:
+  caddy_data:    # TLS certificates — persisted across restarts
+  caddy_config:
+  caddy_logs:

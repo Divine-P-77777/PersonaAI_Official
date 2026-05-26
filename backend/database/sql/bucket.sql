@@ -1,4 +1,4 @@
--- PersonaBot — Storage Configuration
+-- AskMentor — Storage Configuration
 -- Run this in your Supabase SQL Editor.
 
 -- 1. Create the 'avatars' bucket (public = true means files have public URLs)

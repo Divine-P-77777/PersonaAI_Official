@@ -12,8 +12,8 @@ export function Footer() {
                     {/* Brand */}
                     <div className="md:col-span-1">
                         <div className="flex items-center gap-2 mb-4">
-                            <img src="/logo.png" alt="PersonaBot" className="w-8 h-8 object-contain" />
-                            <span className="font-semibold text-xl text-white">PersonaBot</span>
+                            <img src="/logo.png" alt="AskMentor" className="w-8 h-8 object-contain" />
+                            <span className="font-semibold text-xl text-white">AskMentor</span>
                         </div>
                         <p className="text-sm text-gray-400 leading-relaxed">
                             Connecting learners with AI-powered mentors for personalized guidance and growth.
@@ -57,7 +57,7 @@ export function Footer() {
                 {/* Bottom Bar */}
                 <div className="pt-8 border-t border-gray-800 flex flex-col sm:flex-row justify-between items-center gap-4">
                     <div className="text-sm text-gray-400">
-                        © 2026 PersonaBot. All rights reserved.
+                        © 2026 AskMentor. All rights reserved.
                     </div>
 
                     {/* Social Links */}

@@ -129,6 +129,41 @@ async def get_current_user(
     user["_token"] = token
     return user
 
+async def get_optional_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)),
+) -> Optional[Dict[str, Any]]:
+    """Optional authentication: returns user dict if token is valid, else None."""
+    if not credentials or not credentials.credentials:
+        return None
+    try:
+        # Re-use verify logic but catch errors
+        alg = "HS256"
+        token = credentials.credentials
+        try:
+            unverified_header = jwt.get_unverified_header(token)
+            alg = unverified_header.get("alg", "HS256")
+            kid = unverified_header.get("kid")
+            
+            if alg == "ES256":
+                jwks = await get_jwks()
+                key_data = next((k for k in jwks.get("keys", []) if k.get("kid") == kid), None)
+                if key_data:
+                    payload = jwt.decode(token, key_data, algorithms=["ES256"], audience="authenticated")
+                else:
+                    return None
+            else:
+                payload = jwt.decode(token, settings.SUPABASE_JWT_SECRET, algorithms=["HS256"], audience="authenticated")
+            
+            user_id = payload.get("sub")
+            user = await get_user_by_id(user_id, token=token)
+            if user:
+                user["_token"] = token
+            return user
+        except:
+            return None
+    except:
+        return None
+
 async def require_alumni_role(
     user: Dict[str, Any] = Depends(get_current_user),
 ) -> Dict[str, Any]:

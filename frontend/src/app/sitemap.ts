@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next'
  
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://personabot.ai'
+  const baseUrl = 'https://personabot.vercel.app'
   
   return [
     {

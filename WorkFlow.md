@@ -1,5 +1,5 @@
-PersonaBot Codebase Overview
-This document provides a high-level summary of the PersonaBot project, detailing its architecture, technology stack, and key components.
+AskMentor Codebase Overview
+This document provides a high-level summary of the AskMentor project, detailing its architecture, technology stack, and key components.
 
 Architecture
 The project follows a modern full-stack architecture with a decoupled frontend and backend.
@@ -133,17 +133,27 @@ To build and push images for **dynamicphillic**:
 
 #### 1. Backend API
 ```powershell
-docker build -t dynamicphillic/personabot-api ./backend
-docker push dynamicphillic/personabot-api
+docker build -t dynamicphillic/askmentor-api ./backend
+docker push dynamicphillic/askmentor-api
 ```
 
 #### 2. Frontend Web
 ```powershell
-docker build -t dynamicphillic/personabot-web ./frontend
-docker push dynamicphillic/personabot-web
+docker build -t dynamicphillic/askmentor-web ./frontend
+docker push dynamicphillic/askmentor-web
 ```
 
 #### 3. Run Locally with Compose
 ```powershell
 docker-compose up --build
 ```
+
+## How the Backend Talks to It
+The communication flow between your web backend and this Celery microservice looks like this:
+
+User Uploads Image: The user uploads a file to the backend API.
+Backend Encodes & Dispatches: The backend encodes the image to a Base64 string. Instead of processing it directly, the backend (acting as a Celery Producer) calls something like extract_text_from_image_task.delay(base64_string).
+AMQP Message: This .delay() call packages the task name and the JSON payload (the Base64 string) and sends it over AMQP to the RabbitMQ broker.
+Worker Consumes: The Celery microservice, which is constantly listening to the RabbitMQ queue, picks up the message, decodes the image, and runs the Tesseract OCR.
+RPC Return: Once the worker finishes extracting the text, it takes the resulting string and sends it back to RabbitMQ using the RPC protocol.
+Backend Receives: The backend, which was waiting for the RPC response (typically via .get()), receives the text string and continues its workflow (e.g., saving it to the database or passing it to an LLM).

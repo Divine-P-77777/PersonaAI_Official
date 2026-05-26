@@ -1,7 +1,7 @@
 import { UserProfile, Bot, IngestionBatch, DataSource, SourceType } from "../types";
 import { supabase } from "@/lib/supabase";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+const API_URL = `${process.env.NEXT_PUBLIC_API_URL}/api` || "http://localhost:8000/api";
 
 type HttpMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
 
@@ -32,12 +32,12 @@ class ApiService {
   ): Promise<T> {
     const { data: { session } } = await supabase.auth.getSession();
     const token = session?.access_token;
-    
+
     const headers: HeadersInit = {};
     if (!isFormData) {
       headers["Content-Type"] = "application/json";
     }
-    
+
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     }
@@ -62,8 +62,25 @@ class ApiService {
   }
 
   getWsUrl(): string {
-    return API_URL.replace(/^http/, 'ws');
+    return API_URL.replace(/^http/, 'ws')
   }
+
+  async getAccessToken(): Promise<string | null> {
+    const { data: { session } } = await supabase.auth.getSession()
+    return session?.access_token ?? null
+  }
+
+  // Live Session
+  async startLiveSession(botId: string): Promise<{ session_id: string; token: string | null }> {
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token ?? null
+    // Call the real backend endpoint — it validates the bot and registers the session in Redis
+    const res = await this.request<{ session_id: string; ws_url: string }>(
+      "/live/session/start", "POST", { bot_id: botId }
+    )
+    return { session_id: res.session_id, token }
+  }
+
 
   // Auth
   async getCurrentUser(): Promise<UserProfile> {
@@ -115,13 +132,13 @@ class ApiService {
     files?: File[]
   ): Promise<IngestionBatch> {
     const formData = new FormData();
-    
+
     // Add the JSON metadata as a string (if  backend supports it)
     // Actually our backend expects BatchIngestionRequest as JSON Body usually.
     // However, we updated it to handle files. Let's send it as multipart.
-    
+
     formData.append("request", JSON.stringify({ sources }));
-    
+
     if (files) {
       files.forEach((file) => {
         formData.append("files", file);
@@ -216,12 +233,12 @@ class ApiService {
     return this.request<DataSource[]>(`/ingestion/${botId}/sources`);
   }
 
-  async deleteDataSource(sourceId: string): Promise<{status: string, message: string}> {
-    return this.request<{status: string, message: string}>(`/ingestion/source/${sourceId}`, "DELETE");
+  async deleteDataSource(sourceId: string): Promise<{ status: string, message: string }> {
+    return this.request<{ status: string, message: string }>(`/ingestion/source/${sourceId}`, "DELETE");
   }
 
-  async deleteDataSourcesBulk(sourceIds: string[]): Promise<{status: string, message: string}> {
-    return this.request<{status: string, message: string}>("/ingestion/sources/bulk", "DELETE", sourceIds);
+  async deleteDataSourcesBulk(sourceIds: string[]): Promise<{ status: string, message: string }> {
+    return this.request<{ status: string, message: string }>("/ingestion/sources/bulk", "DELETE", sourceIds);
   }
 
   async getChatHistory(botId: string): Promise<{ bot_id: string; history: Array<{ role: "user" | "assistant"; content: string }> }> {
@@ -268,23 +285,23 @@ class ApiService {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        
+
         // Accumulate and decode chunk
         buffer += decoder.decode(value, { stream: true });
-        
+
         // Find all complete SSE messages separated by "\n\n"
         let boundary = buffer.indexOf("\n\n");
         while (boundary !== -1) {
           const completePart = buffer.slice(0, boundary);
           buffer = buffer.slice(boundary + 2); // Reset for next search
-          
+
           // Process individual lines within the split part
           const lines = completePart.split("\n");
           for (const line of lines) {
             const trimmedLine = line.trim();
             if (trimmedLine.startsWith("data: ")) {
               const payload = trimmedLine.slice(6).trim();
-              
+
               if (payload === "[DONE]") {
                 onDone();
                 return;
@@ -301,14 +318,14 @@ class ApiService {
               }
             }
           }
-          
+
           boundary = buffer.indexOf("\n\n");
         }
       }
     } catch (e: any) {
-        onError(`Streaming read error: ${e.message}`);
+      onError(`Streaming read error: ${e.message}`);
     } finally {
-        onDone();
+      onDone();
     }
   }
 }

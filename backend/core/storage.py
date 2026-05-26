@@ -27,7 +27,7 @@ async def upload_to_cloudinary(file_bytes: bytes, folder: str = "ingestion") -> 
             
         result = cloudinary.uploader.upload(
             file_bytes,
-            folder=f"personabot/{folder}",
+            folder=f"askmentor/{folder}",
             resource_type="auto"
         )
         return result.get("secure_url")

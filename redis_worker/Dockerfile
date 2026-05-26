@@ -1,4 +1,4 @@
-# Production Redis for PersonaBot
+# Production Redis for AskMentor
 FROM redis:7-alpine
 
 # Install curl and bash for self-ping scripts

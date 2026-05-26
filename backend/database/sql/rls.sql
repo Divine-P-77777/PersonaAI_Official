@@ -1,4 +1,4 @@
--- PersonaBot — Row Level Security (RLS) Policies
+-- AskMentor — Row Level Security (RLS) Policies
 -- Run after supabase_schema.sql
 
 -- Enable RLS on all tables

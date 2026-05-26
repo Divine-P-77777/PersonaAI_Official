@@ -1,0 +1,35 @@
+# GCP Instance 1 — FastAPI Backend
+# Frontend is on Vercel. Redis is Upstash. RabbitMQ is CloudAMQP.
+# Run: docker compose up -d
+
+services:
+
+  caddy:
+    image: caddy:2.8-alpine
+    container_name: askmentor-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: askmentor-api
+    restart: unless-stopped
+    expose:
+      - "8000"
+    env_file:
+      - .env
+
+volumes:
+  caddy_data:
+  caddy_config:

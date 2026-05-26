@@ -110,7 +110,7 @@ export function HowItWorks() {
                 {/* Section Header */}
                 <div className="text-center max-w-3xl mx-auto mb-20">
                     <h2 className="text-4xl lg:text-6xl font-bold text-gray-900 mb-6 tracking-tight">
-                        How PersonaBot{' '}
+                        How AskMentor{' '}
                         <span className="bg-gradient-to-r from-orange-400 via-pink-500 to-rose-600 bg-clip-text text-transparent">
                             works
                         </span>
