@@ -77,12 +77,22 @@ export default function DashboardPage() {
             </h1>
             <p className="text-gray-500 text-lg font-medium">Manage and scale your industry knowledge with AI.</p>
           </div>
-          <Link
-            href="/dashboard/create"
-            className="h-14 px-8 bg-gradient-to-r from-orange-400 to-pink-500 text-white font-bold rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-orange-200 hover:shadow-orange-300 hover:scale-[1.02] active:scale-[0.98] transition-all"
+          <button
+            onClick={(e) => {
+              e.preventDefault()
+              if (bots.length >= 1) {
+                import("react-toastify").then(({ toast }) =>
+                  toast.info("You can't create more bots. Either delete your existing bot or edit it.")
+                )
+                router.push(`/dashboard/${bots[0].id}`)
+              } else {
+                router.push("/dashboard/create")
+              }
+            }}
+            className="h-14 px-8 bg-gradient-to-r from-orange-400 to-pink-500 text-white font-bold rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-orange-200 hover:shadow-orange-300 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
           >
             <Plus size={20} /> New Persona
-          </Link>
+          </button>
         </div>
 
         {/* Search Bar */}

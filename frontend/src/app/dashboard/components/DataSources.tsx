@@ -124,7 +124,7 @@ export function DataSources({ formData, updateFormData }: DataSourcesProps) {
         if (linkInput.title && linkInput.url) {
             // Normalize URL: remove duplicate https://, handle missing protocol, and trim whitespace
             let normalizedUrl = linkInput.url.trim();
-            
+
             // Remove redundant protocols (e.g., "https:// https://google.com")
             // This regex finds occurrences of http(s):// followed by optional spaces and another http(s)://
             const protocolRegex = /^(https?:\/\/)\s*(https?:\/\/)/i;
@@ -356,6 +356,9 @@ export function DataSources({ formData, updateFormData }: DataSourcesProps) {
                                     {textInput.content.length.toLocaleString()} / {TEXT_MAX_CHARS.toLocaleString()} characters
                                 </span>
                             </div>
+                            <p className="mt-3 text-xs leading-relaxed text-orange-600/90 font-semibold bg-orange-50/50 border border-orange-100 rounded-xl p-3">
+                              💡 <strong>Pro Tip:</strong> AskMentor encourages you to add detailed experience, expertise, how-to guides, roadmaps, or resume review guidelines. This helps the AI retrieval system generate much more personalized and accurate mentor responses for students.
+                            </p>
                             <button
                                 type="button"
                                 onClick={addTextSource}

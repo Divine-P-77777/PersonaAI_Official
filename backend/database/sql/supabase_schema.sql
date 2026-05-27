@@ -161,3 +161,44 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 CREATE INDEX IF NOT EXISTS messages_user_bot_idx ON messages (user_id, bot_id, created_at DESC);
 
+
+
+-- user_wallets: one row per user, tracks free + paid entitlement
+CREATE TABLE user_wallets (
+    id                   UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id              UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE UNIQUE,
+    free_bots_unlocked   INTEGER NOT NULL DEFAULT 0,     -- max 2
+    total_minutes_used   INTEGER NOT NULL DEFAULT 0,     -- global consumed (free + paid)
+    paid_balance_minutes INTEGER NOT NULL DEFAULT 0,     -- purchased top-up minutes
+    updated_at           TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE user_wallets ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can view own wallet" ON user_wallets FOR SELECT USING (auth.uid() = user_id);
+
+-- bot_access: tracks which bots a user has unlocked (max 2 free)
+CREATE TABLE bot_access (
+    id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    bot_id      UUID NOT NULL REFERENCES bots(id) ON DELETE CASCADE,
+    unlocked_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(user_id, bot_id)
+);
+ALTER TABLE bot_access ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users manage own bot access" ON bot_access FOR ALL USING (auth.uid() = user_id);
+
+-- transactions: ledger of every Cashfree payment attempt
+CREATE TABLE transactions (
+    id                   UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id              UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    cashfree_order_id    TEXT NOT NULL UNIQUE,
+    payment_session_id   TEXT NOT NULL,
+    amount               NUMERIC(10,2) NOT NULL,
+    currency             TEXT NOT NULL DEFAULT 'INR',
+    status               TEXT NOT NULL DEFAULT 'pending',  -- pending | paid | failed
+    minutes_purchased    INTEGER NOT NULL,
+    gateway_response     JSONB DEFAULT '{}',
+    created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users view own transactions" ON transactions FOR SELECT USING (auth.uid() = user_id);
+

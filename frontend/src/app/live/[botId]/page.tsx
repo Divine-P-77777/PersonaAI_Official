@@ -6,6 +6,8 @@ import { api } from "@/services/api"
 import { Bot } from "@/types"
 import { useLiveSession, Language, ServerMessage } from "@/hooks/useLiveSession"
 import { useAudioCapture } from "@/hooks/useAudioCapture"
+import { Mic, MicOff, Volume2, MessageSquare, MessageSquareOff } from "lucide-react"
+import LanguageToggle from "@/components/live/LanguageToggle"
 import LiveControls from "@/components/live/LiveControls"
 import TranscriptPanel, { TranscriptEntry } from "@/components/live/TranscriptPanel"
 
@@ -28,6 +30,7 @@ export default function LivePage() {
   const [autoSwitched, setAutoSwitched] = useState(false)
   const [isAISpeaking, setIsAISpeaking] = useState(false)
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([])
+  const [showTranscript, setShowTranscript] = useState(true)
   const audioChunksRef = useRef<string[]>([])
   const activeAudioRef = useRef<HTMLAudioElement | null>(null)
 
@@ -212,9 +215,32 @@ export default function LivePage() {
   if (error || !bot) return <ErrorScreen error={error} />
 
   return (
-    <main className="min-h-screen bg-gray-950 flex flex-col items-center justify-between py-12 gap-8">
+    <main className="min-h-screen bg-gray-950 flex flex-col items-center justify-between py-6 md:py-8 gap-4 md:gap-6 relative overflow-hidden">
+      {/* Minimal Language Toggle at top left */}
+      <div className="absolute top-6 left-6 z-50">
+        <LanguageToggle
+          language={language}
+          onToggle={handleLanguageToggle}
+          autoSwitched={autoSwitched}
+        />
+      </div>
+
+      {/* Transcript Toggle Icon at top right */}
+      <button
+        onClick={() => setShowTranscript(prev => !prev)}
+        title={showTranscript ? "Hide Transcript" : "Show Transcript"}
+        className="absolute top-6 right-6 z-50 p-3 rounded-full bg-gray-900/60 backdrop-blur-md border border-white/10 hover:bg-gray-800 text-gray-300 hover:text-white transition-all shadow-md cursor-pointer"
+        aria-label={showTranscript ? "Hide Transcript" : "Show Transcript"}
+      >
+        {showTranscript ? (
+          <MessageSquare className="w-5 h-5" />
+        ) : (
+          <MessageSquareOff className="w-5 h-5 text-gray-500" />
+        )}
+      </button>
+
       {/* Avatar + name */}
-      <section className="flex flex-col items-center gap-4">
+      <section className="flex flex-col items-center gap-3 mt-4">
         <div className="relative">
           <div className="w-40 h-40 rounded-full overflow-hidden border-4 border-orange-500 shadow-2xl shadow-orange-900/40">
             <Image src={bot.avatar_url || "/logo.png"} width={160} height={160} alt={bot.name} className="object-cover" />
@@ -228,14 +254,21 @@ export default function LivePage() {
           <p className="text-orange-400 text-xs font-bold uppercase tracking-widest mt-1">
             {isConnected ? "Session Active" : "Connecting…"}
           </p>
-          {isConnected && !isListening && !micError && (
-            <p className="text-orange-300/80 text-[11px] font-medium mt-1 animate-bounce">
-              👇 Click the red mic button below to start talking!
-            </p>
-          )}
-          {isListening && (
-            <p className="text-green-400 text-xs font-semibold mt-1 animate-pulse">🎙 Listening…</p>
-          )}
+          <div className="h-6 flex items-center justify-center mt-1.5">
+            {isAISpeaking ? (
+              <p className="text-teal-400 text-xs font-semibold animate-pulse flex items-center justify-center gap-1.5">
+                <Volume2 className="w-3.5 h-3.5 animate-bounce" /> Speaking…
+              </p>
+            ) : isListening ? (
+              <p className="text-green-400 text-xs font-semibold animate-pulse flex items-center justify-center gap-1.5">
+                <Mic className="w-3.5 h-3.5" /> Listening…
+              </p>
+            ) : (
+              <p className="text-gray-500 text-xs font-semibold flex items-center justify-center gap-1.5">
+                <MicOff className="w-3.5 h-3.5 text-gray-600" /> Muted
+              </p>
+            )}
+          </div>
           {micError && (
             <p className="text-red-400 text-xs mt-1">{micError}</p>
           )}
@@ -243,15 +276,16 @@ export default function LivePage() {
       </section>
 
       {/* Transcript */}
-      <TranscriptPanel entries={transcript} />
+      {showTranscript ? (
+        <TranscriptPanel entries={transcript} />
+      ) : (
+        <div className="flex-grow" />
+      )}
 
       {/* Controls */}
       <LiveControls
-        language={language}
         isMuted={!isListening}
         isAISpeaking={isAISpeaking}
-        autoSwitched={autoSwitched}
-        onToggleLanguage={handleLanguageToggle}
         onToggleMic={handleToggleMic}
         onInterrupt={() => {
           if (activeAudioRef.current) {

@@ -77,6 +77,26 @@ export default function BotDetailPage({ params }: { params: Promise<{ botId: str
       }
    };
 
+   const handleDeleteBot = async () => {
+      if (!bot) return;
+      
+      const confirmDelete = window.confirm(
+         "Are you absolutely sure you want to delete this entire bot and all of its associated data? This action is permanent and cannot be undone."
+      );
+      
+      if (!confirmDelete) return;
+      
+      try {
+         setLoading(true);
+         await api.deleteBot(bot.id);
+         showSuccess("Persona has been permanently deleted.");
+         router.push("/dashboard");
+      } catch (err: any) {
+         showError(err.message || "Failed to delete persona.");
+         setLoading(false);
+      }
+   };
+
    const handleDeleteSource = async (sourceId: string) => {
       try {
          await api.deleteDataSource(sourceId);
@@ -294,12 +314,24 @@ export default function BotDetailPage({ params }: { params: Promise<{ botId: str
                         <div className="flex items-center justify-between p-3 hover:bg-pink-50 rounded-2xl transition-colors group cursor-pointer">
                            <div className="flex items-center gap-3">
                               <div className="w-10 h-10 rounded-xl bg-pink-100 text-pink-700 flex items-center justify-center group-hover:bg-pink-500 group-hover:text-white transition-all">
-                                 <RefreshCw size={18} />
+                                  <RefreshCw size={18} />
                               </div>
                               <span className="font-bold text-gray-700">Retrain Model</span>
                            </div>
                            <ExternalLink size={16} className="text-gray-300" />
                         </div>
+                        <button
+                           onClick={handleDeleteBot}
+                           className="w-full flex items-center justify-between p-3 hover:bg-red-50 rounded-2xl transition-colors group cursor-pointer text-left text-red-600 hover:text-red-700 border-none bg-transparent outline-none"
+                        >
+                           <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-xl bg-red-100 text-red-600 flex items-center justify-center group-hover:bg-red-500 group-hover:text-white transition-all">
+                                 <Trash2 size={18} />
+                              </div>
+                              <span className="font-bold text-gray-700">Delete Persona</span>
+                           </div>
+                           <ChevronRight size={16} className="text-red-300 group-hover:text-red-500" />
+                        </button>
                      </div>
                   </section>
                </div>

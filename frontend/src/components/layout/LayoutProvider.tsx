@@ -25,7 +25,7 @@ export default function LayoutProvider({ children }: LayoutProviderProps) {
 
   return (
     <>
-      {/* Global Supabase health watcher — visible on every page */}
+
       <ServerDownBanner />
 
       {showHeaderFooter && <Navbar />}

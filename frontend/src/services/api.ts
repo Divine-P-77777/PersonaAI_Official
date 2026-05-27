@@ -125,6 +125,10 @@ class ApiService {
     return this.request<Bot>(`/bots/${botId}`);
   }
 
+  async deleteBot(botId: string): Promise<{ status: string; bot_id: string }> {
+    return this.request<{ status: string; bot_id: string }>(`/bots/${botId}`, "DELETE");
+  }
+
   // Ingestion
   async createIngestionBatch(
     botId: string,

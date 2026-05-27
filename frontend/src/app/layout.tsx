@@ -104,6 +104,8 @@ export default function RootLayout({
         <PersonaOrganization />
         <WebsiteStructuredData />
         <LayoutProvider>
+          <script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
+
           {children}
         </LayoutProvider>
 
