@@ -1,4 +1,4 @@
-
+import Link from 'next/link';
 import { Mail } from 'lucide-react';
 import { CiLinkedin } from "react-icons/ci";
 import { BsTwitterX, BsGithub } from "react-icons/bs";
@@ -24,10 +24,10 @@ export function Footer() {
                     <div>
                         <h3 className="text-white mb-4">Product</h3>
                         <ul className="space-y-2 text-sm">
-                            <li><a href="#" className="hover:text-white transition-colors">Features</a></li>
-                            <li><a href="#" className="hover:text-white transition-colors">How It Works</a></li>
-                            <li><a href="#" className="hover:text-white transition-colors">Pricing</a></li>
-                            <li><a href="#" className="hover:text-white transition-colors">Use Cases</a></li>
+                            <li><Link href="/explore" className="hover:text-white transition-colors">Explore</Link></li>
+                            <li><Link href="/#how-it-works" className="hover:text-white transition-colors">How It Works</Link></li>
+                            <li><Link href="/billing" className="hover:text-white transition-colors">Pricing</Link></li>
+                            <li><Link href="/signup" className="hover:text-white transition-colors">Use Cases</Link></li>
                         </ul>
                     </div>
 
@@ -35,10 +35,10 @@ export function Footer() {
                     <div>
                         <h3 className="text-white mb-4">Company</h3>
                         <ul className="space-y-2 text-sm">
-                            <li><a href="#" className="hover:text-white transition-colors">About Us</a></li>
-                            <li><a href="#" className="hover:text-white transition-colors">Blog</a></li>
-                            <li><a href="#" className="hover:text-white transition-colors">Careers</a></li>
-                            <li><a href="#" className="hover:text-white transition-colors">Contact</a></li>
+                            <li><Link href="/about" className="hover:text-white transition-colors">About Us</Link></li>
+                            <li><Link href="/blog" className="hover:text-white transition-colors">Blog</Link></li>
+                            <li><Link href="/careers" className="hover:text-white transition-colors">Careers</Link></li>
+                            <li><Link href="/contact" className="hover:text-white transition-colors">Contact</Link></li>
                         </ul>
                     </div>
 
@@ -46,10 +46,9 @@ export function Footer() {
                     <div>
                         <h3 className="text-white mb-4">Legal</h3>
                         <ul className="space-y-2 text-sm">
-                            <li><a href="#" className="hover:text-white transition-colors">Privacy Policy</a></li>
-                            <li><a href="#" className="hover:text-white transition-colors">Terms of Service</a></li>
-                            <li><a href="#" className="hover:text-white transition-colors">Cookie Policy</a></li>
-                            <li><a href="#" className="hover:text-white transition-colors">GDPR</a></li>
+                            <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
+                            <li><Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link></li>
+                            <li><Link href="/refund-policy" className="hover:text-white transition-colors">Refund Policy</Link></li>
                         </ul>
                     </div>
                 </div>

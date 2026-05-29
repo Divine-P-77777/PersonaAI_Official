@@ -253,13 +253,17 @@ class ApiService {
     return this.request<{ status: string; message: string }>(`/chat/${botId}/history`, "DELETE");
   }
 
+  async getBotAccess(botId: string): Promise<any> {
+    return this.request<any>(`/payments/access/${botId}`);
+  }
+
   // Chat (SSE Streaming)
   async chatWithBot(
     botId: string,
     message: string,
     onToken: (token: string) => void,
     onDone: () => void,
-    onError: (err: string) => void
+    onError: (err: any) => void
   ): Promise<void> {
     const { data: { session } } = await supabase.auth.getSession();
     const token = session?.access_token;
@@ -275,7 +279,11 @@ class ApiService {
 
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      onError(err.detail || "Chat request failed");
+      if (response.status === 402) {
+         onError(err.detail); // Pass the custom detail object for payments
+      } else {
+         onError(err.detail || "Chat request failed");
+      }
       return;
     }
 

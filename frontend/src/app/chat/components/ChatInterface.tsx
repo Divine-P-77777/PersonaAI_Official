@@ -13,7 +13,7 @@ import { clsx } from "clsx";
 import Lenis from "lenis";
 import { BotAvatar } from "../../explore/components/BotAvatar";
 import { Radio } from 'lucide-react';
-
+import { CreditWarningPopup } from "@/components/ui/CreditWarningPopup";
 
 interface ChatInterfaceProps {
   bot: Bot;
@@ -149,6 +149,17 @@ export const ChatInterface = ({ bot }: ChatInterfaceProps) => {
     });
   };
 
+  const [warningPopup, setWarningPopup] = useState<{ isOpen: boolean; mode: 'warning' | 'blocked'; message?: string }>({ isOpen: false, mode: 'warning' });
+  const [creditsRemaining, setCreditsRemaining] = useState<number | null>(null);
+
+  useEffect(() => {
+    api.getBotAccess(bot.id).then(res => {
+      if (res.credits_remaining !== undefined) {
+        setCreditsRemaining(res.credits_remaining);
+      }
+    }).catch(console.error);
+  }, [bot.id]);
+
   const handleSend = async () => {
     if (!input.trim() || isStreaming) return;
 
@@ -178,11 +189,26 @@ export const ChatInterface = ({ bot }: ChatInterfaceProps) => {
             return prev;
           });
         },
-        () => setIsStreaming(false),
-        (err) => {
-          console.error("Streaming error:", err);
+        () => {
           setIsStreaming(false);
-          toast.error("Failed to get response. Please try again.");
+          if (creditsRemaining !== null) {
+            const newCredits = creditsRemaining - 1;
+            setCreditsRemaining(newCredits);
+            if (newCredits === 1) {
+              setWarningPopup({ isOpen: true, mode: 'warning' });
+            }
+          }
+        },
+        (err) => {
+          setIsStreaming(false);
+          if (err && (err.code === "INSUFFICIENT_CREDITS" || err.code === "EXPLORATION_LIMIT_REACHED" || err.code === "ACCESS_EXPIRED")) {
+            setWarningPopup({ isOpen: true, mode: 'blocked', message: err.message });
+            setMessages((prev) => prev.slice(0, -2)); // Revert user message & empty assistant message
+          } else {
+            console.error("Streaming error:", err);
+            toast.error(typeof err === 'string' ? err : (err.message || "Failed to get response. Please try again."));
+            setMessages((prev) => prev.slice(0, -2));
+          }
         }
       );
     } catch (err) {
@@ -381,6 +407,14 @@ export const ChatInterface = ({ bot }: ChatInterfaceProps) => {
           </div>
         </div>
       </footer>
+
+      <CreditWarningPopup 
+        isOpen={warningPopup.isOpen}
+        mode={warningPopup.mode}
+        message={warningPopup.message}
+        onClose={() => setWarningPopup(prev => ({ ...prev, isOpen: false }))}
+        onUpgrade={() => router.push(`/billing`)}
+      />
     </div>
   );
 };

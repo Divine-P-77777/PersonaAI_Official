@@ -14,7 +14,8 @@ import {
   Gem,
   LayoutGrid,
   Zap,
-  Share2
+  Share2,
+  Lock
 } from "lucide-react";
 import { api } from "../../services/api";
 import { Bot } from "../../types";
@@ -22,13 +23,14 @@ import Link from 'next/link';
 import { BotAvatar } from "./components/BotAvatar";
 import { toast } from "react-toastify";
 
-
+import { useRouter } from "next/navigation"
 
 export default function ExplorePage() {
   const [bots, setBots] = useState<Bot[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const router = useRouter()
 
   useEffect(() => {
     const fetchBots = async () => {
@@ -58,8 +60,8 @@ export default function ExplorePage() {
       navigator.clipboard.writeText(url)
         .then(() => toast.success("Link copied to clipboard!"))
         .catch((err: any) => {
-           console.error("Clipboard write failed:", err);
-           toast.error("Failed to copy link.");
+          console.error("Clipboard write failed:", err);
+          toast.error("Failed to copy link.");
         });
     }
   };
@@ -149,8 +151,8 @@ export default function ExplorePage() {
                     key={cat}
                     onClick={() => setSelectedCategory(cat)}
                     className={`px-7 py-3 rounded-2xl text-xs font-bold tracking-widest uppercase transition-all duration-300 ${selectedCategory === cat
-                        ? "bg-gray-900 text-white shadow-xl shadow-gray-900/20 scale-105"
-                        : "bg-white text-gray-400 hover:text-gray-900 hover:bg-white/80 border border-transparent hover:border-gray-200"
+                      ? "bg-gray-900 text-white shadow-xl shadow-gray-900/20 scale-105"
+                      : "bg-white text-gray-400 hover:text-gray-900 hover:bg-white/80 border border-transparent hover:border-gray-200"
                       }`}
                   >
                     {cat}
@@ -263,18 +265,31 @@ export default function ExplorePage() {
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <button 
+                        <button
                           onClick={(e) => handleShare(e, bot)}
                           className="w-12 h-12 rounded-[1.5rem] bg-orange-50 text-orange-600 flex items-center justify-center hover:bg-orange-100 transition-all shadow-sm"
                         >
                           <Share2 className="w-5 h-5" />
                         </button>
-                        <Link
-                          href={`/chat/${bot.id}`}
-                          className="w-14 h-14 rounded-[1.8rem] bg-gray-900 text-white flex items-center justify-center hover:bg-orange-600 hover:scale-110 active:scale-95 transition-all duration-300 shadow-xl"
-                        >
-                          <MessageSquare className="w-6 h-6" />
-                        </Link>
+                        {bot.is_unlocked || bot.is_free ? (
+                          <Link
+                            href={`/chat/${bot.id}`}
+                            className="w-14 h-14 rounded-[1.8rem] bg-gray-900 text-white flex items-center justify-center hover:bg-orange-600 hover:scale-110 active:scale-95 transition-all duration-300 shadow-xl"
+                          >
+                            <MessageSquare className="w-6 h-6" />
+                          </Link>
+                        ) : (
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              router.push(`/chat/${bot.id}`);
+                            }}
+                            className="w-14 h-14 rounded-[1.8rem] bg-gray-900 text-white flex items-center justify-center hover:bg-orange-600 hover:scale-110 active:scale-95 transition-all duration-300 shadow-xl relative"
+                          >
+                            <Lock className="w-5 h-5 absolute" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

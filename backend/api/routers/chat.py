@@ -1,5 +1,6 @@
 import json
 import logging
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -16,7 +17,18 @@ from backend.database.queries import (
     save_message,
     clear_chat_history
 )
-
+from backend.database.payment_queries import (
+    get_user_bot_access,
+    get_monthly_exploration,
+    create_free_trial_access,
+    consume_credits,
+    upsert_monthly_exploration,
+)
+from backend.payments.pricing_config import (
+    FREE_EXPLORATION,
+    CREDIT_COSTS,
+    DEFAULT_CREDIT_COST,
+)
 from backend.rag.retrieval import retrieve_similar_chunks
 from backend.rag.context_builder import build_context
 
@@ -58,6 +70,103 @@ async def chat_with_bot(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="This persona is currently paused by the author."
         )
+
+    user_id = user["id"]
+    is_owner = (bot["owner_id"] == user_id)
+    is_free_bot = bot.get("is_free", True)
+
+    # ----------------------------------------------------------------
+    # Credit Guard — enforced for all non-owner interactions on paid bots
+    # ----------------------------------------------------------------
+    if not is_owner and not is_free_bot:
+        action_type = "voice_session" if bot.get("voice_enabled") else "text_message"
+        credit_cost = CREDIT_COSTS.get(action_type, DEFAULT_CREDIT_COST)
+        now = datetime.now(tz=timezone.utc)
+
+        access = await get_user_bot_access(user_id, bot_id, token=user.get("_token"))
+
+        if access:
+            # Check expiry
+            expires_at = access.get("access_expires_at")
+            if expires_at:
+                from dateutil import parser as dateparser
+                exp_dt = dateparser.parse(expires_at) if isinstance(expires_at, str) else expires_at
+                if exp_dt < now:
+                    raise HTTPException(
+                        status_code=402,
+                        detail={
+                            "code": "ACCESS_EXPIRED",
+                            "message": "Your access to this mentor has expired.",
+                            "unlock_price": bot.get("unlock_price"),
+                        }
+                    )
+
+            # Check remaining credits
+            credits_remaining = access["credits_allowed"] - access["credits_used"]
+            if credits_remaining < credit_cost:
+                raise HTTPException(
+                    status_code=402,
+                    detail={
+                        "code": "INSUFFICIENT_CREDITS",
+                        "message": "You've used all your credits for this mentor.",
+                        "unlock_price": bot.get("unlock_price"),
+                        "credits_remaining": credits_remaining,
+                    }
+                )
+        else:
+            # No existing access — check free trial eligibility
+            exploration = await get_monthly_exploration(user_id, token=user.get("_token"))
+            explored_bots: list = (exploration or {}).get("mentors_explored", []) or []
+
+            if bot_id not in explored_bots:
+                # New mentor — check monthly exploration quota
+                if len(explored_bots) >= FREE_EXPLORATION.max_mentors_per_month:
+                    raise HTTPException(
+                        status_code=402,
+                        detail={
+                            "code": "EXPLORATION_LIMIT_REACHED",
+                            "message": (
+                                f"You've explored your monthly limit of "
+                                f"{FREE_EXPLORATION.max_mentors_per_month} mentors. "
+                                f"Unlock this mentor to continue."
+                            ),
+                            "unlock_price": bot.get("unlock_price"),
+                        }
+                    )
+
+                # Grant free trial access
+                trial_expires = now + timedelta(days=7)  # Free trial lasts 7 days
+                access = await create_free_trial_access(
+                    user_id=user_id,
+                    bot_id=bot_id,
+                    credits_allowed=FREE_EXPLORATION.free_credits_per_mentor,
+                    expires_at=trial_expires,
+                    token=user.get("_token"),
+                )
+                await upsert_monthly_exploration(user_id, bot_id, token=user.get("_token"))
+                logger.info(
+                    "[CHAT] Free trial granted | user=%s | bot=%s | credits=%d",
+                    user_id, bot_id, FREE_EXPLORATION.free_credits_per_mentor,
+                )
+            else:
+                # Already explored but no access row (edge case — recreate it)
+                raise HTTPException(
+                    status_code=402,
+                    detail={
+                        "code": "TRIAL_EXHAUSTED",
+                        "message": "Your free trial for this mentor has ended. Unlock to continue.",
+                        "unlock_price": bot.get("unlock_price"),
+                    }
+                )
+
+        # Deduct credits atomically after guard passes
+        if access:
+            await consume_credits(access["id"], credit_cost, token=user.get("_token"))
+            logger.info(
+                "[CHAT] Credits consumed | user=%s | bot=%s | cost=%d | action=%s",
+                user_id, bot_id, credit_cost, action_type,
+            )
+    # ----------------------------------------------------------------
 
     user_message = body.message
     logger.info(f"[CHAT] Bot={bot_id} | User={user['id']} | Message='{user_message[:80]}'")

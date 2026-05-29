@@ -31,7 +31,7 @@ from slowapi.errors import RateLimitExceeded
 from backend.core.config import get_settings
 from backend.core.rate_limiter import limiter
 from backend.core.redis_client import close_redis_pool
-from backend.api.routers import auth, bots, ingestion, chat, voice, users, worker, live
+from backend.api.routers import auth, bots, ingestion, chat, voice, users, worker, live, payments
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -61,6 +61,7 @@ app.include_router(chat.router,      prefix="/api/chat",      tags=["Chat"])
 app.include_router(voice.router,     prefix="/api/voice",     tags=["Voice"])
 app.include_router(worker.router,    prefix="/api",           tags=["Worker Queue"])
 app.include_router(live.router,      prefix="/api/live",      tags=["Live Interaction"])
+app.include_router(payments.router,  prefix="/api/payments",  tags=["Payments"])
 
 # ─── Health Check ─────────────────────────────────────────────────────────────
 @app.get("/health", tags=["Health"])

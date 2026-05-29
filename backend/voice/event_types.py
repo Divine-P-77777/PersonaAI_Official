@@ -54,8 +54,11 @@ def language_switch_event(language: str) -> dict:
     return {"type": ServerEvent.LANGUAGE_SWITCH, "language": language}
 
 
-def error_event(message: str) -> dict:
-    return {"type": ServerEvent.ERROR, "message": message}
+def error_event(message: str, code: str = None) -> dict:
+    evt = {"type": ServerEvent.ERROR, "message": message}
+    if code:
+        evt["code"] = code
+    return evt
 
 
 def stt_transcript_event(text: str, is_final: bool = False) -> dict:

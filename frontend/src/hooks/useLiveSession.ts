@@ -7,61 +7,51 @@
  *   - Send typed messages (config, user_text, interrupt, session_end).
  *   - Parse incoming server events and call typed callbacks.
  *
- * Does NOT contain: audio playback, UI rendering, or language detection.
- * Those are handled by the component and useAudioQueue hook.
+
  */
 
 import { useCallback, useEffect, useRef, useState } from "react"
 
 export type Language = "en" | "hi"
 
-// ── Incoming server event types ──────────────────────────────────────────────
-
-export interface ServerMessage {
-  type:
-    | "stt_transcript"
-    | "ai_transcript"
-    | "audio_stream"
-    | "speaking_done"
-    | "language_switch"
-    | "error"
-  text?:     string
-  data?:     string    // base64 audio chunk
-  format?:   "mp3" | "wav"
-  is_final?: boolean
-  language?: string
-  message?:  string
-}
+// Incoming server event types
+export type ServerMessage =
+  | { type: "stt_transcript"; text?: string; is_final?: boolean }
+  | { type: "ai_transcript"; text?: string; partial?: boolean }
+  | { type: "audio_stream"; data?: string; format?: string }
+  | { type: "speaking_done"; format?: string }
+  | { type: "language_switch"; language: string }
+  | { type: "error"; message: string; code?: string }
 
 // ── Hook return type ──────────────────────────────────────────────────────────
 
 export interface UseLiveSessionReturn {
-  isConnected:  boolean
-  sendText:     (text: string) => void
+  isConnected: boolean
+  sendText: (text: string) => void
   sendInterrupt: () => void
-  sendConfig:   (lang: Language, gender: string, botId: string) => void
-  endSession:   () => void
+  sendConfig: (lang: Language, gender: string, botId: string) => void
+  endSession: () => void
 }
 
 // ── Hook ──────────────────────────────────────────────────────────────────────
 
 export function useLiveSession(
-  sessionId:     string | null,
-  token:         string | null,
-  onMessage:     (msg: ServerMessage) => void,
+  sessionId: string | null,
+  token: string | null,
+  onMessage: (msg: ServerMessage) => void,
 ): UseLiveSessionReturn {
-  const wsRef          = useRef<WebSocket | null>(null)
+  const wsRef = useRef<WebSocket | null>(null)
   const [isConnected, setIsConnected] = useState(false)
-  const onMessageRef   = useRef(onMessage)
+  const onMessageRef = useRef(onMessage)
   onMessageRef.current = onMessage  // Keep ref fresh without re-subscribing
 
   // ── Connect ────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!sessionId || !token) return
 
-    const protocol  = window.location.protocol === "https:" ? "wss" : "ws"
-    const host      = process.env.NEXT_PUBLIC_API_URL?.replace(/^https?:\/\//, "") ?? "localhost:8000"
-    const wsUrl     = `${protocol}://${host}/api/live/ws/${sessionId}?token=${token}`
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws"
+    const host = process.env.NEXT_PUBLIC_API_URL?.replace(/^https?:\/\//, "") ?? "localhost:8000"
+    const wsUrl = `${protocol}://${host}/api/live/ws/${sessionId}?token=${token}`
 
     const ws = new WebSocket(wsUrl)
     wsRef.current = ws

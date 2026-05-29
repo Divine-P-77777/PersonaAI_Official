@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Check, ArrowRight, ArrowLeft, User, Sparkles, Upload, Eye, X } from 'lucide-react';
+import { Check, ArrowRight, ArrowLeft, User, Sparkles, Upload, Eye, X, DollarSign } from 'lucide-react';
 import { BasicInfo } from './BasicInfo';
 import { PersonaConfig } from './PersonaConfig';
 import { DataSources } from './DataSources';
+import { PricingConfig } from './PricingConfig';
 import { Review } from './Review';
 import { IngestionProgress } from './IngestionProgress';
 import { api } from '../../../services/api';
@@ -43,14 +44,23 @@ export type BotFormData = {
         url?: string;
         file?: File;
     }>;
+
+    // Pricing (sourced from config/pricing.ts)
+    is_free: boolean;
+    pricing_tier: string | null;
+    unlock_price: number | null;
+    credits_per_pack: number | null;
+    voice_enabled: boolean;
+    subscription_enabled: boolean;
 };
 
 const steps = [
     { id: 1, name: 'Basic Info', icon: User },
     { id: 2, name: 'Your Persona', icon: Sparkles },
     { id: 3, name: 'Upload Data', icon: Upload },
-    { id: 4, name: 'Review', icon: Eye },
-    { id: 5, name: 'Training', icon: Sparkles }
+    { id: 4, name: 'Pricing', icon: DollarSign },
+    { id: 5, name: 'Review', icon: Eye },
+    { id: 6, name: 'Training', icon: Sparkles }
 ];
 
 export function CreateBot() {
@@ -73,7 +83,14 @@ export function CreateBot() {
         experience: [],
         education: [],
         links: {},
-        dataSources: []
+        dataSources: [],
+        // Pricing defaults
+        is_free: true,
+        pricing_tier: null,
+        unlock_price: null,
+        credits_per_pack: null,
+        voice_enabled: false,
+        subscription_enabled: false,
     });
 
     // Auto-populate avatar from user profile if available
@@ -148,7 +165,14 @@ export function CreateBot() {
                     experience: formData.experience,
                     education: formData.education,
                     links: formData.links
-                }
+                },
+                // Pricing
+                is_free: formData.is_free,
+                pricing_tier: formData.pricing_tier ?? undefined,
+                unlock_price: formData.unlock_price ?? undefined,
+                credits_per_pack: formData.credits_per_pack ?? undefined,
+                voice_enabled: formData.voice_enabled,
+                subscription_enabled: formData.subscription_enabled,
             });
 
             const botId = botResponse.id;
@@ -198,7 +222,7 @@ export function CreateBot() {
             }
 
             setCreatedBotId(botId);
-            setCurrentStep(5); // Move to real-time progress step
+            setCurrentStep(6); // Move to training step
             showSuccess('Bot created! Now indexing documents...');
 
         } catch (err: any) {
@@ -288,9 +312,22 @@ export function CreateBot() {
                         <DataSources formData={formData} updateFormData={updateFormData} />
                     )}
                     {currentStep === 4 && (
+                        <PricingConfig
+                            formData={{
+                                is_free: formData.is_free,
+                                pricing_tier: formData.pricing_tier,
+                                unlock_price: formData.unlock_price,
+                                credits_per_pack: formData.credits_per_pack,
+                                voice_enabled: formData.voice_enabled,
+                                subscription_enabled: formData.subscription_enabled,
+                            }}
+                            updateFormData={updateFormData}
+                        />
+                    )}
+                    {currentStep === 5 && (
                         <Review formData={formData} />
                     )}
-                    {currentStep === 5 && (createdBotId || batchId) && (
+                    {currentStep === 6 && (createdBotId || batchId) && (
                         <IngestionProgress
                             botId={createdBotId || ''}
                             batchId={batchId}
@@ -310,7 +347,7 @@ export function CreateBot() {
                 )}
 
                 {/* Navigation Buttons */}
-                {currentStep < 5 && (
+                {currentStep < 6 && (
                     <div className="flex justify-between items-center px-2">
                         <button
                             onClick={handleBack}
@@ -331,7 +368,7 @@ export function CreateBot() {
                         </button>
 
                         <div className="flex gap-4">
-                            {currentStep < 4 ? (
+                            {currentStep < 5 ? (
                                 <button
                                     onClick={handleNext}
                                     className="flex items-center gap-2 px-10 py-4 bg-gradient-to-r from-gray-900 to-gray-800 text-white rounded-3xl hover:shadow-2xl hover:scale-105 transition-all font-bold"

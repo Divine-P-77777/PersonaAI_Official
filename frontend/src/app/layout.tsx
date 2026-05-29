@@ -29,7 +29,7 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://personabot.vercel.app'), // Replace with actual production URL
+  metadataBase: new URL('https://askmentor.online'),
   title: {
     default: "AskMentor | Your AI Mentor",
     template: "%s | AskMentor"
@@ -50,7 +50,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://personabot.vercel.app",
+    url: "https://askmentor.online",
     siteName: "AskMentor",
     title: "AskMentor | Your AI Mentor",
     description: "Connect with AI-powered personas of alumni, professors, and professionals.",

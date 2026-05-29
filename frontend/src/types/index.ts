@@ -50,6 +50,15 @@ export interface Bot {
     display_name?: string;
     avatar_url?: string;
   };
+  
+  // Monetization fields
+  is_free?: boolean;
+  is_unlocked?: boolean;
+  pricing_tier?: string;
+  unlock_price?: number;
+  credits_per_pack?: number;
+  voice_enabled?: boolean;
+  subscription_enabled?: boolean;
 }
 
 export interface DataSource {

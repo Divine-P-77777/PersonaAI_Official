@@ -10,6 +10,7 @@ import { Mic, MicOff, Volume2, MessageSquare, MessageSquareOff } from "lucide-re
 import LanguageToggle from "@/components/live/LanguageToggle"
 import LiveControls from "@/components/live/LiveControls"
 import TranscriptPanel, { TranscriptEntry } from "@/components/live/TranscriptPanel"
+import { CreditWarningPopup } from "@/components/ui/CreditWarningPopup"
 
 export default function LivePage() {
   const params = useParams()
@@ -24,6 +25,8 @@ export default function LivePage() {
   // ── Session ────────────────────────────────────────────────────────────────
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [token, setToken] = useState<string | null>(null)
+  const [warningPopup, setWarningPopup] = useState<{ isOpen: boolean; mode: 'warning' | 'blocked'; message?: string }>({ isOpen: false, mode: 'warning' })
+  const [creditsRemaining, setCreditsRemaining] = useState<number | null>(null)
 
   // ── Live state ─────────────────────────────────────────────────────────────
   const [language, setLanguage] = useState<Language>("en")
@@ -41,6 +44,16 @@ export default function LivePage() {
         try {
           const data = await api.getBot(botId)
           setBot(data)
+          
+          try {
+            const access = await api.getBotAccess(botId)
+            if (access.credits_remaining !== undefined) {
+              setCreditsRemaining(access.credits_remaining)
+            }
+          } catch (e) {
+            console.error("Failed to fetch access", e)
+          }
+
           const sess = await api.startLiveSession(botId)
           setSessionId(sess.session_id)
           setToken(sess.token)
@@ -148,6 +161,19 @@ export default function LivePage() {
       case "speaking_done":
         // Play the accumulated stream now that synthesis is finished
         playAccumulatedAudio(msg.format ?? "mp3")
+        
+        // Decrement credits
+        setCreditsRemaining(prev => {
+          if (prev !== null) {
+            const newCredits = prev - 5; // Voice session costs 5 credits
+            if (newCredits > 0 && newCredits <= 5) {
+               // Next session will use 5 credits, so this is the last interaction
+               setWarningPopup({ isOpen: true, mode: 'warning' })
+            }
+            return newCredits;
+          }
+          return prev;
+        })
         break
 
       case "language_switch":
@@ -160,6 +186,15 @@ export default function LivePage() {
 
       case "error":
         console.error("[Live] Server error:", msg.message)
+        // Check if it's a credit error based on msg.code (if available) or message content
+        if (msg.code === "INSUFFICIENT_CREDITS" || msg.code === "EXPLORATION_LIMIT_REACHED" || msg.code === "ACCESS_EXPIRED" || msg.code === "TRIAL_EXHAUSTED") {
+            setWarningPopup({ isOpen: true, mode: 'blocked', message: msg.message })
+            if (activeAudioRef.current) {
+                activeAudioRef.current.pause()
+                activeAudioRef.current = null
+            }
+            setIsAISpeaking(false)
+        }
         break
     }
   }, [playAccumulatedAudio])
@@ -296,6 +331,14 @@ export default function LivePage() {
           sendInterrupt()
         }}
         onExit={handleExit}
+      />
+      {/* Credit Warning Popup */}
+      <CreditWarningPopup 
+        isOpen={warningPopup.isOpen}
+        mode={warningPopup.mode}
+        message={warningPopup.message}
+        onClose={() => setWarningPopup(prev => ({ ...prev, isOpen: false }))}
+        onUpgrade={() => router.push(`/billing`)}
       />
     </main>
   )

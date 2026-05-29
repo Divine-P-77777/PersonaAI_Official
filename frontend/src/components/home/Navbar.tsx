@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Menu, X, ChevronDown, LogOut, User as UserIcon, Layout, Sparkles } from 'lucide-react';
+import { Menu, X, ChevronDown, LogOut, User as UserIcon, Layout, Sparkles, CreditCard, Info, Mail, Smartphone } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -45,8 +45,8 @@ export function Navbar() {
 
                     {/* Desktop Navigation */}
                     <div className="hidden md:flex items-center gap-8">
-                        <Link href="/explore" className="text-sm font-semibold text-gray-600 hover:text-orange-700 transition-colors">
-                            Explore
+                        <Link href="/explore" className="text-sm font-semibold text-gray-600 hover:text-orange-700 hover:underline decoration-orange-500 underline-offset-4 transition-all">
+                            Explore Personas
                         </Link>
                         
                         {user ? (
@@ -92,6 +92,40 @@ export function Navbar() {
                                                     Dashboard
                                                 </Link>
                                                 
+                                                <Link 
+                                                    href="/billing"
+                                                    onClick={() => setIsDropdownOpen(false)}
+                                                    className="flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-all"
+                                                >
+                                                    <CreditCard size={18} className="text-gray-400" />
+                                                    Billing
+                                                </Link>
+                                                <Link 
+                                                    href="/about"
+                                                    onClick={() => setIsDropdownOpen(false)}
+                                                    className="flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-all"
+                                                >
+                                                    <Info size={18} className="text-gray-400" />
+                                                    About
+                                                </Link>
+                                                <Link 
+                                                    href="/contact"
+                                                    onClick={() => setIsDropdownOpen(false)}
+                                                    className="flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-all"
+                                                >
+                                                    <Mail size={18} className="text-gray-400" />
+                                                    Contact
+                                                </Link>
+                                                
+                                                <Link 
+                                                    href="/pwa"
+                                                    onClick={() => setIsDropdownOpen(false)}
+                                                    className="flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-all"
+                                                >
+                                                    <Smartphone size={18} className="text-gray-400" />
+                                                    Install App
+                                                </Link>
+                                                
                                                 <button 
                                                     onClick={handleLogout}
                                                     className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium text-red-500 hover:bg-red-50 rounded-xl transition-all"
@@ -106,9 +140,6 @@ export function Navbar() {
                             </div>
                         ) : (
                             <div className="flex items-center gap-4">
-                                <Link href="/signin" className="text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors">
-                                    Sign In
-                                </Link>
                                 <Link href="/signup" className="px-6 py-2 bg-gradient-to-r from-orange-400 to-pink-500 text-white rounded-full hover:shadow-lg transition-all text-sm font-bold">
                                     Get Started
                                 </Link>
@@ -137,13 +168,37 @@ export function Navbar() {
                     >
                         <div className="px-4 py-6 space-y-4">
                             <Link
-                                href="/explore"
-                                onClick={() => setIsMenuOpen(false)}
-                                className="flex items-center gap-3 px-4 py-3 text-base font-bold text-gray-900 hover:bg-gray-50 rounded-2xl transition-colors"
-                            >
-                                <Sparkles size={20} className="text-orange-600" />
-                                Explore Personas
-                            </Link>
+                                                href="/explore"
+                                                onClick={() => setIsMenuOpen(false)}
+                                                className="flex items-center gap-3 px-4 py-3 text-base font-bold text-gray-900 hover:bg-gray-50 rounded-2xl transition-colors"
+                                            >
+                                                <Sparkles size={20} className="text-orange-600" />
+                                                Explore Personas
+                                            </Link>
+                                            <Link
+                                                href="/about"
+                                                onClick={() => setIsMenuOpen(false)}
+                                                className="flex items-center gap-3 px-4 py-3 text-base font-bold text-gray-900 hover:bg-gray-50 rounded-2xl transition-colors"
+                                            >
+                                                <Info size={20} className="text-gray-400" />
+                                                About
+                                            </Link>
+                                            <Link
+                                                href="/contact"
+                                                onClick={() => setIsMenuOpen(false)}
+                                                className="flex items-center gap-3 px-4 py-3 text-base font-bold text-gray-900 hover:bg-gray-50 rounded-2xl transition-colors"
+                                            >
+                                                <Mail size={20} className="text-gray-400" />
+                                                Contact
+                                            </Link>
+                                            <Link
+                                                href="/pwa"
+                                                onClick={() => setIsMenuOpen(false)}
+                                                className="flex items-center gap-3 px-4 py-3 text-base font-bold text-gray-900 hover:bg-gray-50 rounded-2xl transition-colors"
+                                            >
+                                                <Smartphone size={20} className="text-gray-400" />
+                                                Install App
+                                            </Link>
 
                             {user ? (
                                 <>
@@ -155,6 +210,14 @@ export function Navbar() {
                                         <Layout size={20} className="text-gray-400" />
                                         Dashboard
                                     </Link>
+                                    <Link
+                                        href="/billing"
+                                        onClick={() => setIsMenuOpen(false)}
+                                        className="flex items-center gap-3 px-4 py-3 text-base font-bold text-gray-900 hover:bg-gray-50 rounded-2xl transition-colors"
+                                    >
+                                        <CreditCard size={20} className="text-gray-400" />
+                                        Billing
+                                    </Link>
                                     <button
                                         onClick={handleLogout}
                                         className="w-full flex items-center gap-3 px-4 py-3 text-base font-bold text-red-500 hover:bg-red-50 rounded-2xl transition-colors text-left"
@@ -164,14 +227,7 @@ export function Navbar() {
                                     </button>
                                 </>
                             ) : (
-                                <div className="grid grid-cols-2 gap-3 pt-2">
-                                    <Link 
-                                        href="/signin" 
-                                        className="flex items-center justify-center py-3 text-base font-bold text-gray-900 bg-gray-50 rounded-2xl"
-                                        onClick={() => setIsMenuOpen(false)}
-                                    >
-                                        Sign In
-                                    </Link>
+                                <div className="pt-2">
                                     <Link 
                                         href="/signup" 
                                         className="flex items-center justify-center py-3 text-base font-bold text-white bg-gradient-to-r from-orange-400 to-pink-500 rounded-2xl shadow-lg"

@@ -14,6 +14,7 @@ from backend.database.queries import (
 )
 from backend.core.redis_client import invalidate_cache
 from backend.core.storage import upload_to_supabase
+from backend.payments.pricing_config import PRICING_TIERS, validate_pricing, get_value_score_warning
 
 router = APIRouter()
 
@@ -23,23 +24,75 @@ async def create_bot(
     user: Dict[str, Any] = Depends(require_alumni_role)
 ):
     """Create a new alumni/professional persona bot."""
+
+    # --- Pricing validation (sourced from centralized pricing_config.py) ---
+    if not bot_in.is_free:
+        if not bot_in.pricing_tier:
+            raise HTTPException(
+                status_code=400,
+                detail="A pricing_tier is required for paid bots."
+            )
+        if bot_in.pricing_tier not in PRICING_TIERS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid pricing_tier '{bot_in.pricing_tier}'. Valid: {list(PRICING_TIERS)}"
+            )
+
+        price    = bot_in.unlock_price    or PRICING_TIERS[bot_in.pricing_tier].unlock_price
+        credits  = bot_in.credits_per_pack or PRICING_TIERS[bot_in.pricing_tier].credits
+
+        is_valid, err_msg = validate_pricing(bot_in.pricing_tier, price, credits)
+        if not is_valid:
+            raise HTTPException(status_code=422, detail=err_msg)
+
+        # Non-blocking warning (returned in response header for frontend to surface)
+        warning = get_value_score_warning(price, credits)
+    else:
+        price   = None
+        credits = None
+        warning = None
+
     bot_data = {
         "owner_id":    user["id"],
         "name":        bot_in.name,
         "description": bot_in.description,
         "persona_config": bot_in.persona_config.model_dump(mode="json") if bot_in.persona_config else {},
-        # voice_gender is stored as a dedicated column (not only in persona_config)
-        # so the live session can read it cheaply without parsing JSONB.
         "voice_gender": (bot_in.voice_gender.value if bot_in.voice_gender else "female"),
+        # Monetization
+        "is_free":              bot_in.is_free,
+        "pricing_tier":         bot_in.pricing_tier if not bot_in.is_free else None,
+        "unlock_price":         price,
+        "credits_per_pack":     credits,
+        "voice_enabled":        bot_in.voice_enabled,
+        "subscription_enabled": bot_in.subscription_enabled,
     }
     return await db_create_bot(bot_data, token=user.get("_token"))
 
 
 @router.get("/explore", response_model=List[BotResponse])
-async def list_public_bots():
+async def list_public_bots(
+    user: Optional[Dict[str, Any]] = Depends(get_optional_user)
+):
     """List all bots that are 'ready' — for the student explore page."""
     from backend.database.queries import get_public_bots
-    return await get_public_bots()
+    token = user.get("_token") if user else None
+    bots = await get_public_bots(token=token)
+    
+    if user:
+        from backend.database.payment_queries import get_user_bot_access
+        for bot in bots:
+            # Check if user has active access
+            access = await get_user_bot_access(user["id"], str(bot["id"]), token=token)
+            if access:
+                credits_remaining = access.get("credits_allowed", 0) - access.get("credits_used", 0)
+                if credits_remaining > 0:
+                    bot["is_unlocked"] = True
+                else:
+                    bot["is_unlocked"] = False
+            else:
+                bot["is_unlocked"] = False
+    
+    return bots
 
 
 @router.get("/", response_model=List[BotResponse])

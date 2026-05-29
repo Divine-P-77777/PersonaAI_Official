@@ -181,6 +181,20 @@ async def live_websocket(websocket: WebSocket, session_id: str):
         manager.disconnect(session_id)
 
 
+from backend.database.payment_queries import (
+    get_user_bot_access,
+    get_monthly_exploration,
+    create_free_trial_access,
+    consume_credits,
+    upsert_monthly_exploration,
+)
+from backend.payments.pricing_config import (
+    FREE_EXPLORATION,
+    CREDIT_COSTS,
+    DEFAULT_CREDIT_COST,
+)
+from datetime import datetime, timedelta, timezone
+
 async def _run_voice_turn(
     session_id:   str,
     text:         str,
@@ -192,6 +206,58 @@ async def _run_voice_turn(
 ) -> None:
     """Wrapper to run process_voice_turn and handle errors gracefully."""
     try:
+        # Check credits
+        bot = await get_bot_by_id(bot_id, token=token)
+        if not bot:
+            await manager.send_json(session_id, error_event("Bot not found"))
+            return
+            
+        is_owner = (bot["owner_id"] == user_id)
+        is_free_bot = bot.get("is_free", True)
+
+        if not is_owner and not is_free_bot:
+            credit_cost = CREDIT_COSTS.get("voice_session", DEFAULT_CREDIT_COST)
+            now = datetime.now(tz=timezone.utc)
+            access = await get_user_bot_access(user_id, bot_id, token=token)
+
+            if access:
+                expires_at = access.get("access_expires_at")
+                if expires_at:
+                    from dateutil import parser as dateparser
+                    exp_dt = dateparser.parse(expires_at) if isinstance(expires_at, str) else expires_at
+                    if exp_dt < now:
+                        await manager.send_json(session_id, error_event("Your access to this mentor has expired.", "ACCESS_EXPIRED"))
+                        return
+
+                credits_remaining = access["credits_allowed"] - access["credits_used"]
+                if credits_remaining < credit_cost:
+                    await manager.send_json(session_id, error_event("You've used all your credits for this mentor.", "INSUFFICIENT_CREDITS"))
+                    return
+            else:
+                exploration = await get_monthly_exploration(user_id, token=token)
+                explored_bots: list = (exploration or {}).get("mentors_explored", []) or []
+
+                if bot_id not in explored_bots:
+                    if len(explored_bots) >= FREE_EXPLORATION.max_mentors_per_month:
+                        await manager.send_json(session_id, error_event("You've explored your monthly limit of mentors. Unlock to continue.", "EXPLORATION_LIMIT_REACHED"))
+                        return
+
+                    trial_expires = now + timedelta(days=7)
+                    access = await create_free_trial_access(
+                        user_id=user_id,
+                        bot_id=bot_id,
+                        credits_allowed=FREE_EXPLORATION.free_credits_per_mentor,
+                        expires_at=trial_expires,
+                        token=token,
+                    )
+                    await upsert_monthly_exploration(user_id, bot_id, token=token)
+                else:
+                    await manager.send_json(session_id, error_event("Your free trial for this mentor has ended. Unlock to continue.", "TRIAL_EXHAUSTED"))
+                    return
+
+            if access:
+                await consume_credits(access["id"], credit_cost, token=token)
+
         await process_voice_turn(
             session_id=session_id,
             user_text=text,
