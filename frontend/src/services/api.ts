@@ -344,6 +344,34 @@ class ApiService {
       onDone();
     }
   }
+
+  // --- Profile Methods ---
+  async updateMyProfile(data: { name?: string }): Promise<any> {
+    return this.request<any>("/users/me", "PUT", data);
+  }
+
+  async uploadMyAvatar(file: File): Promise<any> {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+
+    const res = await fetch(`${API_URL}/users/me/avatar`, {
+      method: "POST",
+      headers: {
+        ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+      },
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(errorText || "Upload failed");
+    }
+
+    return await res.json();
+  }
 }
 
 export const api = new ApiService();

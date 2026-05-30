@@ -9,6 +9,7 @@ export function Navbar() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [user, setUser] = useState<any>(null);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [imgError, setImgError] = useState(false);
     const router = useRouter();
 
     useEffect(() => {
@@ -24,6 +25,10 @@ export function Navbar() {
 
         return () => subscription.unsubscribe();
     }, []);
+
+    useEffect(() => {
+        setImgError(false);
+    }, [user?.user_metadata?.avatar_url]);
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
@@ -56,11 +61,12 @@ export function Navbar() {
                                     className="flex items-center gap-2 p-1 rounded-full hover:bg-gray-50 transition-all border border-transparent hover:border-gray-100"
                                 >
                                     <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-orange-100 to-pink-100 p-0.5 border border-orange-200 flex items-center justify-center overflow-hidden bg-white">
-                                        {user.avatar_url ? (
+                                        {user.user_metadata?.avatar_url && !imgError ? (
                                             <img
-                                                src={user.avatar_url}
+                                                src={user.user_metadata.avatar_url}
                                                 alt="User"
                                                 className="w-full h-full rounded-full object-cover"
+                                                onError={() => setImgError(true)}
                                             />
                                         ) : (
                                             <User size={20} className="text-orange-400" />
@@ -97,6 +103,15 @@ export function Navbar() {
                                                         Dashboard
                                                     </Link>
                                                 )}
+
+                                                <Link
+                                                    href="/profile"
+                                                    onClick={() => setIsDropdownOpen(false)}
+                                                    className="flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-all"
+                                                >
+                                                    <UserIcon size={18} className="text-gray-400" />
+                                                    My Profile
+                                                </Link>
 
                                                 <Link
                                                     href="/billing"
@@ -218,6 +233,14 @@ export function Navbar() {
                                             Dashboard
                                         </Link>
                                     )}
+                                    <Link
+                                        href="/profile"
+                                        onClick={() => setIsMenuOpen(false)}
+                                        className="flex items-center gap-3 px-4 py-3 text-base font-bold text-gray-900 hover:bg-gray-50 rounded-2xl transition-colors"
+                                    >
+                                        <UserIcon size={20} className="text-gray-400" />
+                                        My Profile
+                                    </Link>
                                     <Link
                                         href="/billing"
                                         onClick={() => setIsMenuOpen(false)}
