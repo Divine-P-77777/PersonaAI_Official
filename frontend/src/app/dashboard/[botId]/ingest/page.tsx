@@ -2,15 +2,15 @@
 
 import React, { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { 
-  FileText, 
-  Link as LinkIcon, 
-  Type, 
-  Trash2, 
-  Plus, 
-  Upload, 
-  CheckCircle2, 
-  Clock, 
+import {
+  FileText,
+  Link as LinkIcon,
+  Type,
+  Trash2,
+  Plus,
+  Upload,
+  CheckCircle2,
+  Clock,
   AlertCircle,
   X,
   Zap,
@@ -23,6 +23,8 @@ import Link from "next/link"
 import { api } from "@/services/api"
 import { useToast } from "@/hooks/useToast"
 import { useRouter } from "next/navigation"
+import { FileDropZone } from "../../components/FileDropZone"
+import imageCompression from 'browser-image-compression'
 
 type SourceType = "pdf" | "image" | "long_text" | "web_link"
 
@@ -43,11 +45,36 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
   const [batchId, setBatchId] = useState<string | null>(null)
   const [batchProgress, setBatchProgress] = useState(0)
   const [batchStatus, setBatchStatus] = useState<"pending" | "processing" | "completed" | "failed">("pending")
-  const pollRef = useRef<NodeJS.Timeout | null>(null)
+  const pollRef = useRef<(() => void) | null>(null)
   const { showSuccess, showError } = useToast()
   const router = useRouter()
+  const [existingSourcesCount, setExistingSourcesCount] = useState(0)
+  const [compressingId, setCompressingId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (botId) {
+      (async () => {
+        try {
+          const data = await api.getBotDataSources(botId)
+          setExistingSourcesCount(data.length)
+        } catch (e) {
+          console.error("Failed to fetch existing sources count:", e)
+        }
+      })()
+    }
+  }, [botId])
+
+  const PDF_MAX_MB = 50
+  const IMAGE_MAX_MB = 10
+  const PDF_MAX_BYTES = PDF_MAX_MB * 1024 * 1024
+  const IMAGE_MAX_BYTES = IMAGE_MAX_MB * 1024 * 1024
+  const TEXT_MAX_CHARS = 50000
 
   const addSource = (type: SourceType) => {
+    if (existingSourcesCount + sources.length >= 15) {
+      showError("Limit reached: You can upload at most 15 documents per bot.")
+      return
+    }
     const newSource: StagedSource = {
       id: Math.random().toString(36).substr(2, 9),
       type,
@@ -58,18 +85,40 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
     setSources([...sources, newSource])
   }
 
+  const handleMagicFilesAdded = (newFiles: Array<{ type: 'pdf' | 'image'; title: string; file: File }>) => {
+    const remainingCount = 15 - (existingSourcesCount + sources.length)
+    if (remainingCount <= 0) {
+      showError("Limit reached: You can upload at most 15 documents per bot.")
+      return
+    }
+
+    let filesToAdd = newFiles
+    if (newFiles.length > remainingCount) {
+      showError(`Limit warning: Only added first ${remainingCount} files to stay within the 15 documents limit.`)
+      filesToAdd = newFiles.slice(0, remainingCount)
+    }
+
+    const newStagedSources = filesToAdd.map(f => ({
+      id: Math.random().toString(36).substr(2, 9),
+      type: f.type as SourceType,
+      title: f.title,
+      file: f.file
+    }))
+    setSources(prev => [...prev, ...newStagedSources])
+    showSuccess(`Magicly added ${filesToAdd.length} sources!`)
+  }
+
   // Cleanup WebSocket on unmount
   useEffect(() => {
     return () => {
       if (pollRef.current) {
         try {
-          // If it's a websocket, close it
-          if (typeof (pollRef.current as any).close === 'function') {
-            (pollRef.current as any).close();
-          } else {
-            clearInterval(pollRef.current as any);
-          }
-        } catch (e) {}
+          // pollRef.current is the cleanup function returned by api.connectIngestionWebSocket
+          pollRef.current();
+          pollRef.current = null;
+        } catch (e) {
+          console.error("Failed to cleanup ingestion polling:", e);
+        }
       }
     };
   }, []);
@@ -82,50 +131,125 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
     setSources(sources.map(s => s.id === id ? { ...s, ...updates } : s))
   }
 
-  const handleFileUpload = (id: string, e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (id: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) {
+    if (!file) return
+
+    const source = sources.find(s => s.id === id)
+    if (!source) return
+
+    if (source.type === 'pdf') {
+      if (file.size > PDF_MAX_BYTES) {
+        showError(`PDF exceeds ${PDF_MAX_MB}MB limit.`)
+        return
+      }
       updateSource(id, { file, title: file.name })
+    } else if (source.type === 'image') {
+      setCompressingId(id)
+      try {
+        let fileToUpload = file
+        if (file.size > IMAGE_MAX_BYTES) {
+          showSuccess("Compressing image...")
+          const options = {
+            maxSizeMB: IMAGE_MAX_MB,
+            maxWidthOrHeight: 4096,
+            useWebWorker: true,
+          }
+          const compressedFile = await imageCompression(file, options)
+          fileToUpload = new File([compressedFile], file.name, { type: file.type })
+
+          if (fileToUpload.size > IMAGE_MAX_BYTES) {
+            showError("Image is too large even after compression.")
+            return
+          }
+        }
+        updateSource(id, { file: fileToUpload, title: fileToUpload.name })
+      } catch (err) {
+        showError("Failed to compress image.")
+      } finally {
+        setCompressingId(null)
+      }
     }
   }
 
+  const [phaseLabel, setPhaseLabel] = useState<string>("")
+
   const startPolling = (id: string, total: number) => {
     try {
-      const wsUrl = `${api.getWsUrl()}/ingestion/batch/${id}/ws`;
-      const ws = new WebSocket(wsUrl);
+      const cleanup = api.connectIngestionWebSocket(
+        id,
+        (batch) => {
+          // ── Sub-step progress calculation ──────────────────────
+          const sourceStatuses: Array<{ status: string }> = batch.sources || [];
+          const effectiveTotal = Math.max(total, sourceStatuses.length, 1);
 
-      ws.onmessage = (event) => {
-        try {
-          const batch = JSON.parse(event.data);
-          
-          if (batch.error) {
-            showError(batch.error);
-            ws.close();
-            return;
-          }
+          const errorLog = batch.error_log || [];
+          const noteEntry = errorLog.find(e => e.note);
+          const currentNote = noteEntry?.note || null;
 
-          const pct = total > 0 ? Math.round((batch.processed_files / total) * 100) : 0;
-          setBatchProgress(pct);
-          setBatchStatus(batch.status);
-          
-          if (batch.status === "completed" || batch.status === "failed") {
-            ws.close();
-            if (batch.status === "completed") {
-              showSuccess("All sources processed successfully! 🎉");
-            } else {
-              showError("Some sources failed to process. Check logs.");
+          let weightedProgress = 0;
+          for (const src of sourceStatuses) {
+            if (src.status === "completed" || src.status === "failed") {
+              weightedProgress += 1.0;
+            } else if (src.status === "processing") {
+              // Try to be granular if we have a note like "Page 5/20"
+              const noteMatch = currentNote?.match(/Page (\d+)\/(\d+)/);
+              if (noteMatch) {
+                const current = parseInt(noteMatch[1]);
+                const total = parseInt(noteMatch[2]);
+                weightedProgress += (current / total) * 0.9; // 0.9 because we still need embedding phase
+              } else {
+                weightedProgress += 0.5;
+              }
             }
           }
-        } catch (err) {
-          console.error("WS Parse error", err);
+
+          const pct = Math.min(
+            Math.round((weightedProgress / effectiveTotal) * 100),
+            batch.status === "completed" ? 100 : 99
+          );
+
+          const finalPct = batch.status === "completed" ? 100 : pct;
+          setBatchProgress(finalPct);
+          setBatchStatus(batch.status);
+
+          // ── Phase label: tell user what's happening right now ──
+          if (batch.status === "completed") {
+            setPhaseLabel("All sources embedded into knowledge base! ✅");
+          } else if (batch.status === "failed") {
+            setPhaseLabel("Some sources failed during processing.");
+          } else if (currentNote) {
+            // Display real-time notes from the worker (OCR page progress, etc.)
+            setPhaseLabel(currentNote);
+          } else if (sourceStatuses.some((s: any) => s.status === "processing")) {
+            const processingCount = sourceStatuses.filter((s: any) => s.status === "processing").length;
+            setPhaseLabel(`📄 Extracting & chunking ${processingCount} document${processingCount > 1 ? 's' : ''}...`);
+          } else if (batch.processed_files > 0 && batch.processed_files < total) {
+            setPhaseLabel(`💾 Storing vectors... ${batch.processed_files}/${total} complete`);
+          } else {
+            setPhaseLabel("OCR → Chunking → Embedding → Vector DB write...");
+          }
+        },
+        (batch) => {
+          // This is called when status is "completed" or "failed"
+          if (batch.status === "completed") {
+            setBatchProgress(100);
+            setBatchStatus("completed");
+            setPhaseLabel("All sources embedded into knowledge base! ✅");
+            showSuccess("All sources processed successfully! 🎉");
+          } else {
+            setBatchStatus("failed");
+            setPhaseLabel("Some sources failed during processing.");
+            showError("Some sources failed to process. Check logs.");
+          }
+        },
+        (err) => {
+          console.error("WebSocket Error:", err);
+          showError(err || "Connection failed for live progress.");
         }
-      };
+      );
 
-      ws.onerror = (error) => {
-        console.error("WebSocket Error:", error);
-      };
-
-      pollRef.current = ws as any;
+      pollRef.current = cleanup;
     } catch (err) {
       console.error("Failed to establish WebSocket:", err);
       showError("Connection failed for live progress.");
@@ -134,6 +258,11 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
 
   const handleStartIngestion = async () => {
     if (sources.length === 0) return
+
+    if (existingSourcesCount + sources.length > 15) {
+      showError(`Limit reached: You can have at most 15 documents. You currently have ${existingSourcesCount} and are trying to add ${sources.length}.`)
+      return
+    }
 
     setIsUploading(true)
     try {
@@ -145,11 +274,12 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
       }))
 
       const files = sources.filter(s => s.file).map(s => s.file!)
-      
+
       const batch = await api.createIngestionBatch(botId, formattedSources, files)
       setBatchId(batch.id)
       setBatchStatus("processing")
       setBatchProgress(0)
+      setPhaseLabel("Starting ingestion pipeline...")
       setShowStatus(true)
       startPolling(batch.id, sources.length)
       showSuccess("Knowledge ingestion started! Processing in background...")
@@ -161,27 +291,28 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
     }
   }
 
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-orange-50 to-white text-gray-900 font-sans selection:bg-orange-200">
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-orange-100 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 h-18 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link 
-                href={`/dashboard/${botId}`}
-                className="p-2 hover:bg-orange-50 rounded-xl text-gray-400 hover:text-orange-600 transition-all"
+            <Link
+              href={`/dashboard/${botId}`}
+              className="p-2 hover:bg-orange-50 rounded-xl text-gray-400 hover:text-orange-600 transition-all"
             >
-                <ArrowLeft size={20} />
+              <ArrowLeft size={20} />
             </Link>
             <div className="flex items-center gap-2">
-                <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
-                    <Database className="text-white" size={20} />
-                </div>
-                <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-orange-600 to-pink-600 bg-clip-text text-transparent">
-                    Knowledge Hub
-                </span>
+              <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
+                <Database className="text-white" size={20} />
+              </div>
+              <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-orange-600 to-pink-600 bg-clip-text text-transparent">
+                Knowledge Hub
+              </span>
             </div>
           </div>
-          <Link 
+          <Link
             href={`/dashboard/${botId}`}
             className="text-gray-500 hover:text-orange-600 transition-colors text-sm font-bold bg-gray-50 px-4 py-2 rounded-xl"
           >
@@ -198,21 +329,31 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
           <p className="text-gray-500 text-lg font-medium">Upload documents, paste links, or write text to build your persona's knowledge base.</p>
         </div>
 
+        {/* Magic Drop Zone */}
+        <div className="mb-12">
+          <FileDropZone onFilesAdded={handleMagicFilesAdded} />
+        </div>
+
+        <div className="relative flex items-center justify-center my-12">
+          <div className="absolute inset-x-0 h-px bg-orange-100/50" />
+          <span className="relative bg-orange-50 px-6 text-xs font-black uppercase tracking-[0.3em] text-orange-400">Or add other types</span>
+        </div>
+
         {/* Action Bar */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
           {[
             { type: "pdf", icon: FileText, label: "PDF", color: "orange" },
             { type: "image", icon: Zap, label: "Image", color: "orange" },
             { type: "web_link", icon: LinkIcon, label: "Web Link", color: "pink" },
             { type: "long_text", icon: Type, label: "Long Text", color: "pink" }
           ].map((btn) => (
-            <button 
+            <button
               key={btn.type}
               onClick={() => addSource(btn.type as SourceType)}
-              className="h-16 px-4 bg-white border-2 border-orange-50 rounded-2xl flex flex-col items-center justify-center gap-1 hover:border-orange-200 hover:bg-orange-50/30 transition-all group shadow-sm"
+              className="h-20 px-4 bg-white/50 backdrop-blur-sm border-2 border-orange-50 rounded-[28px] flex flex-col items-center justify-center gap-2 hover:border-orange-300 hover:bg-orange-100/30 transition-all group shadow-sm hover:shadow-orange-100"
             >
-              <btn.icon size={20} className="text-gray-400 group-hover:text-orange-500 transition-colors" />
-              <span className="text-xs font-bold text-gray-600">{btn.label}</span>
+              <btn.icon size={24} className="text-gray-400 group-hover:text-orange-500 transition-colors" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 group-hover:text-gray-900">{btn.label}</span>
             </button>
           ))}
         </div>
@@ -223,7 +364,7 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
             {sources.length === 0 ? (
               <div className="h-72 rounded-[40px] border-2 border-dashed border-orange-100 bg-orange-50/20 flex flex-col items-center justify-center text-orange-400 gap-4">
                 <div className="w-16 h-16 bg-white rounded-3xl flex items-center justify-center shadow-inner">
-                   <Plus size={32} />
+                  <Plus size={32} />
                 </div>
                 <p className="font-bold">Add your first data source to begin</p>
               </div>
@@ -236,7 +377,7 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
                   exit={{ opacity: 0, scale: 0.95 }}
                   className="bg-white border-2 border-orange-50 rounded-[32px] p-6 group relative shadow-sm hover:shadow-md transition-all"
                 >
-                  <button 
+                  <button
                     onClick={() => removeSource(source.id)}
                     className="absolute top-2 right-2 sm:top-4 sm:right-4 w-10 h-10 rounded-xl flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all opacity-100 sm:opacity-0 group-hover:opacity-100 z-10"
                   >
@@ -250,7 +391,7 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
                       {source.type === "long_text" && <Type size={24} />}
                       {source.type === "image" && <Zap size={24} />}
                     </div>
-                    
+
                     <div className="flex-1 space-y-4 min-w-0 mt-4 sm:mt-0 pt-6 sm:pt-0">
                       {source.type === "web_link" ? (
                         <div className="space-y-4 min-w-0">
@@ -276,17 +417,34 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
                         <div className="space-y-4 min-w-0">
                           <input
                             type="text"
-                            placeholder="Text block title (e.g. My Philosphy)"
+                            placeholder="Text block title (e.g. My Philosphy,Roadmap Guidance)"
                             className="w-full bg-transparent border-none outline-none text-xl font-bold text-gray-900 placeholder-gray-300"
                             value={source.title}
                             onChange={(e) => updateSource(source.id, { title: e.target.value })}
                           />
-                          <textarea
-                            placeholder="Paste or write your text here..."
-                            className="w-full h-40 bg-gray-50 border-2 border-orange-50 rounded-2xl px-5 py-4 outline-none focus:border-orange-200 transition-colors resize-none text-gray-700 font-medium"
-                            value={source.content}
-                            onChange={(e) => updateSource(source.id, { content: e.target.value })}
-                          />
+                          <div className="relative">
+                            <textarea
+                              placeholder="Paste or write your text here..."
+                              className="w-full h-40 bg-gray-50 border-2 border-orange-50 rounded-2xl px-5 py-4 pb-8 outline-none focus:border-orange-200 transition-colors resize-none text-gray-700 font-medium"
+                              value={source.content}
+                              onChange={(e) => {
+                                const newContent = e.target.value;
+                                if (newContent.length <= TEXT_MAX_CHARS) {
+                                  updateSource(source.id, { content: newContent })
+                                } else {
+                                  showError(`Text exceeds the maximum limit of ${TEXT_MAX_CHARS} characters.`)
+                                }
+                              }}
+                            />
+                            <div className="absolute bottom-3 right-4">
+                              <span className={`text-xs font-medium ${(source.content?.length || 0) >= TEXT_MAX_CHARS ? 'text-red-500' : 'text-gray-400'}`}>
+                                {(source.content?.length || 0).toLocaleString()} / {TEXT_MAX_CHARS.toLocaleString()}
+                              </span>
+                            </div>
+                          </div>
+                          <p className="mt-3 text-xs leading-relaxed text-orange-600/90 font-semibold bg-orange-50/50 border border-orange-100 rounded-xl p-3">
+                            💡 <strong>Pro Tip:</strong> AskMentor encourages you to add detailed experience, expertise, how-to guides, roadmaps, or resume review guidelines. This helps the AI retrieval system generate much more personalized and accurate mentor responses for students.
+                          </p>
                         </div>
                       ) : (
                         <div className="space-y-4 min-w-0">
@@ -294,20 +452,29 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
                             <input
                               type="text"
                               placeholder="Filename"
-                              className="w-full sm:flex-1 bg-transparent border-none outline-none text-xl font-bold text-gray-900 placeholder-gray-300 pointer-events-none truncate"
+                              className="w-full sm:flex-1 bg-transparent border-none outline-none text-xl font-bold text-gray-900 placeholder-gray-300 pointer-events-none truncate min-w-0"
                               value={source.title}
                               readOnly
                             />
                             {!source.file && (
-                                <label className="h-12 w-full sm:w-auto px-6 bg-gradient-to-r from-orange-400 to-pink-500 text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-orange-100 hover:scale-105 transition-all shrink-0">
-                                  <Upload size={16} /> Browse
-                                  <input type="file" className="hidden" accept={source.type === 'pdf' ? '.pdf' : 'image/*'} onChange={(e) => handleFileUpload(source.id, e)} />
-                                </label>
+                              <label className={`h-12 w-full sm:w-auto px-6 bg-gradient-to-r from-orange-400 to-pink-500 text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-orange-100 hover:scale-105 transition-all shrink-0 ${compressingId === source.id ? 'opacity-50 cursor-wait' : ''}`}>
+                                {compressingId === source.id ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+                                {compressingId === source.id ? 'Optimizing...' : 'Browse'}
+                                <input
+                                  type="file"
+                                  className="hidden"
+                                  accept={source.type === 'pdf' ? '.pdf' : 'image/*'}
+                                  disabled={compressingId === source.id}
+                                  onChange={(e) => handleFileUpload(source.id, e)}
+                                />
+                              </label>
                             )}
                           </div>
                           {source.file && (
-                            <div className="py-3 px-5 bg-green-50 border-2 border-green-100 text-green-600 rounded-2xl text-sm font-bold inline-flex items-center gap-2">
-                                <CheckCircle2 size={18} /> {source.file.name} ready for secure upload
+                            <div className="py-3 px-5 bg-green-50 border-2 border-green-100 text-green-600 rounded-2xl text-sm font-bold flex items-center gap-2 min-w-0">
+                              <CheckCircle2 size={18} className="shrink-0" />
+                              <span className="truncate flex-1" title={source.file.name}>{source.file.name}</span>
+                              <span className="shrink-0">ready</span>
                             </div>
                           )}
                         </div>
@@ -330,8 +497,8 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
             >
               {isUploading ? (
                 <>
-                    <Loader2 className="w-6 h-6 animate-spin" />
-                    <span className="animate-pulse">Starting Ingestion...</span>
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                  <span className="animate-pulse">Starting Ingestion...</span>
                 </>
               ) : (
                 <>
@@ -345,7 +512,7 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
         {/* Status Overlay with Live Progress Bar */}
         <AnimatePresence>
           {showStatus && (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="fixed inset-0 z-[100] bg-white/95 backdrop-blur-md flex items-center justify-center p-6"
@@ -359,7 +526,7 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
                     <AlertCircle className="text-red-500" size={48} />
                   ) : (
                     <>
-                      <motion.div 
+                      <motion.div
                         animate={{ rotate: 360 }}
                         transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
                         className="absolute -inset-2 rounded-[40px] border-2 border-orange-200 border-t-pink-500"
@@ -371,17 +538,16 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
 
                 {/* Title */}
                 <h2 className="text-3xl font-black text-gray-900 mb-2">
-                  {batchStatus === "completed" ? "Knowledge Ingested! 🎉" 
-                   : batchStatus === "failed" ? "Some Sources Failed"
-                   : "Processing Knowledge..."}
+                  {batchStatus === "completed" ? "Knowledge Ingested! 🎉"
+                    : batchStatus === "failed" ? "Some Sources Failed"
+                      : "Processing Knowledge..."}
                 </h2>
 
                 {/* Status badge */}
-                <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest mb-8 ${
-                  batchStatus === "completed" ? "bg-green-50 text-green-600"
+                <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest mb-8 ${batchStatus === "completed" ? "bg-green-50 text-green-600"
                   : batchStatus === "failed" ? "bg-red-50 text-red-600"
-                  : "bg-orange-50 text-orange-600"
-                }`}>
+                    : "bg-orange-50 text-orange-600"
+                  }`}>
                   {batchStatus === "processing" && (
                     <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
                   )}
@@ -398,22 +564,17 @@ export default function IngestionPage({ params }: { params: Promise<{ botId: str
                   </div>
                   <div className="w-full h-4 bg-gray-100 rounded-full overflow-hidden">
                     <motion.div
-                      className={`h-full rounded-full ${
-                        batchStatus === "failed" 
-                          ? "bg-gradient-to-r from-red-400 to-red-500"
-                          : "bg-gradient-to-r from-orange-400 to-pink-500"
-                      }`}
+                      className={`h-full rounded-full ${batchStatus === "failed"
+                        ? "bg-gradient-to-r from-red-400 to-red-500"
+                        : "bg-gradient-to-r from-orange-400 to-pink-500"
+                        }`}
                       initial={{ width: "0%" }}
                       animate={{ width: `${batchProgress}%` }}
                       transition={{ duration: 0.6, ease: "easeOut" }}
                     />
                   </div>
-                  <p className="text-xs text-gray-400 mt-2 font-medium">
-                    {batchStatus === "completed"
-                      ? "All sources successfully embedded into the knowledge base."
-                      : batchStatus === "failed"
-                      ? "Some sources failed — please check the error logs."
-                      : "OCR → Chunking → Embedding → Vector DB write..."}
+                  <p className="text-xs text-gray-500 mt-2 font-medium">
+                    {phaseLabel || "Initializing pipeline..."}
                   </p>
                 </div>
 

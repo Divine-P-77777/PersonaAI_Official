@@ -32,6 +32,7 @@ export interface PersonaConfig {
     year: number;
   }>;
   links?: Record<string, string>;
+  voice_gender?: "male" | "female" | "transgender";
 }
 
 export interface Bot {
@@ -42,8 +43,18 @@ export interface Bot {
   persona_config: PersonaConfig;
   status: ProjectStatus;
   avatar_url?: string | null;
+  voice_gender?: "male" | "female" | "transgender";
   created_at: string;
   updated_at: string;
+  is_free?: boolean;
+  is_unlocked?: boolean;
+  pricing_tier?: string;
+  unlock_price?: number;
+  credits_per_pack?: number;
+  voice_enabled?: boolean;
+  subscription_enabled?: boolean;
+  session_count?: number;
+  free_explorations_used?: number;
   owner?: {
     display_name?: string;
     avatar_url?: string;

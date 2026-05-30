@@ -7,7 +7,7 @@ import {
    Bot,
    ArrowLeft,
    MessageSquare,
-   Zap,
+   Pencil,
    Settings,
    BarChart3,
    Globe,
@@ -19,7 +19,9 @@ import {
    Trash2,
    Image as ImageIcon,
    Link as LinkIcon,
-   Type
+   Type,
+   Camera,
+   Loader2
 } from "lucide-react"
 import { api } from "@/services/api"
 import { useToast } from "@/hooks/useToast"
@@ -33,8 +35,31 @@ export default function BotDetailPage({ params }: { params: Promise<{ botId: str
    const [sources, setSources] = useState<DataSource[]>([])
    const [loading, setLoading] = useState(true)
    const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
+   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
+   const fileInputRef = React.useRef<HTMLInputElement>(null)
    const { showError, showSuccess } = useToast()
    const router = useRouter()
+
+   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      if (!file || !bot) return
+
+      if (file.size > 5 * 1024 * 1024) {
+         showError("Image size must be less than 5MB")
+         return
+      }
+
+      try {
+         setIsUploadingAvatar(true)
+         const updatedBot = await api.uploadBotAvatar(bot.id, file)
+         setBot(updatedBot)
+         showSuccess("Persona avatar updated successfully!")
+      } catch (err: any) {
+         showError(err.message || "Failed to upload avatar.")
+      } finally {
+         setIsUploadingAvatar(false)
+      }
+   }
 
    const handleToggleStatus = async () => {
       if (!bot || isUpdatingStatus) return;
@@ -52,6 +77,26 @@ export default function BotDetailPage({ params }: { params: Promise<{ botId: str
       }
    };
 
+   const handleDeleteBot = async () => {
+      if (!bot) return;
+      
+      const confirmDelete = window.confirm(
+         "Are you absolutely sure you want to delete this entire bot and all of its associated data? This action is permanent and cannot be undone."
+      );
+      
+      if (!confirmDelete) return;
+      
+      try {
+         setLoading(true);
+         await api.deleteBot(bot.id);
+         showSuccess("Persona has been permanently deleted.");
+         router.push("/dashboard");
+      } catch (err: any) {
+         showError(err.message || "Failed to delete persona.");
+         setLoading(false);
+      }
+   };
+
    const handleDeleteSource = async (sourceId: string) => {
       try {
          await api.deleteDataSource(sourceId);
@@ -59,6 +104,16 @@ export default function BotDetailPage({ params }: { params: Promise<{ botId: str
          showSuccess("Knowledge source deleted securely.");
       } catch (err: any) {
          showError(err.message || "Failed to delete source.");
+      }
+   };
+
+   const handleDeleteSourcesBulk = async (sourceIds: string[]) => {
+      try {
+         await api.deleteDataSourcesBulk(sourceIds);
+         setSources(sources.filter(s => !sourceIds.includes(s.id)));
+         showSuccess(`Successfully deleted ${sourceIds.length} sources.`);
+      } catch (err: any) {
+         showError(err.message || "Bulk deletion failed.");
       }
    };
 
@@ -88,11 +143,38 @@ export default function BotDetailPage({ params }: { params: Promise<{ botId: str
 
    if (loading) {
       return (
-         <div className="min-h-screen bg-orange-50/30 flex items-center justify-center">
-            <div className="flex flex-col items-center gap-4">
-               <div className="w-12 h-12 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin" />
-               <p className="text-orange-600 font-medium animate-pulse">Loading Persona...</p>
-            </div>
+         <div className="min-h-screen bg-white flex flex-col items-center justify-center relative overflow-hidden">
+            {/* Soft Background Glows */}
+            <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-orange-100/50 rounded-full blur-[120px] animate-pulse" />
+            <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-pink-100/50 rounded-full blur-[120px] animate-pulse" />
+            
+            <motion.div 
+               initial={{ opacity: 0, scale: 0.9 }}
+               animate={{ opacity: 1, scale: 1 }}
+               className="relative z-10 flex flex-col items-center"
+            >
+               <div className="relative w-24 h-24 mb-6">
+                  {/* Outer Spinning Ring */}
+                  <div className="absolute inset-0 rounded-3xl border-2 border-transparent border-t-orange-400 border-r-pink-500 animate-spin" style={{ animationDuration: '3s' }} />
+                  
+                  {/* Inner Content */}
+                  <div className="absolute inset-2 bg-gradient-to-br from-orange-400 to-pink-500 rounded-2xl flex items-center justify-center shadow-xl shadow-orange-200">
+                     <Bot className="w-10 h-10 text-white" />
+                  </div>
+                  
+                  {/* Pulse Effect */}
+                  <div className="absolute inset-0 bg-orange-400 rounded-3xl animate-ping opacity-20" />
+               </div>
+
+               <div className="text-center">
+                  <h3 className="text-xl font-bold text-gray-900 mb-1">Loading Persona...</h3>
+                  <div className="flex items-center justify-center gap-1">
+                     <div className="w-1 h-1 bg-orange-400 rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
+                     <div className="w-1 h-1 bg-orange-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                     <div className="w-1 h-1 bg-orange-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
+                  </div>
+               </div>
+            </motion.div>
          </div>
       )
    }
@@ -107,17 +189,18 @@ export default function BotDetailPage({ params }: { params: Promise<{ botId: str
                <div className="flex items-center gap-4">
                   <Link
                      href="/dashboard"
-                     className="p-2 hover:bg-orange-50 rounded-xl text-gray-500 hover:text-orange-600 transition-all"
+                     className="p-2 hover:bg-orange-50 rounded-xl text-gray-500 hover:text-orange-700 transition-all"
+                     aria-label="Back to Dashboard"
                   >
                      <ArrowLeft size={20} />
                   </Link>
                   <div className="flex items-center gap-3">
-                     <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center text-orange-600">
+                     <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center text-orange-700">
                         <Bot size={22} />
                      </div>
                      <div>
                         <h1 className="font-bold text-gray-900 leading-tight">{bot.name}</h1>
-                        <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Persona Management</p>
+                        <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Persona Management</p>
                      </div>
                   </div>
                </div>
@@ -125,12 +208,13 @@ export default function BotDetailPage({ params }: { params: Promise<{ botId: str
                <div className="flex items-center gap-6">
                   {/* Live/Pause Toggle */}
                   <div className="flex items-center gap-3 bg-gray-50 px-4 py-2 rounded-2xl border border-orange-50">
-                     <span className={`text-[10px] font-black uppercase tracking-widest ${bot.status === 'ready' ? 'text-green-600' : 'text-gray-400'}`}>
+                     <span className={`text-[10px] font-black uppercase tracking-widest ${bot.status === 'ready' ? 'text-green-700' : 'text-gray-500'}`}>
                         {bot.status === 'ready' ? 'Live' : 'Paused'}
                      </span>
                      <button 
                         onClick={handleToggleStatus}
-                        className={`w-10 h-5 rounded-full p-1 transition-all duration-300 flex items-center ${bot.status === 'ready' ? 'bg-green-500 justify-end' : 'bg-gray-200 justify-start'}`}
+                        className={`w-10 h-5 rounded-full p-1 transition-all duration-300 flex items-center ${bot.status === 'ready' ? 'bg-green-600 justify-end' : 'bg-gray-300 justify-start'}`}
+                        aria-label="Toggle Persona Status"
                      >
                         <motion.div 
                            layout
@@ -163,45 +247,64 @@ export default function BotDetailPage({ params }: { params: Promise<{ botId: str
                <div className="lg:col-span-1 space-y-8">
                   <section className="bg-white rounded-[40px] p-8 border border-orange-100 shadow-sm">
                      <div className="flex flex-col items-center text-center">
-                        <div className="w-32 h-32 rounded-3xl bg-gradient-to-br from-orange-100 to-pink-100 p-1 mb-6 shadow-xl relative group">
+                        <div className="w-32 h-32 rounded-full bg-gradient-to-br from-orange-100 to-pink-100 p-0.5 mb-6 shadow-xl relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                           {/* Always render base: uploaded photo or bot icon */}
                            {bot.avatar_url ? (
-                              <img src={bot.avatar_url} alt={bot.name} className="w-full h-full object-cover rounded-[22px]" />
+                              <img src={bot.avatar_url} alt={bot.name} className="w-full h-full object-cover rounded-full" />
                            ) : (
-                              <div className="w-full h-full bg-white rounded-[22px] flex items-center justify-center text-orange-400">
+                              <div className="w-full h-full bg-white rounded-full flex items-center justify-center text-orange-400">
                                  <Bot size={48} />
                               </div>
                            )}
-                           <div className={`absolute -bottom-2 -right-2 w-10 h-10 border-4 border-white rounded-full flex items-center justify-center text-white ${bot.status === 'ready' ? 'bg-green-500' : 'bg-gray-400'}`} title={bot.status === 'ready' ? 'Active' : 'Paused'}>
-                              <Zap size={16} fill="white" />
+                            
+                           {/* Hover camera overlay */}
+                           <div className="absolute inset-0 rounded-full bg-black/40 text-white flex flex-col items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm z-10 pointer-events-none">
+                              {isUploadingAvatar
+                                ? <Loader2 className="w-8 h-8 animate-spin" />
+                                : <><Camera className="w-7 h-7" /><span className="text-[9px] font-bold uppercase tracking-widest">Update</span></>
+                              }
+                           </div>
+                            
+                           {/* Hidden file input */}
+                           <input
+                              type="file"
+                              ref={fileInputRef}
+                              className="hidden"
+                              accept="image/*"
+                              onChange={handleAvatarChange}
+                           />
+
+                           <div className={`absolute -bottom-2 -right-2 w-10 h-10 border-4 border-white rounded-full flex items-center justify-center text-white z-20 ${bot.status === 'ready' ? 'bg-green-600' : 'bg-gray-500'}`} title={bot.status === 'ready' ? 'Active' : 'Paused'}>
+                              <Pencil size={14} />
                            </div>
                         </div>
                         <h2 className="text-2xl font-black text-gray-900 mb-2">{bot.name}</h2>
-                        <p className="text-gray-500 font-medium leading-relaxed mb-6 italic">
+                        <p className="text-gray-600 font-semibold leading-relaxed mb-6 italic">
                            "{bot.description}"
                         </p>
 
                         <div className="w-full pt-6 border-t border-orange-50 grid grid-cols-2 gap-4">
                            <div className="text-center p-3 rounded-2xl bg-orange-50/50">
-                              <div className="text-xl font-black text-orange-600">0</div>
-                              <div className="text-[10px] uppercase tracking-widest text-orange-400 font-bold">Chats</div>
+                              <div className="text-xl font-black text-orange-700">0</div>
+                              <div className="text-[10px] uppercase tracking-widest text-orange-500 font-bold">Chats</div>
                            </div>
                            <div className="text-center p-3 rounded-2xl bg-pink-50/50">
-                              <div className="text-xl font-black text-pink-600">{sources.length}</div>
-                              <div className="text-[10px] uppercase tracking-widest text-pink-400 font-bold">Sources</div>
+                              <div className="text-xl font-black text-pink-700">{sources.length}</div>
+                              <div className="text-[10px] uppercase tracking-widest text-pink-500 font-bold">Sources</div>
                            </div>
                         </div>
                      </div>
                   </section>
 
                   <section className="bg-white rounded-[32px] p-6 border border-orange-100 shadow-sm">
-                     <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-6">Persona Config</h3>
+                     <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-6">Persona Config</h3>
                      <div className="space-y-4">
                         <Link 
                            href={`/dashboard/${bot.id}/edit`}
                            className="flex items-center justify-between p-3 hover:bg-orange-50 rounded-2xl transition-colors group cursor-pointer"
                         >
                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center group-hover:bg-orange-500 group-hover:text-white transition-all">
+                              <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-700 flex items-center justify-center group-hover:bg-orange-500 group-hover:text-white transition-all">
                                  <Settings size={18} />
                               </div>
                               <span className="font-bold text-gray-700">Settings</span>
@@ -210,13 +313,25 @@ export default function BotDetailPage({ params }: { params: Promise<{ botId: str
                         </Link>
                         <div className="flex items-center justify-between p-3 hover:bg-pink-50 rounded-2xl transition-colors group cursor-pointer">
                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-xl bg-pink-100 text-pink-600 flex items-center justify-center group-hover:bg-pink-500 group-hover:text-white transition-all">
-                                 <RefreshCw size={18} />
+                              <div className="w-10 h-10 rounded-xl bg-pink-100 text-pink-700 flex items-center justify-center group-hover:bg-pink-500 group-hover:text-white transition-all">
+                                  <RefreshCw size={18} />
                               </div>
                               <span className="font-bold text-gray-700">Retrain Model</span>
                            </div>
                            <ExternalLink size={16} className="text-gray-300" />
                         </div>
+                        <button
+                           onClick={handleDeleteBot}
+                           className="w-full flex items-center justify-between p-3 hover:bg-red-50 rounded-2xl transition-colors group cursor-pointer text-left text-red-600 hover:text-red-700 border-none bg-transparent outline-none"
+                        >
+                           <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-xl bg-red-100 text-red-600 flex items-center justify-center group-hover:bg-red-500 group-hover:text-white transition-all">
+                                 <Trash2 size={18} />
+                              </div>
+                              <span className="font-bold text-gray-700">Delete Persona</span>
+                           </div>
+                           <ChevronRight size={16} className="text-red-300 group-hover:text-red-500" />
+                        </button>
                      </div>
                   </section>
                </div>
@@ -226,10 +341,10 @@ export default function BotDetailPage({ params }: { params: Promise<{ botId: str
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                      <div className="bg-white rounded-[32px] p-8 border-l-8 border-l-orange-400 border border-orange-100 shadow-sm">
                         <div className="flex justify-between items-start mb-4">
-                           <div className="p-3 bg-orange-50 text-orange-600 rounded-2xl">
+                           <div className="p-3 bg-orange-50 text-orange-700 rounded-2xl">
                               <ShieldCheck size={28} />
                            </div>
-                           <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${bot.status === 'ready' ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
+                           <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${bot.status === 'ready' ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                               {bot.status === 'ready' ? 'Health: 100%' : 'Status: Paused'}
                            </span>
                         </div>
@@ -239,10 +354,10 @@ export default function BotDetailPage({ params }: { params: Promise<{ botId: str
 
                      <div className="bg-white rounded-[32px] p-8 border-l-8 border-l-pink-400 border border-pink-100 shadow-sm">
                         <div className="flex justify-between items-start mb-4">
-                           <div className="p-3 bg-pink-50 text-pink-600 rounded-2xl">
+                           <div className="p-3 bg-pink-50 text-pink-700 rounded-2xl">
                               <BarChart3 size={28} />
                            </div>
-                           <span className="px-3 py-1 bg-gray-50 text-gray-400 rounded-full text-xs font-black uppercase tracking-wider">No Data</span>
+                           <span className="px-3 py-1 bg-gray-50 text-gray-500 rounded-full text-xs font-black uppercase tracking-wider">No Data</span>
                         </div>
                         <h4 className="text-xl font-black text-gray-900 mb-1">Performance</h4>
                         <p className="text-gray-500 text-sm font-medium">Insights and student engagement metrics will appear once you share your bot.</p>
@@ -257,7 +372,8 @@ export default function BotDetailPage({ params }: { params: Promise<{ botId: str
                         </div>
                         <Link
                            href={`/dashboard/${bot.id}/ingest`}
-                           className="p-3 bg-orange-50 text-orange-600 rounded-2xl hover:bg-orange-500 hover:text-white transition-all shadow-inner"
+                           className="p-3 bg-orange-50 text-orange-700 rounded-2xl hover:bg-orange-500 hover:text-white transition-all shadow-inner"
+                           aria-label="Add or Refresh Knowledge Sources"
                         >
                            <RefreshCw size={20} />
                         </Link>
@@ -266,7 +382,8 @@ export default function BotDetailPage({ params }: { params: Promise<{ botId: str
                      <KnowledgeSourcesList 
                         sources={sources} 
                         botId={bot.id} 
-                        onDeleteSource={handleDeleteSource} 
+                        onDeleteSource={handleDeleteSource}
+                        onDeleteSourcesBulk={handleDeleteSourcesBulk}
                      />
                   </section>
                </div>

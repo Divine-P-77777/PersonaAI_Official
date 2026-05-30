@@ -1,9 +1,27 @@
 import { UserProfile, Bot, IngestionBatch, DataSource, SourceType } from "../types";
 import { supabase } from "@/lib/supabase";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+const API_URL = `${process.env.NEXT_PUBLIC_API_URL}/api` || "http://localhost:8000/api";
 
 type HttpMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
+
+// Payload emitted by the /ingestion/batch/{id}/ws WebSocket endpoint every 1.5s
+export interface IngestionSourceStatus {
+  id: string;
+  title: string;
+  type: string;
+  status: "pending" | "processing" | "completed" | "failed";
+  error_message?: string | null;
+}
+
+export interface IngestionUpdate {
+  status: "pending" | "processing" | "completed" | "failed";
+  total_files: number;
+  processed_files: number;
+  error_log: Array<{ source_id?: string; title?: string; error?: string; note?: string }>;
+  sources: IngestionSourceStatus[];
+  error?: string; // WebSocket-level error
+}
 
 class ApiService {
   private async request<T>(
@@ -14,12 +32,12 @@ class ApiService {
   ): Promise<T> {
     const { data: { session } } = await supabase.auth.getSession();
     const token = session?.access_token;
-    
+
     const headers: HeadersInit = {};
     if (!isFormData) {
       headers["Content-Type"] = "application/json";
     }
-    
+
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     }
@@ -44,8 +62,25 @@ class ApiService {
   }
 
   getWsUrl(): string {
-    return API_URL.replace(/^http/, 'ws');
+    return API_URL.replace(/^http/, 'ws')
   }
+
+  async getAccessToken(): Promise<string | null> {
+    const { data: { session } } = await supabase.auth.getSession()
+    return session?.access_token ?? null
+  }
+
+  // Live Session
+  async startLiveSession(botId: string): Promise<{ session_id: string; token: string | null }> {
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token ?? null
+    // Call the real backend endpoint — it validates the bot and registers the session in Redis
+    const res = await this.request<{ session_id: string; ws_url: string }>(
+      "/live/session/start", "POST", { bot_id: botId }
+    )
+    return { session_id: res.session_id, token }
+  }
+
 
   // Auth
   async getCurrentUser(): Promise<UserProfile> {
@@ -72,6 +107,12 @@ class ApiService {
     return this.request<Bot>("/bots/", "POST", data);
   }
 
+  async uploadBotAvatar(botId: string, file: File): Promise<Bot> {
+    const formData = new FormData();
+    formData.append("file", file);
+    return this.request<Bot>(`/bots/${botId}/avatar`, "POST", formData, true);
+  }
+
   async updateBot(botId: string, data: Partial<Bot>): Promise<Bot> {
     return this.request<Bot>(`/bots/${botId}`, "PUT", data);
   }
@@ -84,6 +125,10 @@ class ApiService {
     return this.request<Bot>(`/bots/${botId}`);
   }
 
+  async deleteBot(botId: string): Promise<{ status: string; bot_id: string }> {
+    return this.request<{ status: string; bot_id: string }>(`/bots/${botId}`, "DELETE");
+  }
+
   // Ingestion
   async createIngestionBatch(
     botId: string,
@@ -91,13 +136,13 @@ class ApiService {
     files?: File[]
   ): Promise<IngestionBatch> {
     const formData = new FormData();
-    
+
     // Add the JSON metadata as a string (if  backend supports it)
     // Actually our backend expects BatchIngestionRequest as JSON Body usually.
     // However, we updated it to handle files. Let's send it as multipart.
-    
+
     formData.append("request", JSON.stringify({ sources }));
-    
+
     if (files) {
       files.forEach((file) => {
         formData.append("files", file);
@@ -111,12 +156,109 @@ class ApiService {
     return this.request<IngestionBatch>(`/ingestion/batch/${batchId}`);
   }
 
+  /**
+   * Opens a WebSocket connection to the ingestion progress stream.
+   *
+   * - Emits IngestionUpdate payloads every ~1.5s as the backend worker processes files.
+   * - Passes the Supabase JWT as `?token=` so backend RLS reads are authenticated.
+   * - Auto-reconnects once (after 2s) if the connection drops unexpectedly.
+   *
+   * @returns A cleanup function — call it to close the socket and cancel reconnect.
+   */
+  connectIngestionWebSocket(
+    batchId: string,
+    onUpdate: (data: IngestionUpdate) => void,
+    onDone: (data: IngestionUpdate) => void,
+    onError: (err: string) => void
+  ): () => void {
+    let ws: WebSocket | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let isClosed = false;
+    let didReconnect = false;
+
+    const connect = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      // Convert http(s) → ws(s)
+      const wsBase = API_URL.replace(/^http/, "ws");
+      const url = `${wsBase}/ingestion/batch/${batchId}/ws${token ? `?token=${encodeURIComponent(token)}` : ""}`;
+
+      ws = new WebSocket(url);
+
+      ws.onopen = () => {
+        didReconnect = false; // reset on successful connect
+      };
+
+      ws.onmessage = (event) => {
+        if (isClosed) return;
+        try {
+          const data = JSON.parse(event.data) as IngestionUpdate;
+
+          if (data.error) {
+            onError(data.error);
+            return;
+          }
+
+          onUpdate(data);
+
+          if (data.status === "completed" || data.status === "failed") {
+            onDone(data);
+          }
+        } catch {
+          console.warn("[WS] Failed to parse ingestion update:", event.data);
+        }
+      };
+
+      ws.onerror = () => {
+        onError("WebSocket connection error — retrying...");
+      };
+
+      ws.onclose = () => {
+        if (!isClosed && !didReconnect) {
+          // Attempt one auto-reconnect after 2 seconds
+          didReconnect = true;
+          reconnectTimer = setTimeout(connect, 2000);
+        }
+      };
+    };
+
+    connect();
+
+    // Return a cleanup function the component should call on unmount
+    return () => {
+      isClosed = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      ws?.close();
+    };
+  }
+
   async getBotDataSources(botId: string): Promise<DataSource[]> {
     return this.request<DataSource[]>(`/ingestion/${botId}/sources`);
   }
 
-  async deleteDataSource(sourceId: string): Promise<{status: string, message: string}> {
-    return this.request<{status: string, message: string}>(`/ingestion/source/${sourceId}`, "DELETE");
+  async deleteDataSource(sourceId: string): Promise<{ status: string, message: string }> {
+    return this.request<{ status: string, message: string }>(`/ingestion/source/${sourceId}`, "DELETE");
+  }
+
+  async deleteDataSourcesBulk(sourceIds: string[]): Promise<{ status: string, message: string }> {
+    return this.request<{ status: string, message: string }>("/ingestion/sources/bulk", "DELETE", sourceIds);
+  }
+
+  async getChatHistory(botId: string): Promise<{ bot_id: string; history: Array<{ role: "user" | "assistant"; content: string }> }> {
+    return this.request<{ bot_id: string; history: Array<{ role: "user" | "assistant"; content: string }> }>(`/chat/${botId}/history`);
+  }
+
+  async clearChatHistory(botId: string): Promise<{ status: string; message: string }> {
+    return this.request<{ status: string; message: string }>(`/chat/${botId}/history`, "DELETE");
+  }
+
+  async getBotAccess(botId: string): Promise<any> {
+    return this.request<any>(`/payments/access/${botId}`);
+  }
+
+  async getWallet(): Promise<any> {
+    return this.request<any>('/payments/wallet');
   }
 
   // Chat (SSE Streaming)
@@ -125,7 +267,7 @@ class ApiService {
     message: string,
     onToken: (token: string) => void,
     onDone: () => void,
-    onError: (err: string) => void
+    onError: (err: any) => void
   ): Promise<void> {
     const { data: { session } } = await supabase.auth.getSession();
     const token = session?.access_token;
@@ -141,7 +283,11 @@ class ApiService {
 
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      onError(err.detail || "Chat request failed");
+      if (response.status === 402) {
+         onError(err.detail); // Pass the custom detail object for payments
+      } else {
+         onError(err.detail || "Chat request failed");
+      }
       return;
     }
 
@@ -155,23 +301,23 @@ class ApiService {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        
+
         // Accumulate and decode chunk
         buffer += decoder.decode(value, { stream: true });
-        
+
         // Find all complete SSE messages separated by "\n\n"
         let boundary = buffer.indexOf("\n\n");
         while (boundary !== -1) {
           const completePart = buffer.slice(0, boundary);
           buffer = buffer.slice(boundary + 2); // Reset for next search
-          
+
           // Process individual lines within the split part
           const lines = completePart.split("\n");
           for (const line of lines) {
             const trimmedLine = line.trim();
             if (trimmedLine.startsWith("data: ")) {
               const payload = trimmedLine.slice(6).trim();
-              
+
               if (payload === "[DONE]") {
                 onDone();
                 return;
@@ -188,15 +334,43 @@ class ApiService {
               }
             }
           }
-          
+
           boundary = buffer.indexOf("\n\n");
         }
       }
     } catch (e: any) {
-        onError(`Streaming read error: ${e.message}`);
+      onError(`Streaming read error: ${e.message}`);
     } finally {
-        onDone();
+      onDone();
     }
+  }
+
+  // --- Profile Methods ---
+  async updateMyProfile(data: { name?: string }): Promise<any> {
+    return this.request<any>("/users/me", "PUT", data);
+  }
+
+  async uploadMyAvatar(file: File): Promise<any> {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+
+    const res = await fetch(`${API_URL}/users/me/avatar`, {
+      method: "POST",
+      headers: {
+        ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+      },
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(errorText || "Upload failed");
+    }
+
+    return await res.json();
   }
 }
 

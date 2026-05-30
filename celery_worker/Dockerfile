@@ -18,5 +18,5 @@ COPY . /app/celery_worker
 # Explicitly set the app paths so Python can discover 'celery_worker' natively
 ENV PYTHONPATH=/app
 
-# Start the Celery worker connected to RabbitMQ
-CMD ["celery", "-A", "celery_worker.celery_app", "worker", "--loglevel=info"]
+# Start the Celery worker — concurrency=1 for Render free tier (512MB RAM)
+CMD ["celery", "-A", "celery_worker.celery_app", "worker", "--loglevel=info", "--concurrency=1", "--uid=nobody"]

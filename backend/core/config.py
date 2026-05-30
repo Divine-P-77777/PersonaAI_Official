@@ -1,5 +1,5 @@
 from pydantic_settings import BaseSettings
-from pydantic import Field
+from pydantic import Field, field_validator
 from functools import lru_cache
 
 
@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     """Application configuration loaded from environment variables."""
 
     # App
-    APP_NAME: str = "PersonaBot"
+    APP_NAME: str = "AskMentor"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
     ENVIRONMENT: str = "development"
@@ -41,6 +41,18 @@ class Settings(BaseSettings):
     # ElevenLabs (Voice)
     ELEVENLABS_API_KEY: str = ""
 
+    # Sarvam AI (Hindi TTS)
+    SARVAM_API_KEY: str = ""
+
+    # Cashfree Payments
+    # CASHFREE_ENV must be "sandbox" (default, for testing) or "production"
+    CASHFREE_ENV:        str = "sandbox"
+    CASHFREE_APP_ID:     str = ""
+    CASHFREE_SECRET_KEY: str = ""
+    CASHFREE_WEBHOOK_SECRET: str = ""
+    CASHFREE_WEBHOOK_URL: str = ""
+    FRONTEND_BASE_URL: str = "http://localhost:3000"
+
     # RAG Config
     CHUNK_SIZE: int = 1000
     CHUNK_OVERLAP: int = 200
@@ -49,11 +61,41 @@ class Settings(BaseSettings):
     WEB_SCRAPER_TIMEOUT: float = 30.0
     TESSERACT_PATH: str = "tesseract"
 
-    # Worker Queue
+    # Worker Queue & Redis
     CELERY_BROKER_URL: str = "amqp://guest:guest@localhost:5672//"
+    REDIS_URL: str = "redis://localhost:6379/0"
 
     # CORS
-    ALLOWED_ORIGINS: list[str] = ["http://localhost:3000"]
+    ALLOWED_ORIGINS: list[str] = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "https://www.askmentor.online",
+        "https://askmentor.online",
+    ]
+
+    @field_validator("ALLOWED_ORIGINS", mode="before")
+    @classmethod
+    def parse_allowed_origins(cls, v):
+        if isinstance(v, str):
+            import json
+            v = v.strip()
+            if not v:
+                return [
+                    "http://localhost:3000",
+                    "http://127.0.0.1:3000",
+                    "https://www.askmentor.online",
+                    "https://askmentor.online",
+                ]
+            if v.startswith("[") and v.endswith("]"):
+                try:
+                    return json.loads(v)
+                except json.JSONDecodeError:
+                    pass
+            # Comma-separated values
+            return [item.strip() for item in v.split(",") if item.strip()]
+        elif isinstance(v, list):
+            return v
+        return v
 
     model_config = {
         "env_file": ".env",

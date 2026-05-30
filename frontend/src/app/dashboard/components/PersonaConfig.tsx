@@ -1,4 +1,4 @@
-import { Plus, X, Briefcase, GraduationCap, Link as LinkIcon } from 'lucide-react';
+import { Plus, X, Briefcase, GraduationCap, Link as LinkIcon, Smile, MessageSquare, Sparkles, Venus, Mars, User } from 'lucide-react';
 import { BotFormData } from './CreateBot';
 
 interface PersonaConfigProps {
@@ -8,11 +8,17 @@ interface PersonaConfigProps {
 
 export function PersonaConfig({ formData, updateFormData }: PersonaConfigProps) {
     const tones = [
-        { value: 'professional', label: 'Professional', emoji: '💼' },
-        { value: 'friendly', label: 'Friendly', emoji: '😊' },
-        { value: 'casual', label: 'Casual', emoji: '👋' },
-        { value: 'academic', label: 'Academic', emoji: '🎓' },
-        { value: 'enthusiastic', label: 'Enthusiastic', emoji: '🌟' }
+        { value: 'professional', label: 'Professional', icon: <Briefcase className="w-8 h-8 text-orange-500 mx-auto" /> },
+        { value: 'friendly', label: 'Friendly', icon: <Smile className="w-8 h-8 text-orange-500 mx-auto" /> },
+        { value: 'casual', label: 'Casual', icon: <MessageSquare className="w-8 h-8 text-orange-500 mx-auto" /> },
+        { value: 'academic', label: 'Academic', icon: <GraduationCap className="w-8 h-8 text-orange-500 mx-auto" /> },
+        { value: 'enthusiastic', label: 'Enthusiastic', icon: <Sparkles className="w-8 h-8 text-orange-500 mx-auto" /> }
+    ];
+
+    const genders = [
+        { value: 'female', label: 'Female', icon: <Venus className="w-8 h-8 text-pink-500 mx-auto" /> },
+        { value: 'male', label: 'Male', icon: <Mars className="w-8 h-8 text-blue-500 mx-auto" /> },
+        { value: 'transgender', label: 'Gender-Neutral', icon: <User className="w-8 h-8 text-purple-500 mx-auto" /> }
     ];
 
     const addExpertise = () => {
@@ -100,22 +106,48 @@ export function PersonaConfig({ formData, updateFormData }: PersonaConfigProps) 
                             key={tone.value}
                             type="button"
                             onClick={() => updateFormData({ tone: tone.value })}
-                            className={`p-4 rounded-xl border-2 transition-all ${formData.tone === tone.value
-                                    ? 'border-orange-400 bg-orange-50 shadow-md'
-                                    : 'border-gray-200 hover:border-gray-300'
+                            className={`p-4 rounded-xl border-2 transition-all flex flex-col justify-center items-center gap-1 cursor-pointer ${formData.tone === tone.value
+                                ? 'border-orange-400 bg-orange-50 shadow-md'
+                                : 'border-gray-200 hover:border-gray-300'
                                 }`}
                         >
-                            <div className="text-3xl mb-1">{tone.emoji}</div>
+                            <div className="mb-1 flex justify-center">{tone.icon}</div>
                             <div className="text-sm text-gray-900">{tone.label}</div>
                         </button>
                     ))}
                 </div>
             </div>
 
+            {/* Voice Gender */}
+            <div>
+                <label className="block text-sm text-gray-700 mb-3">
+                    Voice Gender <span className="text-red-500">*</span>
+                </label>
+                <div className="grid grid-cols-3 gap-3 max-w-md">
+                    {genders.map((gender) => (
+                        <button
+                            key={gender.value}
+                            type="button"
+                            onClick={() => updateFormData({ voice_gender: gender.value })}
+                            className={`p-4 rounded-xl border-2 transition-all text-center flex flex-col justify-center items-center gap-1 cursor-pointer ${formData.voice_gender === gender.value
+                                ? 'border-orange-400 bg-orange-50 shadow-md'
+                                : 'border-gray-200 hover:border-gray-300'
+                                }`}
+                        >
+                            <div className="mb-1 flex justify-center">{gender.icon}</div>
+                            <div className="text-sm text-gray-900 font-bold">{gender.label}</div>
+                        </button>
+                    ))}
+                </div>
+                <p className="text-sm text-gray-500 mt-2">
+                    Choose the voice engine gender matching this persona's vocal identity
+                </p>
+            </div>
+
             {/* Expertise */}
             <div>
                 <label className="block text-sm text-gray-700 mb-2">
-                    Areas of Expertise
+                    Areas of Expertise <span className="text-red-500">*</span>
                 </label>
                 <div className="flex gap-2 mb-3">
                     <input

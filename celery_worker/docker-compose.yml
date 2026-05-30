@@ -1,0 +1,20 @@
+# GCP Instance 2 — Celery Worker
+# Redis is Upstash. RabbitMQ is CloudAMQP. No ports exposed.
+# Run: docker compose up -d
+
+services:
+
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: askmentor-worker
+    restart: unless-stopped
+    command: >
+      celery -A celery_worker.celery_app worker
+      --loglevel=warning
+      --concurrency=2
+      --queues=askmentor_worker
+      --uid=nobody
+    env_file:
+      - .env

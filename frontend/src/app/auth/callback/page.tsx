@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Loader } from "@/components/ui/Loader";
 
+
 export default function AuthCallback() {
   const router = useRouter();
 
@@ -19,16 +20,17 @@ export default function AuthCallback() {
       }
 
       if (data?.session) {
-        // Store the access token for the custom ApiService
         localStorage.setItem("token", data.session.access_token);
         
-        // Check if onboarding is completed
+        // Fetch the user's profile row
         const { data: profile } = await supabase
           .from("users")
-          .select("onboarding_completed")
+          .select("onboarding_completed, avatar_url, display_name")
           .eq("id", data.session.user.id)
           .single();
 
+        // We removed the DiceBear/Genderize logic. If a user doesn't have an avatar from Google, 
+        // the UI will now gracefully fallback to a default Lucide React <User /> icon.
         if (profile?.onboarding_completed) {
           router.push("/dashboard");
         } else {

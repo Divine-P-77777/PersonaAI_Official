@@ -1,0 +1,9 @@
+# GCP Instance 1 — Caddyfile
+# Replace YOUR_IP_DASHED with your GCP external IP (dots → dashes)
+# Example: 34.100.200.50 → 34-100-200-50
+# Your API URL: https://api.34-100-200-50.nip.io
+
+api.{$GCP_IP_DASHED}.nip.io {
+    reverse_proxy backend:8000
+    encode gzip
+}

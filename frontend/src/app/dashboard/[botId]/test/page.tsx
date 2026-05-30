@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { api } from "@/services/api";
 import { Bot as BotType } from "@/types";
-import { ChatInterface } from "@/components/chat/ChatInterface";
+import { ChatInterface } from "@/app/chat/components/ChatInterface";
 import { motion } from "framer-motion";
 import { Loader2, ShieldCheck, ArrowLeft } from "lucide-react";
 import Link from "next/link";

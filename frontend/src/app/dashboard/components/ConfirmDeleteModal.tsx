@@ -29,6 +29,7 @@ export default function ConfirmDeleteModal({ isOpen, onClose, onConfirm, sourceT
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: 10 }}
                   className="relative w-full max-w-md bg-white rounded-[32px] p-6 shadow-2xl z-10 overflow-hidden"
+                  data-lenis-prevent
                >
                   <button 
                      onClick={onClose}

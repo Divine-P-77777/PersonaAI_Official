@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Menu, X, ChevronDown, LogOut, User as UserIcon, Layout, Sparkles } from 'lucide-react';
+import { Menu, X, ChevronDown, LogOut, User as UserIcon, User, Layout, Sparkles, CreditCard, Info, Mail, Smartphone } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -9,6 +9,7 @@ export function Navbar() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [user, setUser] = useState<any>(null);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [imgError, setImgError] = useState(false);
     const router = useRouter();
 
     useEffect(() => {
@@ -25,6 +26,10 @@ export function Navbar() {
         return () => subscription.unsubscribe();
     }, []);
 
+    useEffect(() => {
+        setImgError(false);
+    }, [user?.user_metadata?.avatar_url]);
+
     const handleLogout = async () => {
         await supabase.auth.signOut();
         setIsDropdownOpen(false);
@@ -38,31 +43,34 @@ export function Navbar() {
                     {/* Logo */}
                     <Link href="/" className="flex items-center">
                         <div className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                            <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-pink-500 rounded-lg flex items-center justify-center">
-                                <span className="text-white font-bold text-lg">P</span>
-                            </div>
-                            <span className="font-semibold text-xl text-gray-900">PersonaBot</span>
+                            <img src="/logo.png" alt="AskMentor" className="w-9 h-9 object-contain" />
+                            <span className="font-semibold text-xl text-gray-900">AskMentor</span>
                         </div>
                     </Link>
 
                     {/* Desktop Navigation */}
                     <div className="hidden md:flex items-center gap-8">
-                        <Link href="/explore" className="text-sm font-semibold text-gray-600 hover:text-orange-600 transition-colors">
-                            Explore
+                        <Link href="/explore" className="text-sm font-semibold text-gray-600 hover:text-orange-700 hover:underline decoration-orange-500 underline-offset-4 transition-all">
+                            Explore Personas
                         </Link>
-                        
+
                         {user ? (
                             <div className="relative">
-                                <button 
+                                <button
                                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                                     className="flex items-center gap-2 p-1 rounded-full hover:bg-gray-50 transition-all border border-transparent hover:border-gray-100"
                                 >
-                                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-orange-100 to-pink-100 p-0.5 border border-orange-200">
-                                        <img 
-                                            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`} 
-                                            alt="User" 
-                                            className="w-full h-full rounded-full bg-white object-cover"
-                                        />
+                                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-orange-100 to-pink-100 p-0.5 border border-orange-200 flex items-center justify-center overflow-hidden bg-white">
+                                        {user.user_metadata?.avatar_url && !imgError ? (
+                                            <img
+                                                src={user.user_metadata.avatar_url}
+                                                alt="User"
+                                                className="w-full h-full rounded-full object-cover"
+                                                onError={() => setImgError(true)}
+                                            />
+                                        ) : (
+                                            <User size={20} className="text-orange-400" />
+                                        )}
                                     </div>
                                     <ChevronDown size={14} className={`text-gray-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
                                 </button>
@@ -70,9 +78,9 @@ export function Navbar() {
                                 <AnimatePresence>
                                     {isDropdownOpen && (
                                         <>
-                                            <div 
-                                                className="fixed inset-0 z-[-1]" 
-                                                onClick={() => setIsDropdownOpen(false)} 
+                                            <div
+                                                className="fixed inset-0 z-[-1]"
+                                                onClick={() => setIsDropdownOpen(false)}
                                             />
                                             <motion.div
                                                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
@@ -81,20 +89,65 @@ export function Navbar() {
                                                 className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-gray-100 p-2 overflow-hidden"
                                             >
                                                 <div className="px-3 py-2 border-b border-gray-50 mb-1">
-                                                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Account</p>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Account</p>
                                                     <p className="text-xs font-bold text-gray-900 truncate">{user.email}</p>
                                                 </div>
-                                                
-                                                <Link 
-                                                    href="/dashboard"
+
+                                                {user?.user_metadata?.role !== 'user' && (
+                                                    <Link
+                                                        href="/dashboard"
+                                                        onClick={() => setIsDropdownOpen(false)}
+                                                        className="flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-all"
+                                                    >
+                                                        <Layout size={18} className="text-gray-400" />
+                                                        Dashboard
+                                                    </Link>
+                                                )}
+
+                                                <Link
+                                                    href="/profile"
                                                     onClick={() => setIsDropdownOpen(false)}
                                                     className="flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-all"
                                                 >
-                                                    <Layout size={18} className="text-gray-400" />
-                                                    Dashboard
+                                                    <UserIcon size={18} className="text-gray-400" />
+                                                    My Profile
                                                 </Link>
-                                                
-                                                <button 
+
+                                                <Link
+                                                    href="/billing"
+                                                    onClick={() => setIsDropdownOpen(false)}
+                                                    className="flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-all"
+                                                >
+                                                    <CreditCard size={18} className="text-gray-400" />
+                                                    Billing
+                                                </Link>
+                                                <Link
+                                                    href="/about"
+                                                    onClick={() => setIsDropdownOpen(false)}
+                                                    className="flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-all"
+                                                >
+                                                    <Info size={18} className="text-gray-400" />
+                                                    About
+                                                </Link>
+                                                <Link
+                                                    href="/contact"
+                                                    onClick={() => setIsDropdownOpen(false)}
+                                                    className="flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-all"
+                                                >
+                                                    <Mail size={18} className="text-gray-400" />
+                                                    Contact
+                                                </Link>
+
+                                                <Link
+                                                    href="/pwa"
+                                                    onClick={() => setIsDropdownOpen(false)}
+                                                    className="flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-all"
+                                                >
+                                                    <Smartphone size={18} className="text-gray-400" />
+                                                    Install App
+                                                </Link>
+
+                                                <button
                                                     onClick={handleLogout}
                                                     className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium text-red-500 hover:bg-red-50 rounded-xl transition-all"
                                                 >
@@ -108,9 +161,6 @@ export function Navbar() {
                             </div>
                         ) : (
                             <div className="flex items-center gap-4">
-                                <Link href="/signin" className="text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors">
-                                    Sign In
-                                </Link>
                                 <Link href="/signup" className="px-6 py-2 bg-gradient-to-r from-orange-400 to-pink-500 text-white rounded-full hover:shadow-lg transition-all text-sm font-bold">
                                     Get Started
                                 </Link>
@@ -131,7 +181,7 @@ export function Navbar() {
             {/* Mobile Menu */}
             <AnimatePresence>
                 {isMenuOpen && (
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
@@ -143,19 +193,61 @@ export function Navbar() {
                                 onClick={() => setIsMenuOpen(false)}
                                 className="flex items-center gap-3 px-4 py-3 text-base font-bold text-gray-900 hover:bg-gray-50 rounded-2xl transition-colors"
                             >
-                                <Sparkles size={20} className="text-orange-500" />
+                                <Sparkles size={20} className="text-orange-600" />
                                 Explore Personas
+                            </Link>
+                            <Link
+                                href="/about"
+                                onClick={() => setIsMenuOpen(false)}
+                                className="flex items-center gap-3 px-4 py-3 text-base font-bold text-gray-900 hover:bg-gray-50 rounded-2xl transition-colors"
+                            >
+                                <Info size={20} className="text-gray-400" />
+                                About
+                            </Link>
+                            <Link
+                                href="/contact"
+                                onClick={() => setIsMenuOpen(false)}
+                                className="flex items-center gap-3 px-4 py-3 text-base font-bold text-gray-900 hover:bg-gray-50 rounded-2xl transition-colors"
+                            >
+                                <Mail size={20} className="text-gray-400" />
+                                Contact
+                            </Link>
+                            <Link
+                                href="/pwa"
+                                onClick={() => setIsMenuOpen(false)}
+                                className="flex items-center gap-3 px-4 py-3 text-base font-bold text-gray-900 hover:bg-gray-50 rounded-2xl transition-colors"
+                            >
+                                <Smartphone size={20} className="text-gray-400" />
+                                Install App
                             </Link>
 
                             {user ? (
                                 <>
+                                    {user?.user_metadata?.role !== 'user' && (
+                                        <Link
+                                            href="/dashboard"
+                                            onClick={() => setIsMenuOpen(false)}
+                                            className="flex items-center gap-3 px-4 py-3 text-base font-bold text-gray-900 hover:bg-gray-50 rounded-2xl transition-colors"
+                                        >
+                                            <Layout size={20} className="text-gray-400" />
+                                            Dashboard
+                                        </Link>
+                                    )}
                                     <Link
-                                        href="/dashboard"
+                                        href="/profile"
                                         onClick={() => setIsMenuOpen(false)}
                                         className="flex items-center gap-3 px-4 py-3 text-base font-bold text-gray-900 hover:bg-gray-50 rounded-2xl transition-colors"
                                     >
-                                        <Layout size={20} className="text-gray-400" />
-                                        Dashboard
+                                        <UserIcon size={20} className="text-gray-400" />
+                                        My Profile
+                                    </Link>
+                                    <Link
+                                        href="/billing"
+                                        onClick={() => setIsMenuOpen(false)}
+                                        className="flex items-center gap-3 px-4 py-3 text-base font-bold text-gray-900 hover:bg-gray-50 rounded-2xl transition-colors"
+                                    >
+                                        <CreditCard size={20} className="text-gray-400" />
+                                        Billing
                                     </Link>
                                     <button
                                         onClick={handleLogout}
@@ -166,16 +258,9 @@ export function Navbar() {
                                     </button>
                                 </>
                             ) : (
-                                <div className="grid grid-cols-2 gap-3 pt-2">
-                                    <Link 
-                                        href="/signin" 
-                                        className="flex items-center justify-center py-3 text-base font-bold text-gray-900 bg-gray-50 rounded-2xl"
-                                        onClick={() => setIsMenuOpen(false)}
-                                    >
-                                        Sign In
-                                    </Link>
-                                    <Link 
-                                        href="/signup" 
+                                <div className="pt-2">
+                                    <Link
+                                        href="/signup"
                                         className="flex items-center justify-center py-3 text-base font-bold text-white bg-gradient-to-r from-orange-400 to-pink-500 rounded-2xl shadow-lg"
                                         onClick={() => setIsMenuOpen(false)}
                                     >

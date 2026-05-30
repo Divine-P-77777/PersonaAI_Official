@@ -22,7 +22,32 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Modern Typography Font Families */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-poppins), var(--font-sans), Arial, sans-serif;
+}
+
+p, div, span, a, li {
+  font-family: var(--font-inter), var(--font-sans), Arial, sans-serif;
+}
+
+h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+h2 {
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+p {
+  line-height: 1.6;
 }
 
 /* Glassmorphism Design System Utility */
@@ -31,7 +56,8 @@ body {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 8px 32px 0 rgba(251, 146, 60, 0.05); /* very subtle orange glow */
+  box-shadow: 0 8px 32px 0 rgba(251, 146, 60, 0.05);
+  /* very subtle orange glow */
   will-change: transform, opacity;
 }
 
@@ -43,7 +69,8 @@ body {
   background: rgba(255, 255, 255, 0.85);
   transform: translateY(-4px) scale(1.01);
   border-color: rgba(251, 146, 60, 0.4);
-  box-shadow: 0 20px 40px -12px rgba(251, 146, 60, 0.15); /* stronger orange glow */
+  box-shadow: 0 20px 40px -12px rgba(251, 146, 60, 0.15);
+  /* stronger orange glow */
 }
 
 /* Global Premium Gradient Scrollbar */
@@ -53,12 +80,14 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(255, 237, 213, 0.2); /* Very light orange-50 */
+  background: rgba(255, 237, 213, 0.2);
+  /* Very light orange-50 */
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(to bottom, #fb923c, #ec4899); /* orange-400 to pink-500 */
+  background: linear-gradient(to bottom, #fb923c, #ec4899);
+  /* orange-400 to pink-500 */
   border-radius: 10px;
   border: 4px solid transparent;
   background-clip: content-box;
@@ -66,7 +95,8 @@ body {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(to bottom, #f97316, #db2777); /* orange-500 to pink-600 */
+  background: linear-gradient(to bottom, #f97316, #db2777);
+  /* orange-500 to pink-600 */
   border: 2px solid transparent;
   background-clip: content-box;
 }

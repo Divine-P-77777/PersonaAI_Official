@@ -1,17 +1,33 @@
 import json
 import logging
-from fastapi import APIRouter, Depends, HTTPException, status
+from datetime import datetime, timedelta, timezone
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from langchain_groq import ChatGroq
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
+from backend.core.rate_limiter import limiter
+from backend.core.redis_client import get_cache, set_cache, invalidate_cache
 from backend.core.config import get_settings
 from backend.core.security import get_current_user
 from backend.database.queries import (
     get_bot_by_id, 
     get_recent_messages, 
-    save_message
+    save_message,
+    clear_chat_history
+)
+from backend.database.payment_queries import (
+    get_user_bot_access,
+    get_monthly_exploration,
+    create_free_trial_access,
+    consume_credits,
+    upsert_monthly_exploration,
+)
+from backend.payments.pricing_config import (
+    FREE_EXPLORATION,
+    CREDIT_COSTS,
+    DEFAULT_CREDIT_COST,
 )
 from backend.rag.retrieval import retrieve_similar_chunks
 from backend.rag.context_builder import build_context
@@ -26,14 +42,26 @@ class ChatMessage(BaseModel):
 
 
 @router.post("/{bot_id}")
+@limiter.limit("10000/minute")  # TODO: Revert to "20/minute" after load testing
 async def chat_with_bot(
     bot_id: str,
+    request: Request,
     body: ChatMessage,
     user: dict = Depends(get_current_user),
 ):
     """Send a message and receive a streaming RAG-powered response from a bot."""
-    # 1. Verify bot access
-    bot = await get_bot_by_id(bot_id, token=user.get("_token"))
+    # 1. Verify bot access (with Redis caching)
+    bot_cache_key = f"bot_config:{bot_id}"
+    bot = await get_cache(bot_cache_key)
+    
+    if bot is None:
+        logger.info(f"[CHAT] Cache MISS for {bot_cache_key}. Querying Supabase...")
+        bot = await get_bot_by_id(bot_id, token=user.get("_token"))
+        if bot:
+            await set_cache(bot_cache_key, bot, expire=3600)
+    else:
+        logger.info(f"[CHAT] ⚡ Cache HIT for {bot_cache_key}. Using fast Redis memory.")
+
     if not bot:
         raise HTTPException(status_code=404, detail="Bot not found or inaccessible")
 
@@ -42,6 +70,103 @@ async def chat_with_bot(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="This persona is currently paused by the author."
         )
+
+    user_id = user["id"]
+    is_owner = (bot["owner_id"] == user_id)
+    is_free_bot = bot.get("is_free", True)
+
+    # ----------------------------------------------------------------
+    # Credit Guard — enforced for all non-owner interactions on paid bots
+    # ----------------------------------------------------------------
+    if not is_owner and not is_free_bot:
+        action_type = "voice_session" if bot.get("voice_enabled") else "text_message"
+        credit_cost = CREDIT_COSTS.get(action_type, DEFAULT_CREDIT_COST)
+        now = datetime.now(tz=timezone.utc)
+
+        access = await get_user_bot_access(user_id, bot_id, token=user.get("_token"))
+
+        if access:
+            # Check expiry
+            expires_at = access.get("access_expires_at")
+            if expires_at:
+                from dateutil import parser as dateparser
+                exp_dt = dateparser.parse(expires_at) if isinstance(expires_at, str) else expires_at
+                if exp_dt < now:
+                    raise HTTPException(
+                        status_code=402,
+                        detail={
+                            "code": "ACCESS_EXPIRED",
+                            "message": "Your access to this mentor has expired.",
+                            "unlock_price": bot.get("unlock_price"),
+                        }
+                    )
+
+            # Check remaining credits
+            credits_remaining = access["credits_allowed"] - access["credits_used"]
+            if credits_remaining < credit_cost:
+                raise HTTPException(
+                    status_code=402,
+                    detail={
+                        "code": "INSUFFICIENT_CREDITS",
+                        "message": "You've used all your credits for this mentor.",
+                        "unlock_price": bot.get("unlock_price"),
+                        "credits_remaining": credits_remaining,
+                    }
+                )
+        else:
+            # No existing access — check free trial eligibility
+            exploration = await get_monthly_exploration(user_id, token=user.get("_token"))
+            explored_bots: list = (exploration or {}).get("mentors_explored", []) or []
+
+            if bot_id not in explored_bots:
+                # New mentor — check monthly exploration quota
+                if len(explored_bots) >= FREE_EXPLORATION.max_mentors_per_month:
+                    raise HTTPException(
+                        status_code=402,
+                        detail={
+                            "code": "EXPLORATION_LIMIT_REACHED",
+                            "message": (
+                                f"You've explored your monthly limit of "
+                                f"{FREE_EXPLORATION.max_mentors_per_month} mentors. "
+                                f"Unlock this mentor to continue."
+                            ),
+                            "unlock_price": bot.get("unlock_price"),
+                        }
+                    )
+
+                # Grant free trial access
+                trial_expires = now + timedelta(days=7)  # Free trial lasts 7 days
+                access = await create_free_trial_access(
+                    user_id=user_id,
+                    bot_id=bot_id,
+                    credits_allowed=FREE_EXPLORATION.free_credits_per_mentor,
+                    expires_at=trial_expires,
+                    token=user.get("_token"),
+                )
+                await upsert_monthly_exploration(user_id, bot_id, token=user.get("_token"))
+                logger.info(
+                    "[CHAT] Free trial granted | user=%s | bot=%s | credits=%d",
+                    user_id, bot_id, FREE_EXPLORATION.free_credits_per_mentor,
+                )
+            else:
+                # Already explored but no access row (edge case — recreate it)
+                raise HTTPException(
+                    status_code=402,
+                    detail={
+                        "code": "TRIAL_EXHAUSTED",
+                        "message": "Your free trial for this mentor has ended. Unlock to continue.",
+                        "unlock_price": bot.get("unlock_price"),
+                    }
+                )
+
+        # Deduct credits atomically after guard passes
+        if access:
+            await consume_credits(access["id"], credit_cost, token=user.get("_token"))
+            logger.info(
+                "[CHAT] Credits consumed | user=%s | bot=%s | cost=%d | action=%s",
+                user_id, bot_id, credit_cost, action_type,
+            )
+    # ----------------------------------------------------------------
 
     user_message = body.message
     logger.info(f"[CHAT] Bot={bot_id} | User={user['id']} | Message='{user_message[:80]}'")
@@ -73,16 +198,25 @@ async def chat_with_bot(
     )
 
     # 4. Fetch recent chat history for context (Top 5 messages)
-    history = await get_recent_messages(
-        user_id=user["id"], 
-        bot_id=bot_id, 
-        limit=5, 
-        token=user.get("_token")
-    )
+    cache_key = f"chat_history:{bot_id}:{user['id']}"
+    llm_history = await get_cache(cache_key)
+    
+    if llm_history is None:
+        logger.info(f"[CHAT] Cache MISS for {cache_key}. Querying Supabase...")
+        llm_history = await get_recent_messages(
+            user_id=user["id"], 
+            bot_id=bot_id, 
+            limit=5, 
+            token=user.get("_token")
+        )
+        # Store in redis with an expiration (e.g. 1 hour of inactivity)
+        await set_cache(cache_key, llm_history, expire=3600)
+    else:
+        logger.info(f"[CHAT] ⚡ Cache HIT for {cache_key}. Using fast Redis memory.")
     
     # Format history for LangChain
     history_messages = []
-    for msg in history:
+    for msg in llm_history:
         if msg["role"] == "user":
             history_messages.append(HumanMessage(content=msg["content"]))
         else:
@@ -96,6 +230,17 @@ async def chat_with_bot(
         content=user_message,
         token=user.get("_token")
     )
+    # Optimistically append to cache immediately
+    llm_history.append({
+        "role": "user",
+        "content": user_message
+    })
+    # Maintain rolling window size
+    llm_history = llm_history[-5:]
+    await set_cache(cache_key, llm_history, expire=3600)
+    
+    # Invalidate full history cache so the next GET /history call reflects this new message
+    await invalidate_cache(f"full_history:{bot_id}:{user['id']}")
 
     # 6. Stream response via langchain_groq ChatGroq
     async def generate():
@@ -132,8 +277,18 @@ async def chat_with_bot(
                     content=full_response,
                     token=user.get("_token")
                 )
+                # Update redis cache with AI response
+                final_history = llm_history + [{
+                    "role": "assistant",
+                    "content": full_response
+                }]
+                final_history = final_history[-5:]
+                await set_cache(cache_key, final_history, expire=3600)
+                
+                # Invalidate full history cache
+                await invalidate_cache(f"full_history:{bot_id}:{user['id']}")
             
-            logger.info(f"[CHAT] ✅ Stream complete & history saved for bot {bot_id}")
+            logger.info(f"[CHAT] ✅ Stream complete & history saved (and cached) for bot {bot_id}")
 
         except Exception as e:
             logger.error(f"[CHAT] ❌ LLM streaming failed: {e}")
@@ -155,7 +310,14 @@ async def get_chat_history(
     user: dict = Depends(get_current_user),
 ):
     """Get chat history for a bot session."""
-    bot = await get_bot_by_id(bot_id, token=user.get("_token"))
+    bot_cache_key = f"bot_config:{bot_id}"
+    bot = await get_cache(bot_cache_key)
+    
+    if bot is None:
+        bot = await get_bot_by_id(bot_id, token=user.get("_token"))
+        if bot:
+            await set_cache(bot_cache_key, bot, expire=3600)
+
     if not bot:
         raise HTTPException(status_code=404, detail="Bot not found or inaccessible")
 
@@ -165,7 +327,49 @@ async def get_chat_history(
             detail="This persona is currently paused by the author."
         )
 
-    return {"bot_id": bot_id, "history": []}
+    # Try Redis first for the full history
+    full_cache_key = f"full_history:{bot_id}:{user['id']}"
+    cached_history = await get_cache(full_cache_key)
+    if cached_history is not None:
+        logger.info(f"[CHAT] ⚡ Full History Cache HIT for {full_cache_key}")
+        return {"bot_id": bot_id, "history": cached_history}
+
+    logger.info(f"[CHAT] Full History Cache MISS for {full_cache_key}. Querying Supabase...")
+    full_history = await get_recent_messages(
+        user_id=user["id"], 
+        bot_id=bot_id, 
+        limit=50, 
+        token=user.get("_token")
+    )
+    
+    logger.info(f"[CHAT] Retrieved {len(full_history)} messages from Supabase for history.")
+    
+    # Cache the full history (expire in 1 hour)
+    await set_cache(full_cache_key, full_history, expire=3600)
+    
+    return {"bot_id": bot_id, "history": full_history}
+
+@router.delete("/{bot_id}/history")
+async def delete_chat_history_endpoint(
+    bot_id: str,
+    user: dict = Depends(get_current_user),
+):
+    """Delete chat history for a bot session."""
+    # 1. Clear database
+    success = await clear_chat_history(
+        user_id=user["id"], 
+        bot_id=bot_id, 
+        token=user.get("_token")
+    )
+    
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to clear chat history")
+
+    # 2. Invalidate redis caches
+    await invalidate_cache(f"chat_history:{bot_id}:{user['id']}")
+    await invalidate_cache(f"full_history:{bot_id}:{user['id']}")
+    
+    return {"status": "success", "message": "Chat history cleared"}
 
 
 @router.get("/{bot_id}/debug-retrieval")

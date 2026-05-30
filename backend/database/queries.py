@@ -1,5 +1,5 @@
 """
-PersonaBot — Database Query Helpers
+AskMentor — Database Query Helpers
 
 All queries enforce multi-tenant isolation.
 Only the Supabase client (anon/service-role) is used — no raw SQLAlchemy
@@ -75,7 +75,7 @@ async def get_public_bots(token: str = None) -> list[dict]:
     result = (
         client
         .table("bots")
-        .select("*, owner:users(display_name, avatar_url)")
+        .select("*, owner:users(display_name, avatar_url), messages(count)")
         .eq("status", "ready")
         .order("created_at", desc=True)
         .execute()
@@ -261,6 +261,19 @@ async def delete_data_source(source_id: str, token: str = None) -> bool:
     return bool(result.data)
 
 
+async def delete_data_sources_bulk(source_ids: list[str], token: str = None) -> bool:
+    """Batch-delete multiple data sources in one query (chunks cascade)."""
+    client = get_authed_client(token) if token else get_supabase_client()
+    result = (
+        client
+        .table("data_sources")
+        .delete()
+        .in_("id", source_ids)
+        .execute()
+    )
+    return bool(result.data)
+
+
 # ---------------------------------------------------------------------------
 # Data Chunks
 # ---------------------------------------------------------------------------
@@ -371,3 +384,20 @@ async def save_message(user_id: str, bot_id: str, role: str, content: str, token
     except Exception as e:
         logger.error(f"[DB] Failed to save message: {e}")
         return None
+
+async def clear_chat_history(user_id: str, bot_id: str, token: str = None) -> bool:
+    """Delete all chat history between a user and a specific bot."""
+    try:
+        client = get_authed_client(token) if token else get_supabase_client()
+        result = (
+            client
+            .table("messages")
+            .delete()
+            .eq("user_id", user_id)
+            .eq("bot_id", bot_id)
+            .execute()
+        )
+        return True
+    except Exception as e:
+        logger.error(f"[DB] Failed to clear chat history: {e}")
+        return False
