@@ -257,6 +257,10 @@ class ApiService {
     return this.request<any>(`/payments/access/${botId}`);
   }
 
+  async getWallet(): Promise<any> {
+    return this.request<any>('/payments/wallet');
+  }
+
   // Chat (SSE Streaming)
   async chatWithBot(
     botId: string,

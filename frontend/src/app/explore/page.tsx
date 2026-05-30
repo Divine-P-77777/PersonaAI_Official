@@ -21,6 +21,7 @@ import { api } from "../../services/api";
 import { Bot } from "../../types";
 import Link from 'next/link';
 import { BotAvatar } from "./components/BotAvatar";
+import { UnlockModal } from "@/components/ui/UnlockModal";
 import { toast } from "react-toastify";
 
 import { useRouter } from "next/navigation"
@@ -30,6 +31,7 @@ export default function ExplorePage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedUnlockBot, setSelectedUnlockBot] = useState<Bot | null>(null);
   const router = useRouter()
 
   useEffect(() => {
@@ -206,11 +208,19 @@ export default function ExplorePage() {
                 >
                   <div className="h-[520px] bg-white rounded-[3rem] border border-gray-100/50 shadow-sm hover:shadow-[0_40px_100px_rgba(0,0,0,0.08)] hover:-translate-y-3 transition-all duration-700 overflow-hidden flex flex-col p-8 cursor-pointer relative z-10">
 
-                    {/* Premium Status Badge */}
-                    <div className="absolute top-8 right-8 z-20">
+                    {/* Premium Status / Live Status Badge */}
+                    <div className="absolute top-8 right-8 z-20 flex flex-col gap-2 items-end">
                       <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 rounded-full text-[10px] font-black tracking-widest text-green-600 uppercase">
                         <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
                         Live Now
+                      </div>
+                      
+                      <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black tracking-widest uppercase shadow-sm ${
+                        bot.is_free 
+                          ? "bg-blue-50 text-blue-600 border border-blue-100" 
+                          : "bg-purple-50 text-purple-600 border border-purple-100"
+                      }`}>
+                        {bot.is_free ? "Free" : `Paid: ₹${bot.unlock_price || 99}`}
                       </div>
                     </div>
 
@@ -260,7 +270,13 @@ export default function ExplorePage() {
                         </div>
                         <div className="flex flex-col">
                           <span className="text-[9px] text-gray-400 font-black uppercase tracking-widest leading-none mb-1">Sessions</span>
-                          <span className="text-lg font-black text-gray-900 tracking-tight">12.4k</span>
+                          <span className="text-lg font-black text-gray-900 tracking-tight">
+                            {bot.session_count !== undefined
+                              ? bot.session_count > 1000
+                                ? (bot.session_count / 1000).toFixed(1) + "k"
+                                : bot.session_count
+                              : "12.4k"}
+                          </span>
                         </div>
                       </div>
 
@@ -271,7 +287,7 @@ export default function ExplorePage() {
                         >
                           <Share2 className="w-5 h-5" />
                         </button>
-                        {bot.is_unlocked || bot.is_free ? (
+                        {bot.is_unlocked ? (
                           <Link
                             href={`/chat/${bot.id}`}
                             className="w-14 h-14 rounded-[1.8rem] bg-gray-900 text-white flex items-center justify-center hover:bg-orange-600 hover:scale-110 active:scale-95 transition-all duration-300 shadow-xl"
@@ -283,7 +299,7 @@ export default function ExplorePage() {
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              router.push(`/chat/${bot.id}`);
+                              setSelectedUnlockBot(bot);
                             }}
                             className="w-14 h-14 rounded-[1.8rem] bg-gray-900 text-white flex items-center justify-center hover:bg-orange-600 hover:scale-110 active:scale-95 transition-all duration-300 shadow-xl relative"
                           >
@@ -330,6 +346,12 @@ export default function ExplorePage() {
           </Link>
         </div>
       </section>
+
+      <UnlockModal 
+        isOpen={!!selectedUnlockBot} 
+        onClose={() => setSelectedUnlockBot(null)} 
+        bot={selectedUnlockBot} 
+      />
     </div>
   );
 }

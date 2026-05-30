@@ -44,7 +44,7 @@ async def get_monthly_exploration(user_id: str, token: str = None) -> Optional[d
             .maybe_single()
             .execute()
         )
-        return result.data
+        return result.data if result and hasattr(result, "data") else None
     except Exception as e:
         logger.error("[PayDB] get_monthly_exploration failed: %s", e)
         return None
@@ -76,7 +76,7 @@ async def upsert_monthly_exploration(
                     .eq("id", existing["id"])
                     .execute()
                 )
-                return result.data[0] if result.data else existing
+                return (result.data[0] if result and hasattr(result, "data") and result.data else existing)
             return existing
         else:
             result = (
@@ -89,7 +89,7 @@ async def upsert_monthly_exploration(
                 })
                 .execute()
             )
-            return result.data[0] if result.data else None
+            return (result.data[0] if result and hasattr(result, "data") and result.data else None)
     except Exception as e:
         logger.error("[PayDB] upsert_monthly_exploration failed: %s", e)
         return None
@@ -112,7 +112,7 @@ async def get_user_bot_access(user_id: str, bot_id: str, token: str = None) -> O
             .maybe_single()
             .execute()
         )
-        return result.data
+        return result.data if result and hasattr(result, "data") else None
     except Exception as e:
         logger.error("[PayDB] get_user_bot_access failed: %s", e)
         return None
@@ -144,7 +144,7 @@ async def create_free_trial_access(
             })
             .execute()
         )
-        return result.data[0] if result.data else None
+        return (result.data[0] if result and hasattr(result, "data") and result.data else None)
     except Exception as e:
         logger.error("[PayDB] create_free_trial_access failed: %s", e)
         return None
@@ -186,7 +186,7 @@ async def upgrade_to_unlocked_access(
         else:
             result = client.table("user_bot_access").insert(payload).execute()
 
-        return result.data[0] if result.data else None
+        return (result.data[0] if result and hasattr(result, "data") and result.data else None)
     except Exception as e:
         logger.error("[PayDB] upgrade_to_unlocked_access failed: %s", e)
         return None

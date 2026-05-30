@@ -78,9 +78,21 @@ async def list_public_bots(
     token = user.get("_token") if user else None
     bots = await get_public_bots(token=token)
     
+    for bot in bots:
+        # Extract session count from the related messages table
+        messages = bot.pop("messages", None)
+        if isinstance(messages, list) and len(messages) > 0:
+            bot["session_count"] = messages[0].get("count", 0)
+        else:
+            bot["session_count"] = 0
+
     if user:
-        from backend.database.payment_queries import get_user_bot_access
+        from backend.database.payment_queries import get_user_bot_access, get_monthly_exploration
+        monthly_exp = await get_monthly_exploration(user["id"], token=token)
+        free_explorations_used = len(monthly_exp.get("mentors_explored", [])) if monthly_exp else 0
+        
         for bot in bots:
+            bot["free_explorations_used"] = free_explorations_used
             # Check if user has active access
             access = await get_user_bot_access(user["id"], str(bot["id"]), token=token)
             if access:
@@ -140,6 +152,40 @@ async def update_bot(
     if "persona_config" in updates and updates["persona_config"]:
         # Only persona_config passed through model_dump might need careful handling if it's a sub-model
         updates["persona_config"] = bot_in.persona_config.model_dump(mode="json")
+        
+    # --- Pricing validation and sanitization for updates ---
+    # If is_free is provided in the update, apply logic
+    if "is_free" in updates:
+        if updates["is_free"]:
+            # If changing to free, force monetization fields to None
+            updates["pricing_tier"] = None
+            updates["unlock_price"] = None
+            updates["credits_per_pack"] = None
+        else:
+            # If changing to paid, validate fields
+            bot = await get_bot_by_id(str(bot_id), token=user.get("_token"))
+            if not bot:
+                raise HTTPException(status_code=404, detail="Bot not found")
+                
+            tier = updates.get("pricing_tier") or bot.get("pricing_tier")
+            if not tier:
+                raise HTTPException(status_code=400, detail="A pricing_tier is required for paid bots.")
+                
+            price = updates.get("unlock_price")
+            if price is None:
+                price = bot.get("unlock_price") or PRICING_TIERS[tier].unlock_price
+                
+            credits_val = updates.get("credits_per_pack")
+            if credits_val is None:
+                credits_val = bot.get("credits_per_pack") or PRICING_TIERS[tier].credits
+                
+            is_valid, err_msg = validate_pricing(tier, price, credits_val)
+            if not is_valid:
+                raise HTTPException(status_code=422, detail=err_msg)
+                
+            updates["pricing_tier"] = tier
+            updates["unlock_price"] = price
+            updates["credits_per_pack"] = credits_val
 
     updated_bot = await db_update_bot(str(bot_id), updates, token=user.get("_token"))
     if not updated_bot:

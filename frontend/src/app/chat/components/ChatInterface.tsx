@@ -157,6 +157,17 @@ export const ChatInterface = ({ bot }: ChatInterfaceProps) => {
       if (res.credits_remaining !== undefined) {
         setCreditsRemaining(res.credits_remaining);
       }
+      
+      // Auto-trigger popup on load if they have no access
+      if (res.has_access === false) {
+        if (res.status === 'expired') {
+          setWarningPopup({ isOpen: true, mode: 'blocked', message: "Your access to this mentor has expired." });
+        } else if (res.credits_remaining === 0) {
+          setWarningPopup({ isOpen: true, mode: 'blocked', message: "You've used all your free credits for this mentor." });
+        } else if (res.status === null && res.free_trials_remaining_this_month === 0) {
+          setWarningPopup({ isOpen: true, mode: 'blocked', message: "Your free trial for this mentor has ended. Unlock to continue." });
+        }
+      }
     }).catch(console.error);
   }, [bot.id]);
 
@@ -196,6 +207,8 @@ export const ChatInterface = ({ bot }: ChatInterfaceProps) => {
             setCreditsRemaining(newCredits);
             if (newCredits === 1) {
               setWarningPopup({ isOpen: true, mode: 'warning' });
+            } else if (newCredits === 0) {
+              setWarningPopup({ isOpen: true, mode: 'blocked', message: "You've used all your free credits for this mentor." });
             }
           }
         },

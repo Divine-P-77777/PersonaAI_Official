@@ -22,7 +22,15 @@ export default function DashboardPage() {
   const router = useRouter()
 
   useEffect(() => {
-    fetchBots()
+    const checkAccess = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user?.user_metadata?.role === "user") {
+        router.push("/explore")
+      } else {
+        fetchBots()
+      }
+    }
+    checkAccess()
   }, [])
 
   const fetchBots = async () => {

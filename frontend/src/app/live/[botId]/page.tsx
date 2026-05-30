@@ -36,6 +36,7 @@ export default function LivePage() {
   const [showTranscript, setShowTranscript] = useState(true)
   const audioChunksRef = useRef<string[]>([])
   const activeAudioRef = useRef<HTMLAudioElement | null>(null)
+  const lastAiTextRef = useRef<string>("")
 
   // ── Fetch bot + start session ──────────────────────────────────────────────
   useEffect(() => {
@@ -141,6 +142,7 @@ export default function LivePage() {
 
       case "ai_transcript":
         if (msg.text) {
+          lastAiTextRef.current = msg.text
           setTranscript(prev => {
             const last = prev[prev.length - 1]
             if (last?.role === "ai" && last.partial) {
@@ -159,8 +161,52 @@ export default function LivePage() {
         break
 
       case "speaking_done":
-        // Play the accumulated stream now that synthesis is finished
-        playAccumulatedAudio(msg.format ?? "mp3")
+        if (audioChunksRef.current.length === 0 && lastAiTextRef.current) {
+          // TTS Exhausted / Failed fallback to browser SpeechSynthesis
+          console.warn("[LivePage] No audio chunks received. Falling back to browser TTS.");
+          const utterance = new SpeechSynthesisUtterance(lastAiTextRef.current);
+          const textToSpeak = lastAiTextRef.current;
+          
+          // Auto-detect Devanagari characters to force Hindi voice even if session state is English
+          const hasDevanagari = /[\u0900-\u097F]/.test(textToSpeak);
+          const langCode = (language === 'hi' || hasDevanagari) ? 'hi-IN' : 'en-US';
+          utterance.lang = langCode;
+          
+          const targetGender = bot?.persona_config?.voice_gender ?? bot?.voice_gender ?? 'female';
+          const voices = window.speechSynthesis.getVoices();
+          
+          const isHindi = langCode.startsWith('hi');
+          const maleKeywords = isHindi ? ['madhur', 'hemant', 'rishi', 'male'] : ['male', 'guy', 'david', 'mark'];
+          const femaleKeywords = isHindi ? ['swara', 'kalpana', 'lekha', 'female'] : ['female', 'girl', 'zira', 'samantha'];
+          
+          const langVoices = voices.filter(v => v.lang.startsWith(langCode.split('-')[0]));
+          
+          let matchingVoice = langVoices.find(v => {
+            const name = v.name.toLowerCase();
+            if (targetGender === 'male') {
+                return maleKeywords.some(kw => name.includes(kw));
+            } else {
+                return femaleKeywords.some(kw => name.includes(kw));
+            }
+          });
+          
+          // Google's default Hindi voice usually sounds female. Fallback to it if specific gender matches fail.
+          if (!matchingVoice && isHindi) {
+              matchingVoice = langVoices.find(v => v.name.includes('Google') || v.name.includes('Android'));
+          }
+          
+          utterance.voice = matchingVoice || langVoices[0] || null;
+          
+          setIsAISpeaking(true);
+          utterance.onend = () => setIsAISpeaking(false);
+          utterance.onerror = () => setIsAISpeaking(false);
+          
+          // If using English voice for Hindi text, it will sound terrible. The Devanagari check above fixes it.
+          window.speechSynthesis.speak(utterance);
+        } else {
+          // Play the accumulated stream now that synthesis is finished
+          playAccumulatedAudio(msg.format ?? "mp3")
+        }
         
         // Decrement credits
         setCreditsRemaining(prev => {

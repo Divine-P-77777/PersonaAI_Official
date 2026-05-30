@@ -19,6 +19,7 @@ import { api } from "@/services/api"
 import { useToast } from "@/hooks/useToast"
 import Link from "next/link"
 import { Bot as BotType } from "@/types"
+import { PricingConfig, PricingFormData } from "../../components/PricingConfig"
 
 export default function BotEditPage({ params }: { params: Promise<{ botId: string }> }) {
   const { botId } = React.use(params)
@@ -37,10 +38,16 @@ export default function BotEditPage({ params }: { params: Promise<{ botId: strin
     expertise: "",
     voice_gender: "",
     is_free: true,
-    pricing_tier: "standard",
-    unlock_price: 1500,
-    credits_per_pack: 40
+    pricing_tier: "standard" as string | null,
+    unlock_price: 1500 as number | null,
+    credits_per_pack: 40 as number | null,
+    voice_enabled: true,
+    subscription_enabled: false
   })
+
+  const updateFormData = (data: Partial<PricingFormData>) => {
+    setFormData((prev) => ({ ...prev, ...data }));
+  };
 
   useEffect(() => {
     if (botId) fetchBot()
@@ -61,7 +68,9 @@ export default function BotEditPage({ params }: { params: Promise<{ botId: strin
         is_free: data.is_free ?? true,
         pricing_tier: data.pricing_tier || "standard",
         unlock_price: data.unlock_price || 1500,
-        credits_per_pack: data.credits_per_pack || 40
+        credits_per_pack: data.credits_per_pack || 40,
+        voice_enabled: data.voice_enabled ?? true,
+        subscription_enabled: data.subscription_enabled ?? false
       })
     } catch (err: any) {
       showError("Could not load bot details.")
@@ -82,9 +91,11 @@ export default function BotEditPage({ params }: { params: Promise<{ botId: strin
         description: formData.description,
         voice_gender: formData.voice_gender as "male" | "female" | "transgender",
         is_free: formData.is_free,
-        pricing_tier: formData.is_free ? undefined : formData.pricing_tier,
+        pricing_tier: formData.is_free ? undefined : formData.pricing_tier ?? undefined,
         unlock_price: formData.is_free ? undefined : Number(formData.unlock_price),
         credits_per_pack: formData.is_free ? undefined : Number(formData.credits_per_pack),
+        voice_enabled: formData.voice_enabled,
+        subscription_enabled: formData.subscription_enabled,
         persona_config: {
           ...bot.persona_config,
           greeting: formData.greeting,
@@ -280,63 +291,18 @@ export default function BotEditPage({ params }: { params: Promise<{ botId: strin
           </section>
 
           {/* Monetization */}
-          <section className="bg-white rounded-[40px] p-10 border border-orange-100 shadow-sm relative overflow-hidden">
-            <h2 className="text-2xl font-black text-gray-900 mb-8 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-green-50 text-green-500 flex items-center justify-center">
-                <Zap size={18} />
-              </div>
-              Monetization
-            </h2>
-
-            <div className="space-y-6">
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  id="is_free"
-                  checked={formData.is_free}
-                  onChange={e => setFormData({ ...formData, is_free: e.target.checked })}
-                  className="w-5 h-5 rounded text-orange-500 focus:ring-orange-500"
-                />
-                <label htmlFor="is_free" className="text-sm font-bold text-gray-700">Free Mentor (Unlock for everyone)</label>
-              </div>
-
-              {!formData.is_free && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                  <div className="space-y-2">
-                    <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-4">Pricing Tier</label>
-                    <select
-                      className="w-full h-14 px-6 bg-gray-50 border-2 border-orange-50 rounded-2xl outline-none focus:border-orange-200 focus:bg-white transition-all font-bold text-gray-800 appearance-none"
-                      value={formData.pricing_tier}
-                      onChange={e => setFormData({ ...formData, pricing_tier: e.target.value })}
-                    >
-                      <option value="starter">Starter</option>
-                      <option value="standard">Standard</option>
-                      <option value="premium">Premium</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-4">Unlock Price (₹)</label>
-                    <input
-                      type="number"
-                      className="w-full h-14 px-6 bg-gray-50 border-2 border-orange-50 rounded-2xl outline-none focus:border-orange-200 focus:bg-white transition-all font-bold text-gray-800"
-                      value={formData.unlock_price}
-                      onChange={e => setFormData({ ...formData, unlock_price: Number(e.target.value) })}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-4">Credits Per Pack</label>
-                    <input
-                      type="number"
-                      className="w-full h-14 px-6 bg-gray-50 border-2 border-orange-50 rounded-2xl outline-none focus:border-orange-200 focus:bg-white transition-all font-bold text-gray-800"
-                      value={formData.credits_per_pack}
-                      onChange={e => setFormData({ ...formData, credits_per_pack: Number(e.target.value) })}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
+          <section className="bg-white rounded-[40px] p-10 border border-orange-100 shadow-sm">
+            <PricingConfig
+              formData={{
+                is_free: formData.is_free,
+                pricing_tier: formData.pricing_tier,
+                unlock_price: formData.unlock_price,
+                credits_per_pack: formData.credits_per_pack,
+                voice_enabled: formData.voice_enabled,
+                subscription_enabled: formData.subscription_enabled,
+              }}
+              updateFormData={updateFormData}
+            />
           </section>
 
           <div className="flex items-center justify-center gap-6 text-[11px] text-gray-400 font-bold uppercase tracking-widest pt-4">

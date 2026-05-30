@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Menu, X, ChevronDown, LogOut, User as UserIcon, Layout, Sparkles, CreditCard, Info, Mail, Smartphone } from 'lucide-react';
+import { Menu, X, ChevronDown, LogOut, User as UserIcon, User, Layout, Sparkles, CreditCard, Info, Mail, Smartphone } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -48,19 +48,23 @@ export function Navbar() {
                         <Link href="/explore" className="text-sm font-semibold text-gray-600 hover:text-orange-700 hover:underline decoration-orange-500 underline-offset-4 transition-all">
                             Explore Personas
                         </Link>
-                        
+
                         {user ? (
                             <div className="relative">
-                                <button 
+                                <button
                                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                                     className="flex items-center gap-2 p-1 rounded-full hover:bg-gray-50 transition-all border border-transparent hover:border-gray-100"
                                 >
-                                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-orange-100 to-pink-100 p-0.5 border border-orange-200">
-                                        <img 
-                                            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`} 
-                                            alt="User" 
-                                            className="w-full h-full rounded-full bg-white object-cover"
-                                        />
+                                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-orange-100 to-pink-100 p-0.5 border border-orange-200 flex items-center justify-center overflow-hidden bg-white">
+                                        {user.avatar_url ? (
+                                            <img
+                                                src={user.avatar_url}
+                                                alt="User"
+                                                className="w-full h-full rounded-full object-cover"
+                                            />
+                                        ) : (
+                                            <User size={20} className="text-orange-400" />
+                                        )}
                                     </div>
                                     <ChevronDown size={14} className={`text-gray-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
                                 </button>
@@ -68,9 +72,9 @@ export function Navbar() {
                                 <AnimatePresence>
                                     {isDropdownOpen && (
                                         <>
-                                            <div 
-                                                className="fixed inset-0 z-[-1]" 
-                                                onClick={() => setIsDropdownOpen(false)} 
+                                            <div
+                                                className="fixed inset-0 z-[-1]"
+                                                onClick={() => setIsDropdownOpen(false)}
                                             />
                                             <motion.div
                                                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
@@ -82,17 +86,19 @@ export function Navbar() {
                                                     <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Account</p>
                                                     <p className="text-xs font-bold text-gray-900 truncate">{user.email}</p>
                                                 </div>
-                                                
-                                                <Link 
-                                                    href="/dashboard"
-                                                    onClick={() => setIsDropdownOpen(false)}
-                                                    className="flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-all"
-                                                >
-                                                    <Layout size={18} className="text-gray-400" />
-                                                    Dashboard
-                                                </Link>
-                                                
-                                                <Link 
+
+                                                {user?.user_metadata?.role !== 'user' && (
+                                                    <Link
+                                                        href="/dashboard"
+                                                        onClick={() => setIsDropdownOpen(false)}
+                                                        className="flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-all"
+                                                    >
+                                                        <Layout size={18} className="text-gray-400" />
+                                                        Dashboard
+                                                    </Link>
+                                                )}
+
+                                                <Link
                                                     href="/billing"
                                                     onClick={() => setIsDropdownOpen(false)}
                                                     className="flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-all"
@@ -100,7 +106,7 @@ export function Navbar() {
                                                     <CreditCard size={18} className="text-gray-400" />
                                                     Billing
                                                 </Link>
-                                                <Link 
+                                                <Link
                                                     href="/about"
                                                     onClick={() => setIsDropdownOpen(false)}
                                                     className="flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-all"
@@ -108,7 +114,7 @@ export function Navbar() {
                                                     <Info size={18} className="text-gray-400" />
                                                     About
                                                 </Link>
-                                                <Link 
+                                                <Link
                                                     href="/contact"
                                                     onClick={() => setIsDropdownOpen(false)}
                                                     className="flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-all"
@@ -116,8 +122,8 @@ export function Navbar() {
                                                     <Mail size={18} className="text-gray-400" />
                                                     Contact
                                                 </Link>
-                                                
-                                                <Link 
+
+                                                <Link
                                                     href="/pwa"
                                                     onClick={() => setIsDropdownOpen(false)}
                                                     className="flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-all"
@@ -125,8 +131,8 @@ export function Navbar() {
                                                     <Smartphone size={18} className="text-gray-400" />
                                                     Install App
                                                 </Link>
-                                                
-                                                <button 
+
+                                                <button
                                                     onClick={handleLogout}
                                                     className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium text-red-500 hover:bg-red-50 rounded-xl transition-all"
                                                 >
@@ -160,7 +166,7 @@ export function Navbar() {
             {/* Mobile Menu */}
             <AnimatePresence>
                 {isMenuOpen && (
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
@@ -168,48 +174,50 @@ export function Navbar() {
                     >
                         <div className="px-4 py-6 space-y-4">
                             <Link
-                                                href="/explore"
-                                                onClick={() => setIsMenuOpen(false)}
-                                                className="flex items-center gap-3 px-4 py-3 text-base font-bold text-gray-900 hover:bg-gray-50 rounded-2xl transition-colors"
-                                            >
-                                                <Sparkles size={20} className="text-orange-600" />
-                                                Explore Personas
-                                            </Link>
-                                            <Link
-                                                href="/about"
-                                                onClick={() => setIsMenuOpen(false)}
-                                                className="flex items-center gap-3 px-4 py-3 text-base font-bold text-gray-900 hover:bg-gray-50 rounded-2xl transition-colors"
-                                            >
-                                                <Info size={20} className="text-gray-400" />
-                                                About
-                                            </Link>
-                                            <Link
-                                                href="/contact"
-                                                onClick={() => setIsMenuOpen(false)}
-                                                className="flex items-center gap-3 px-4 py-3 text-base font-bold text-gray-900 hover:bg-gray-50 rounded-2xl transition-colors"
-                                            >
-                                                <Mail size={20} className="text-gray-400" />
-                                                Contact
-                                            </Link>
-                                            <Link
-                                                href="/pwa"
-                                                onClick={() => setIsMenuOpen(false)}
-                                                className="flex items-center gap-3 px-4 py-3 text-base font-bold text-gray-900 hover:bg-gray-50 rounded-2xl transition-colors"
-                                            >
-                                                <Smartphone size={20} className="text-gray-400" />
-                                                Install App
-                                            </Link>
+                                href="/explore"
+                                onClick={() => setIsMenuOpen(false)}
+                                className="flex items-center gap-3 px-4 py-3 text-base font-bold text-gray-900 hover:bg-gray-50 rounded-2xl transition-colors"
+                            >
+                                <Sparkles size={20} className="text-orange-600" />
+                                Explore Personas
+                            </Link>
+                            <Link
+                                href="/about"
+                                onClick={() => setIsMenuOpen(false)}
+                                className="flex items-center gap-3 px-4 py-3 text-base font-bold text-gray-900 hover:bg-gray-50 rounded-2xl transition-colors"
+                            >
+                                <Info size={20} className="text-gray-400" />
+                                About
+                            </Link>
+                            <Link
+                                href="/contact"
+                                onClick={() => setIsMenuOpen(false)}
+                                className="flex items-center gap-3 px-4 py-3 text-base font-bold text-gray-900 hover:bg-gray-50 rounded-2xl transition-colors"
+                            >
+                                <Mail size={20} className="text-gray-400" />
+                                Contact
+                            </Link>
+                            <Link
+                                href="/pwa"
+                                onClick={() => setIsMenuOpen(false)}
+                                className="flex items-center gap-3 px-4 py-3 text-base font-bold text-gray-900 hover:bg-gray-50 rounded-2xl transition-colors"
+                            >
+                                <Smartphone size={20} className="text-gray-400" />
+                                Install App
+                            </Link>
 
                             {user ? (
                                 <>
-                                    <Link
-                                        href="/dashboard"
-                                        onClick={() => setIsMenuOpen(false)}
-                                        className="flex items-center gap-3 px-4 py-3 text-base font-bold text-gray-900 hover:bg-gray-50 rounded-2xl transition-colors"
-                                    >
-                                        <Layout size={20} className="text-gray-400" />
-                                        Dashboard
-                                    </Link>
+                                    {user?.user_metadata?.role !== 'user' && (
+                                        <Link
+                                            href="/dashboard"
+                                            onClick={() => setIsMenuOpen(false)}
+                                            className="flex items-center gap-3 px-4 py-3 text-base font-bold text-gray-900 hover:bg-gray-50 rounded-2xl transition-colors"
+                                        >
+                                            <Layout size={20} className="text-gray-400" />
+                                            Dashboard
+                                        </Link>
+                                    )}
                                     <Link
                                         href="/billing"
                                         onClick={() => setIsMenuOpen(false)}
@@ -228,8 +236,8 @@ export function Navbar() {
                                 </>
                             ) : (
                                 <div className="pt-2">
-                                    <Link 
-                                        href="/signup" 
+                                    <Link
+                                        href="/signup"
                                         className="flex items-center justify-center py-3 text-base font-bold text-white bg-gradient-to-r from-orange-400 to-pink-500 rounded-2xl shadow-lg"
                                         onClick={() => setIsMenuOpen(false)}
                                     >

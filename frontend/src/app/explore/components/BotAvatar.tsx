@@ -1,64 +1,22 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { Bot } from "../../../types";
+import { User } from "lucide-react";
 
 interface BotAvatarProps {
   bot: Bot;
   className?: string;
 }
 
-// Simple in-memory cache to avoid redundant API calls during the session
-const genderCache: Record<string, "male" | "female" | null> = {};
-
 export function BotAvatar({ bot, className }: BotAvatarProps) {
-  const [avatarUrl, setAvatarUrl] = useState<string>("");
-  const name = bot.name.split(" ")[0]; // Just use first name for gender detection
-
-  useEffect(() => {
-    // 1. If the bot has a real avatar, use it immediately
-    const realAvatar = bot.avatar_url;
-    if (realAvatar) {
-      setAvatarUrl(realAvatar);
-      return;
-    }
-
-    // 2. Fallback to DiceBear with Gender Detection
-    const fetchGenderAndSetAvatar = async () => {
-      let gender = genderCache[name];
-
-      if (gender === undefined) {
-        try {
-          // Genderize.io is free for up to 1000 names/day
-          const response = await fetch(`https://api.genderize.io/?name=${encodeURIComponent(name)}`);
-          const data = await response.json();
-          gender = data.gender; // "male", "female" or null
-          genderCache[name] = gender;
-        } catch (err) {
-          console.warn("Genderize.io failed, falling back to random avatar:", err);
-          gender = null;
-        }
-      }
-
-      // Construct DiceBear URL with gender-specific styles if gender is known
-      let diceBearUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(bot.name)}`;
-      
-      if (gender === "male") {
-        // Force male-leaning styles
-        diceBearUrl += "&top=shortHair,shortCurly,shortFlat,shortRound,shortWaved,sides,frizzle,shaggy,shaggyMullet,theCaesar,theCaesarAndSidePart&facialHairProbability=40";
-      } else if (gender === "female") {
-        // Force female-leaning styles
-        diceBearUrl += "&top=longHair,bob,curly,curvy,dreads,dreads01,dreads02,hijab,turban,straight01,straight02,straightAndStrand&facialHairProbability=0";
-      }
-
-      setAvatarUrl(diceBearUrl);
-    };
-
-    fetchGenderAndSetAvatar();
-  }, [bot, name]);
+  const avatarUrl = bot.avatar_url || bot.owner?.avatar_url;
 
   if (!avatarUrl) {
-    return <div className={`animate-pulse bg-gray-100 rounded-full ${className}`} />;
+    return (
+      <div className={`bg-gray-100 flex items-center justify-center rounded-full ${className}`}>
+        <User className="w-1/2 h-1/2 text-gray-400" />
+      </div>
+    );
   }
 
   return (
@@ -67,8 +25,12 @@ export function BotAvatar({ bot, className }: BotAvatarProps) {
       alt={bot.name}
       className={`object-cover rounded-full ${className}`}
       onError={(e) => {
-        // Final fallback if anything fails
-        (e.currentTarget as HTMLImageElement).src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${bot.name}`;
+        // Fallback if image fails to load
+        (e.currentTarget as HTMLImageElement).style.display = "none";
+        e.currentTarget.parentElement?.classList.add("bg-gray-100", "flex", "items-center", "justify-center");
+        if (e.currentTarget.parentElement) {
+            e.currentTarget.parentElement.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user w-1/2 h-1/2 text-gray-400"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+        }
       }}
     />
   );

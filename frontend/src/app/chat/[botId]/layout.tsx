@@ -26,7 +26,7 @@ export async function generateMetadata(
     
     const title = `${bot.name} | AskMentor`;
     const description = bot.description || `Chat with ${bot.name}, an AI-powered persona specialized in ${bot.persona_config.expertise?.join(', ') || 'mentorship'}.`;
-    const ogImage = `https://api.dicebear.com/7.x/avataaars/svg?seed=${bot.name}`;
+    const ogImage = bot.avatar_url || bot.owner?.avatar_url || "https://personabot.vercel.app/og-image.png";
 
     return {
       title,

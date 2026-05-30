@@ -88,3 +88,5 @@ class BotResponse(BaseModel):
     credits_per_pack:     Optional[int]   = None
     voice_enabled:        bool            = False
     subscription_enabled: bool            = False
+    session_count:        Optional[int]   = 0
+    free_explorations_used: Optional[int] = 0

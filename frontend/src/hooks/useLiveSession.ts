@@ -33,7 +33,7 @@ export interface UseLiveSessionReturn {
   endSession: () => void
 }
 
-// ── Hook ──────────────────────────────────────────────────────────────────────
+// Hook 
 
 export function useLiveSession(
   sessionId: string | null,

@@ -46,12 +46,6 @@ export interface Bot {
   voice_gender?: "male" | "female" | "transgender";
   created_at: string;
   updated_at: string;
-  owner?: {
-    display_name?: string;
-    avatar_url?: string;
-  };
-  
-  // Monetization fields
   is_free?: boolean;
   is_unlocked?: boolean;
   pricing_tier?: string;
@@ -59,6 +53,12 @@ export interface Bot {
   credits_per_pack?: number;
   voice_enabled?: boolean;
   subscription_enabled?: boolean;
+  session_count?: number;
+  free_explorations_used?: number;
+  owner?: {
+    display_name?: string;
+    avatar_url?: string;
+  };
 }
 
 export interface DataSource {

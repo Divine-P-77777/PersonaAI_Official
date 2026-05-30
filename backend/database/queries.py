@@ -75,7 +75,7 @@ async def get_public_bots(token: str = None) -> list[dict]:
     result = (
         client
         .table("bots")
-        .select("*, owner:users(display_name, avatar_url)")
+        .select("*, owner:users(display_name, avatar_url), messages(count)")
         .eq("status", "ready")
         .order("created_at", desc=True)
         .execute()

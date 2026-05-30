@@ -3,6 +3,7 @@ import { FileText, Image as ImageIcon, AlertCircle, Type, Link as LinkIcon, Vide
 import imageCompression from 'browser-image-compression';
 import { BotFormData } from './CreateBot';
 import { FileDropZone } from './FileDropZone';
+import { toast } from 'react-toastify';
 
 interface DataSourcesProps {
     formData: BotFormData;
@@ -121,6 +122,11 @@ export function DataSources({ formData, updateFormData }: DataSourcesProps) {
     };
 
     const addLinkSource = (type: 'web_link' | 'video_link') => {
+        if (type === 'video_link') {
+            toast.info("In future it will be available!");
+            return;
+        }
+
         if (linkInput.title && linkInput.url) {
             // Normalize URL: remove duplicate https://, handle missing protocol, and trim whitespace
             let normalizedUrl = linkInput.url.trim();

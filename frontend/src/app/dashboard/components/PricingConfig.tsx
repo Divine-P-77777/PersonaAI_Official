@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Zap, Mic, Star, ChevronDown, ChevronUp, AlertTriangle, CheckCircle, DollarSign } from 'lucide-react';
+import { Zap, Mic, Star, ChevronDown, ChevronUp, AlertTriangle, CheckCircle, DollarSign, Target, Clock } from 'lucide-react';
 import {
   PRICING_TIERS_LIST,
   getAllowedCreditRange,
@@ -10,7 +10,7 @@ import {
   FREE_EXPLORATION,
   type PricingTier,
 } from '../../../config/pricing';
-
+import { useEffect } from 'react';
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -33,21 +33,21 @@ interface PricingConfigProps {
 // Tier Icons (decorative, per tier)
 // ---------------------------------------------------------------------------
 const TIER_ICONS: Record<string, React.ReactNode> = {
-  starter:  <Zap className="w-5 h-5" />,
+  starter: <Zap className="w-5 h-5" />,
   standard: <Star className="w-5 h-5" />,
-  premium:  <Mic className="w-5 h-5" />,
+  premium: <Mic className="w-5 h-5" />,
 };
 
 const TIER_COLORS: Record<string, string> = {
-  starter:  'from-blue-500 to-cyan-400',
+  starter: 'from-blue-500 to-cyan-400',
   standard: 'from-violet-500 to-purple-400',
-  premium:  'from-orange-500 to-pink-500',
+  premium: 'from-orange-500 to-pink-500',
 };
 
 const TIER_BORDER: Record<string, string> = {
-  starter:  'border-blue-400 ring-blue-100',
+  starter: 'border-blue-400 ring-blue-100',
   standard: 'border-violet-400 ring-violet-100',
-  premium:  'border-orange-400 ring-orange-100',
+  premium: 'border-orange-400 ring-orange-100',
 };
 
 // ---------------------------------------------------------------------------
@@ -66,9 +66,9 @@ export function PricingConfig({ formData, updateFormData }: PricingConfigProps) 
       updateFormData({
         is_free: true,
         pricing_tier: null,
-        unlock_price: null,
-        credits_per_pack: null,
-        voice_enabled: false,
+        unlock_price: 0,
+        credits_per_pack: 40,
+        voice_enabled: true,
       });
       setValidationError(null);
       setValueWarning(null);
@@ -134,28 +134,17 @@ export function PricingConfig({ formData, updateFormData }: PricingConfigProps) 
         </p>
       </div>
 
-      {/* Free Exploration Info Banner */}
-      <div className="flex items-start gap-3 p-4 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200">
-        <CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
-        <div className="text-sm">
-          <p className="font-bold text-emerald-800">Free Discovery Built-In</p>
-          <p className="text-emerald-700 mt-0.5">
-            Every student gets <strong>{FREE_EXPLORATION.maxMentorsPerMonth} free mentor explorations/month</strong> with{' '}
-            <strong>{FREE_EXPLORATION.freeCreditsPerMentor} free messages each</strong> — even on paid mentors.
-            This drives discovery and unlocks.
-          </p>
-        </div>
-      </div>
+
 
       {/* Free / Paid Toggle */}
       <div className="grid grid-cols-2 gap-4">
         <button
+          type="button"
           onClick={() => handleFreeToggle(true)}
-          className={`p-6 rounded-3xl border-2 text-left transition-all duration-200 ${
-            formData.is_free
-              ? 'border-emerald-400 bg-emerald-50 ring-4 ring-emerald-100 shadow-lg'
-              : 'border-gray-200 hover:border-gray-300 bg-white hover:shadow-md'
-          }`}
+          className={`p-6 rounded-3xl border-2 text-left transition-all duration-200 ${formData.is_free
+            ? 'border-emerald-400 bg-emerald-50 ring-4 ring-emerald-100 shadow-lg'
+            : 'border-gray-200 hover:border-gray-300 bg-white hover:shadow-md'
+            }`}
         >
           <div className="w-10 h-10 rounded-2xl bg-emerald-100 flex items-center justify-center mb-3">
             <CheckCircle className="w-5 h-5 text-emerald-500" />
@@ -167,12 +156,12 @@ export function PricingConfig({ formData, updateFormData }: PricingConfigProps) 
         </button>
 
         <button
+          type="button"
           onClick={() => handleFreeToggle(false)}
-          className={`p-6 rounded-3xl border-2 text-left transition-all duration-200 ${
-            !formData.is_free
-              ? 'border-orange-400 bg-orange-50 ring-4 ring-orange-100 shadow-lg'
-              : 'border-gray-200 hover:border-gray-300 bg-white hover:shadow-md'
-          }`}
+          className={`p-6 rounded-3xl border-2 text-left transition-all duration-200 ${!formData.is_free
+            ? 'border-orange-400 bg-orange-50 ring-4 ring-orange-100 shadow-lg'
+            : 'border-gray-200 hover:border-gray-300 bg-white hover:shadow-md'
+            }`}
         >
           <div className="w-10 h-10 rounded-2xl bg-orange-100 flex items-center justify-center mb-3">
             <DollarSign className="w-5 h-5 text-orange-500" />
@@ -183,6 +172,62 @@ export function PricingConfig({ formData, updateFormData }: PricingConfigProps) 
           </p>
         </button>
       </div>
+
+      {/* Free Mentor Customization */}
+      {formData.is_free && (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-3 duration-300">
+          <div className="p-6 rounded-3xl border border-emerald-200 bg-white shadow-sm">
+            <h3 className="font-bold text-gray-800 text-lg mb-2">Free Access Configuration</h3>
+            <p className="text-sm text-gray-600 mb-6">
+              Students can send messages and have live voice interactions for free. By default, they receive <strong>40 credits</strong> (e.g., 15 chat messages + 5 live interactions). You can adjust this allowance below.
+            </p>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-bold text-gray-700">Free Credits Allowance</label>
+                <span className="text-sm font-black text-gray-900">
+                  {formData.credits_per_pack ?? 40} credits
+                </span>
+              </div>
+              <input
+                type="number"
+                min={1}
+                max={100}
+                value={formData.credits_per_pack || ''}
+                onChange={(e) => updateFormData({ credits_per_pack: parseInt(e.target.value) || 0 })}
+                className="w-full h-2 bg-gray-200 rounded-full appearance-none cursor-pointer accent-emerald-500"
+              />
+              <div className="flex justify-between text-xs text-gray-400 mt-1">
+                <span>10</span>
+                <span>40</span>
+              </div>
+            </div>
+
+            <div className="mt-6 flex items-center justify-between p-5 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200">
+              <div>
+                <p className="font-bold text-gray-900 flex items-center gap-2">
+                  <Mic className="w-4 h-4 text-emerald-500" />
+                  Voice Enabled
+                </p>
+                <p className="text-sm text-gray-500 mt-0.5">
+                  Voice costs 5 credits per turn. It is enabled by default for free mentors.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => updateFormData({ voice_enabled: !formData.voice_enabled })}
+                className={`relative w-12 h-6 rounded-full transition-all duration-300 ${formData.voice_enabled ? 'bg-emerald-500' : 'bg-gray-300'
+                  }`}
+              >
+                <div
+                  className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all duration-300 ${formData.voice_enabled ? 'left-7' : 'left-1'
+                    }`}
+                />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Paid Tier Selection */}
       {!formData.is_free && (
@@ -199,12 +244,12 @@ export function PricingConfig({ formData, updateFormData }: PricingConfigProps) 
               return (
                 <button
                   key={tier.tierId}
+                  type="button"
                   onClick={() => handleTierSelect(tier)}
-                  className={`relative p-5 rounded-3xl border-2 text-left transition-all duration-200 ${
-                    isSelected
-                      ? `${border} ring-4 shadow-xl bg-white`
-                      : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-md'
-                  }`}
+                  className={`relative p-5 rounded-3xl border-2 text-left transition-all duration-200 ${isSelected
+                    ? `${border} ring-4 shadow-xl bg-white`
+                    : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-md'
+                    }`}
                 >
                   {isSelected && (
                     <div className={`absolute top-3 right-3 w-6 h-6 rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center`}>
@@ -220,11 +265,20 @@ export function PricingConfig({ formData, updateFormData }: PricingConfigProps) 
                   <p className="text-2xl font-black text-gray-900 mt-1">₹{tier.unlockPrice}</p>
                   <p className="text-xs text-gray-500 font-medium">default price</p>
 
-                  <div className="mt-3 space-y-1 text-sm text-gray-600">
-                    <p>🎯 <strong>{tier.credits} credits</strong> on unlock</p>
-                    <p>⏳ Valid for <strong>{tier.expiryDays} days</strong></p>
+                  <div className="mt-3 space-y-2 text-sm text-gray-600">
+                    <div className="flex items-center gap-2">
+                      <Target className="w-4 h-4 text-violet-500" />
+                      <p><strong>{tier.credits} credits</strong> on unlock</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-emerald-500" />
+                      <p>Valid for <strong>{tier.expiryDays} days</strong></p>
+                    </div>
                     {tier.voiceEligible && (
-                      <p>🎙️ <strong>Voice enabled</strong></p>
+                      <div className="flex items-center gap-2">
+                        <Mic className="w-4 h-4 text-orange-500" />
+                        <p><strong>Voice enabled</strong></p>
+                      </div>
                     )}
                   </div>
 
@@ -250,14 +304,12 @@ export function PricingConfig({ formData, updateFormData }: PricingConfigProps) 
               </div>
               <button
                 onClick={() => updateFormData({ voice_enabled: !formData.voice_enabled })}
-                className={`relative w-12 h-6 rounded-full transition-all duration-300 ${
-                  formData.voice_enabled ? 'bg-orange-400' : 'bg-gray-300'
-                }`}
+                className={`relative w-12 h-6 rounded-full transition-all duration-300 ${formData.voice_enabled ? 'bg-orange-400' : 'bg-gray-300'
+                  }`}
               >
                 <div
-                  className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all duration-300 ${
-                    formData.voice_enabled ? 'left-7' : 'left-1'
-                  }`}
+                  className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all duration-300 ${formData.voice_enabled ? 'left-7' : 'left-1'
+                    }`}
                 />
               </button>
             </div>
