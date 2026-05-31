@@ -1,479 +1,184 @@
-import json
-import os
-import base64
-import asyncio
-import logging
-import tempfile
-import traceback
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from app.services.elevenlabs_service import elevenlabs_service
-from app.services.rag_pipeline import rag_pipeline
-from app.services.live_session_service import (
-    create_session, get_history, append_turns,
-    update_language as persist_language, delete_session, ensure_table_exists
-)
+# Ask Mentor Live Interaction: Architecture & Notes
 
-logger = logging.getLogger(__name__)
+## Concise Notes on Live Mode Operations
 
-router = APIRouter(prefix="/live", tags=["live"])
+The Live Mode interaction provides a full-duplex, low-latency conversational experience with the AI Mentor. It operates via a robust WebSocket connection and coordinates Speech-To-Text (STT), Large Language Models (LLM) with RAG, and Text-To-Speech (TTS) streaming. 
 
-# Bootstrap DynamoDB live session table on first import (idempotent)
-try:
-    ensure_table_exists()
-except Exception as _e:
-    logger.warning(f"[LiveSession] Table bootstrap warning: {_e}")
+*(Note: Unlike the CivicPulse project, Ask Mentor does not use any `<DRAFT_READY />` tag parsing logic. The LLM output is streamed directly to the TTS engine.)*
 
+### 1. Frontend Audio Capture & Transmission
+- **Web Speech API (STT):** The frontend (`useAudioCapture.ts`) utilizes the browser's native `SpeechRecognition` API for real-time continuous speech-to-text.
+- **Post-Processing:** A developer-domain post-processor corrects common browser STT mishearings (e.g., "super bass" to "Supabase").
+- **WebSocket Transport:** Validated text transcripts are sent as `user_text` JSON payloads over a WebSocket (`useLiveSession.ts`) to the backend.
+- **Echo Cancellation:** The frontend automatically mutes the user's microphone when the AI is actively speaking and resumes listening afterward to prevent audio loops.
 
-class ConnectionManager:
-    def __init__(self):
-        # Store active connections per session_id
-        self.active_connections: dict[str, WebSocket] = {}
-        self.cancel_events: dict[str, asyncio.Event] = {}
-        self.active_tasks: dict[str, asyncio.Task] = {}
+### 2. Backend Orchestration (FastAPI)
+- **Session Management:** The REST endpoint (`/session/start`) validates the user, checks credit/access limits, and spins up a Redis session. The WebSocket router (`/ws/{session_id}`) then connects to this session.
+- **Language Detection:** The backend automatically detects if the user spoke in English or Hindi and toggles the session language on the fly.
+- **Concurrent RAG Processing:** Incoming text triggers `process_voice_turn` as a background task. It pulls relevant context using `pgvector` and streams the LLM response via Langchain (Groq).
+- **Interruption Handling:** If the user speaks again while the AI is processing/speaking, an `interrupt` signal cancels the active LLM background task and signals the TTS loop to abort.
 
-    async def connect(self, websocket: WebSocket, session_id: str):
-        await websocket.accept()
-        self.active_connections[session_id] = websocket
-        self.cancel_events[session_id] = asyncio.Event()
-        self.active_tasks[session_id] = None  # To track the processing task
-        logger.info(f"Session {session_id}: WebSocket connected.")
+### 3. Text-To-Speech (TTS) Streaming
+- **Dynamic TTS Routing:** The system routes English text to **ElevenLabs** (mp3) and Hindi text to **Sarvam AI** (wav).
+- **Direct Streaming:** The LLM token stream is yielded directly to the TTS engine asynchronously.
+- **Base64 Audio Chunks:** Audio is generated in chunks and streamed as base64-encoded strings back to the frontend.
 
-    def disconnect(self, session_id: str):
-        if session_id in self.active_connections:
-            self.active_connections.pop(session_id, None)
-            self.cancel_events.pop(session_id, None)
-            logger.info(f"Session {session_id}: Cleaned up and removed.")
+### 4. Frontend Audio Playback
+- **Chunk Accumulation & Playback:** The frontend accumulates the base64 audio chunks, converts them to a `Uint8Array`, wraps them in a `Blob`, and plays them smoothly using the HTML5 `Audio` element.
+- **TTS Fallback:** If the backend TTS stream fails, the frontend falls back to the browser's native `SpeechSynthesis` API to guarantee delivery.
 
-    def set_cancel_event(self, session_id: str):
-        if session_id in self.cancel_events:
-            self.cancel_events[session_id].set()
+---
 
-    def clear_cancel_event(self, session_id: str):
-        if session_id in self.cancel_events:
-            self.cancel_events[session_id].clear()
-            
-    def is_cancelled(self, session_id: str) -> bool:
-        event = self.cancel_events.get(session_id)
-        return event.is_set() if event else False
+## 5. Shared Context Memory Pipeline 
+
+To achieve human-like conversation continuity without degrading latency, the system utilizes a **Hybrid Asynchronous Context Memory** design.
+
+```
+                  +-----------------------------------------+
+                  |         Incoming Voice Turn             |
+                  +-----------------------------------------+
+                                       |
+                                       v
+                     /-----------------------------------\
+                    /  Is Bot Config & Chat History in    \
+                   <   Upstash Redis Cache (Key: chat_...)? >
+                    \                                    /
+                     \-----------------------------------/
+                               /               \
+                       YES    /                 \   NO (Cache Miss)
+                             v                   v
+                 +-----------------------+   +-----------------------+
+                 |  Instant Redis Read   |   | Query Supabase (SQL)  |
+                 |      (< 1ms)          |   |  - bot table          |
+                 |                       |   |  - message table      |
+                 +-----------------------+   +-----------------------+
+                             \                   /
+                              \                 /  Optimistically Cache
+                               v               v
+                +---------------------------------------------+
+                | Combined LLM Context Prompt Construction    |
+                | - Bot System Persona / Configuration        |
+                | - Last 5 Messages (Chat History Context)    |
+                | - Top 5 Vector Search Results (pgvector)     |
+                +---------------------------------------------+
+                                       |
+                                       +================================+
+                                       |                                |
+                                       v (Foreground Task)              v (Background Task)
+                          +-------------------------+      +-------------------------+
+                          |   Launch Groq LLM &     |      |  asyncio.create_task()  |
+                          |   TTS Audio Stream      |      |  Save User & AI message |
+                          |   (Immediate playback)  |      |   to Supabase Postgres  |
+                          +-------------------------+      +-------------------------+
+```
+
+### Key Latency-Saving Elements:
+1. **Upstash Redis Caching:**
+   - Both **Bot Config** (`bot_config:{bot_id}`) and **Last 5 Messages** (`chat_history:{bot_id}:{user_id}`) are read directly from Redis in $<1\text{ms}$.
+   - Only on a rare cache miss does the system fall back to Supabase Postgres (taking 100-200ms) and then immediately warms up the Redis cache.
+2. **Background Database Writes:**
+   - Saving the user's transcript and the assistant's response to the persistent `messages` table in Supabase is executed using `asyncio.create_task()`.
+   - This fires a non-blocking, background thread task to persist the data to the SQL DB, returning control to the voice loop in $0\text{ms}$.
+3. **Interruption Harvesting:**
+   - If the user interrupts, the foreground loop is aborted via `asyncio.CancelledError`.
+   - The system intercepts the cancellation, retrieves the *partial text* generated up to that exact millisecond, appends `... [interrupted]`, and pushes it to Redis and Supabase in the background.
+
+---
+
+## Architecture Diagram
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant User
+    participant Frontend as Next.js Frontend
+    participant WS as FastAPI WebSocket
+    participant Cache as Upstash Redis Cache
+    participant RAG as RAG Pipeline (pgvector)
+    participant LLM as ChatGroq LLM
+    participant DB as Supabase Database
+
+    User->>Frontend: Speaks (Voice Turn)
+    Frontend->>Frontend: Web Speech API (STT) & Tech Post-Processing
+    Frontend->>WS: Send {"type": "user_text", "text": "..."}
+    
+    rect rgb(24, 30, 45)
+        Note over WS,Cache: Context Retrieval (Shared with standard text chat)
+        WS->>Cache: get_cache(chat_history:{bot_id}:{user_id})
+        alt Cache Hit (< 1ms)
+            Cache-->>WS: Return Last 5 Messages
+        else Cache Miss
+            WS->>DB: Query get_recent_messages (SQL)
+            DB-->>WS: Return Messages
+            WS->>Cache: set_cache(chat_history)
+        end
+    end
+
+    rect rgb(28, 48, 38)
+        Note over WS,DB: Asynchronous User Message Persistence
+        WS->>Cache: Append current user message & update cache
+        WS->>DB: asyncio.create_task(save_message("user"))
+    end
+
+    rect rgb(24, 30, 45)
+        Note over WS,LLM: Foreground Voice Generation Loop
+        WS->>RAG: retrieve_similar_chunks (pgvector)
+        RAG-->>WS: Return Top 5 Context Chunks
+        WS->>LLM: ChatGroq.astream(SystemPrompt + History + UserText)
         
-    def cancel_active_task(self, session_id: str):
-        task = self.active_tasks.get(session_id)
-        if task and not task.done():
-            task.cancel()
-            logger.info(f"Session {session_id}: Active LLM/TTS processing task cancelled.")
+        loop Token-by-Token TTS Streaming
+            LLM-->>WS: Stream LLM Tokens
+            WS->>Frontend: Stream base64 audio chunks (wav/mp3)
+        end
+    end
 
-    async def send_json(self, session_id: str, data: dict) -> bool:
-        """Send JSON to a specific session's WebSocket safely."""
-        websocket = self.active_connections.get(session_id)
-        if not websocket:
-            return False
-        try:
-            await websocket.send_json(data)
-            return True
-        except Exception as e:
-            logger.warning(f"Session {session_id}: Failed to send message: {e}")
-            self.disconnect(session_id)
-            return False
+    alt Normal Completion
+        WS->>Frontend: Send {"type": "speaking_done"}
+        WS->>Cache: Append full AI response to chat_history cache
+        WS->>DB: asyncio.create_task(save_message("assistant"))
+        WS->>Cache: Invalidate full_history cache
+    else User Interrupted
+        User->>Frontend: Speaks (Interrupts AI)
+        Frontend->>WS: Send {"type": "interrupt"}
+        WS->>WS: Catch CancelledError & harvest partial generated text
+        WS->>Cache: Append partial text ("... [interrupted]") to cache
+        WS->>DB: asyncio.create_task(save_message("assistant_partial"))
+        WS->>Cache: Invalidate full_history cache
+    end
+```
 
-manager = ConnectionManager()
+## System Component Diagram
 
-GREETING_TEXT = (
-    "Hi! I'm CivicPulse. How can I help you today?"
-)
+```mermaid
+graph TD
+    subgraph Client [Frontend Next.js App]
+        STT[Browser Web Speech API] -->|Raw Text| PP[Post-Processor Tech Dictionary]
+        PP --> LiveSession[useLiveSession WebSocket Hook]
+        LiveSession --> |Play Audio Chunks| AP[HTML5 Audio Player]
+        LiveSession -.-> |Interruption Trigger| STT
+    end
 
-GREETING_TEXT_HI = (
-    "नमस्ते! मैं CivicPulse हूँ। आज कैसे मदद कर सकती हूँ?"
-)
-
-
-async def send_greeting(session_id: str, language: str = "en"):
-    """Send an AI greeting with TTS audio when the user first connects."""
-    try:
-        text = GREETING_TEXT_HI if language == "hi" else GREETING_TEXT
+    subgraph Server [Backend FastAPI App]
+        WS[WebSocket Endpoint /ws/]
+        WS <--> |JSON Payloads| LiveSession
         
-        # 1. Send the greeting text transcript
-        await manager.send_json(session_id, {
-            "type": "ai_transcript",
-            "text": text
-        })
-
-        # 2. Generate TTS audio and stream it
-        logger.info(f"Session {session_id}: Generating greeting TTS ({language})...")
+        WS --> |Spawn Voice Task| Processor[Voice Turn Processor]
         
-        if language == "hi":
-            from app.services.sarvamai_service import sarvam_service
-            audio_generator = sarvam_service.generate_speech_stream(iter([text]))
-            audio_format = "wav"
-        else:
-            audio_generator = elevenlabs_service.generate_speech_stream(iter([text]))
-            audio_format = "mp3"
-
-        async for audio_chunk in audio_generator:
-            chunk_b64 = base64.b64encode(audio_chunk).decode('utf-8')
-            if not await manager.send_json(session_id, {
-                "type": "audio_stream",
-                "data": chunk_b64,
-                "format": audio_format
-            }):
-                return  # Connection died
-
-        logger.info(f"Session {session_id}: Greeting sent successfully.")
-        # Signal that we are done sending chunks
-        await manager.send_json(session_id, {"type": "speaking_done"})
-    except Exception as e:
-        logger.error(f"Session {session_id}: Greeting failed: {e}")
-        text = GREETING_TEXT_HI if language == "hi" else GREETING_TEXT
-        await manager.send_json(session_id, {
-            "type": "ai_transcript",
-            "text": text
-        })
-
-async def send_ai_voice_message(session_id: str, text: str, language: str = "en"):
-    """Send an arbitrary AI message with TTS audio to a specific session."""
-    try:
-        # 1. Send the text transcript
-        await manager.send_json(session_id, {
-            "type": "ai_transcript",
-            "text": text
-        })
-
-        # 2. Generate TTS audio and stream it
-        logger.info(f"Session {session_id}: Generating custom TTS ({language}): {text[:50]}...")
+        Processor <--> |Fast Context Memory| Redis[(Upstash Redis Cache)]
         
-        if language == "hi":
-            from app.services.sarvamai_service import sarvam_service
-            audio_generator = sarvam_service.generate_speech_stream(iter([text]))
-            audio_format = "wav"
-        else:
-            audio_generator = elevenlabs_service.generate_speech_stream(iter([text]))
-            audio_format = "mp3"
-
-        async for audio_chunk in audio_generator:
-            chunk_b64 = base64.b64encode(audio_chunk).decode('utf-8')
-            if not await manager.send_json(session_id, {
-                "type": "audio_stream",
-                "data": chunk_b64,
-                "format": audio_format
-            }):
-                return  # Connection died
-
-        logger.info(f"Session {session_id}: Custom voice message sent successfully.")
-        # Signal that we are done sending chunks
-        await manager.send_json(session_id, {"type": "speaking_done"})
-    except Exception as e:
-        logger.error(f"Session {session_id}: Custom voice message failed: {e}")
-
-
-async def process_voice_turn(
-    session_id: str,
-    transcript_text: str,
-    language: str,
-    user_id: str = "live_user"
-):
-    """Process a complete voice turn: load history → RAG → TTS → stream back → persist turn."""
-    try:
-        transcript_text = transcript_text.strip()
-        logger.info(f"Session {session_id}: Transcript received: '{transcript_text}'")
-
-        if not transcript_text:
-            return
-
-        # 1. Load session chat history from DynamoDB
-        chat_history = get_history(session_id)
-        logger.info(f"Session {session_id}: Loaded {len(chat_history)} history turns")
-
-        manager.clear_cancel_event(session_id)
-
-
-
-        logger.info(f"Session {session_id}: Running RAG pipeline (user={user_id})...")
-        llm_stream = rag_pipeline.analyze_document(
-            query=transcript_text,
-            user_id=user_id,
-            session_id=session_id,
-            chat_history=chat_history,
-            language=language,
-            stream=True,
-            mode="live"
-        )
-
-        # Collect full response while streaming to TTS
-        full_response_chunks: list[str] = []
-        # Shared queue: text_iterator pushes parsed draft data here as soon as
-        # the closing /> is detected in the LLM stream — audio loop fires the
-        # WebSocket event immediately on the next iteration (fastest possible).
-        _draft_queue: list[dict] = []
-
-        import re as _re
-
-        def _parse_draft_tag(raw_tag: str) -> dict | None:
-            """Parse attributes from a complete <DRAFT_READY ... /> tag string."""
-            try:
-                ctx_m = _re.search(r'initial_context="([\s\S]*)"', raw_tag)
-                parsed: dict = {}
-                if ctx_m:
-                    parsed["initial_context"] = ctx_m.group(1).strip()
-                simple_part = _re.sub(r'initial_context="[\s\S]*"', '', raw_tag)
-                for m in _re.finditer(r'(\w+)="([^"]*)"', simple_part):
-                    parsed[m.group(1)] = m.group(2)
-                if parsed.get("type") and parsed.get("initial_context"):
-                    return parsed
-            except Exception as _e:
-                logger.error(f"Session {session_id}: _parse_draft_tag error: {_e}")
-            return None
-
-        def text_iterator():
-            """
-            Yields text chunks to TTS, stripping <DRAFT_READY .../> tags so they
-            are never spoken aloud. Parses the tag eagerly and pushes to _draft_queue
-            so draft_completed can be fired during audio streaming (not after).
-            """
-            tag_buffer = ""
-            inside_tag = False
-
-            for chunk in llm_stream:
-                full_response_chunks.append(chunk)  # Always collect full text
-
-                if inside_tag:
-                    tag_buffer += chunk
-                    if "/>" in tag_buffer:
-                        inside_tag = False
-                        # ── Parse eagerly and push to queue ──
-                        parsed = _parse_draft_tag(tag_buffer)
-                        if parsed:
-                            _draft_queue.append(parsed)
-                        # Yield anything after the closing />
-                        after_tag = tag_buffer.split("/>", 1)[-1]
-                        tag_buffer = ""
-                        if after_tag.strip():
-                            yield after_tag
-                    continue
-
-                if "<DRAFT_READY" in chunk:
-                    pre_tag, rest = chunk.split("<DRAFT_READY", 1)
-                    if pre_tag.strip():
-                        yield pre_tag
-                    tag_buffer = "<DRAFT_READY" + rest
-                    if "/>" in tag_buffer:
-                        # Closed in same chunk
-                        parsed = _parse_draft_tag(tag_buffer)
-                        if parsed:
-                            _draft_queue.append(parsed)
-                        after_tag = tag_buffer.split("/>", 1)[-1]
-                        tag_buffer = ""
-                        if after_tag.strip():
-                            yield after_tag
-                    else:
-                        inside_tag = True
-                else:
-                    yield chunk
-
-        # 2. Generate TTS audio from the text stream
-        logger.info(f"Session {session_id}: Generating TTS for language '{language}'")
-
-        if language == "hi":
-            from app.services.sarvamai_service import sarvam_service
-            audio_generator = sarvam_service.generate_speech_stream(text_iterator())
-            audio_format = "wav"
-        else:
-            audio_generator = elevenlabs_service.generate_speech_stream(text_iterator())
-            audio_format = "mp3"
-
-        # 3. Stream TTS audio chunks — fire draft_completed the moment tag is ready
-        draft_event_sent = False
-        async for audio_chunk in audio_generator:
-            # ── Fire draft_completed at FIRST audio chunk after tag is parsed ──
-            if _draft_queue and not draft_event_sent:
-                draft_event_sent = True
-                await manager.send_json(session_id, {
-                    "type": "draft_completed",
-                    "data": _draft_queue[0]
-                })
-                logger.info(f"Session {session_id}: draft_completed fired during stream: type={_draft_queue[0].get('type')}")
-
-            if manager.is_cancelled(session_id):
-                logger.info(f"Session {session_id}: Audio streaming interrupted by user.")
-                break
-            chunk_b64 = base64.b64encode(audio_chunk).decode('utf-8')
-            if session_id not in manager.active_connections:
-                break
-            await manager.send_json(session_id, {
-                "type": "audio_stream",
-                "data": chunk_b64,
-                "format": audio_format
-            })
-
-        # Fire draft_completed if tag was found but audio loop ended before sending
-        if _draft_queue and not draft_event_sent:
-            await manager.send_json(session_id, {
-                "type": "draft_completed",
-                "data": _draft_queue[0]
-            })
-            logger.info(f"Session {session_id}: draft_completed fired post-stream: type={_draft_queue[0].get('type')}")
-
-        # 4. Send the AI transcript ONCE after all audio is streamed
-        final_text = "".join(full_response_chunks)
-        logger.info(f"Session {session_id}: RAG response ({len(final_text)} chars)")
-
-        await manager.send_json(session_id, {
-            "type": "ai_transcript",
-            "text": final_text
-        })
-        await manager.send_json(session_id, {"type": "speaking_done"})
-
-
-        # 5. Persist turn to DynamoDB - AWAIT to ensure history is saved before next message
-        try:
-            await asyncio.to_thread(append_turns, session_id, transcript_text, final_text)
-            logger.info(f"Session {session_id}: Turn persisted to DynamoDB.")
-        except Exception as e:
-            logger.error(f"Session {session_id}: Failed to persist turn: {e}")
-
-    except Exception as e:
-        logger.error(f"Session {session_id}: Voice turn error: {e}")
-        traceback.print_exc()
-        await manager.send_json(session_id, {
-            "type": "error",
-            "message": f"Processing error: {str(e)}"
-        })
-
-
-@router.websocket("/ws/{session_id}")
-async def live_voice_websocket(websocket: WebSocket, session_id: str):
-    """
-    WebSocket endpoint for full-duplex Live Voice Mode.
-    Receives raw user text transcripts (from frontend STT), processes with RAG,
-    and streams AI TTS audio back. Auth is required.
-    """
-    # 1. Extract token from query params
-    token = websocket.query_params.get("token")
-    if not token:
-        logger.warning(f"Session {session_id}: Rejected connection missing token.")
-        try:
-            await websocket.close(code=1008, reason="Missing authentication token")
-        except Exception:
-            pass
-        return
+        Processor -.-> |Asynchronous Write Tasks| DB[(Supabase DB Postgres)]
         
-    try:
-        from app.core.auth import verify_jwt
-        user_data = verify_jwt(token)
-        user_id = user_data.get("sub")
-        logger.info(f"Session {session_id}: Authenticated user {user_id}")
-    except Exception as e:
-        logger.warning(f"Session {session_id}: Rejected connection with invalid token: {e}")
-        try:
-            await websocket.close(code=1008, reason="Invalid authentication token")
-        except Exception:
-            pass
-        return
+        Processor --> |pgvector| DB
+        Processor --> |Query| RAG[ChatGroq LLM]
+        RAG --> |Stream Tokens| Router[TTS Router]
+        
+        Router --> |English Text| ElevenLabs[ElevenLabs API]
+        Router --> |Hindi Text| Sarvam[Sarvam AI API]
+        
+        ElevenLabs --> |MP3 Chunks| WS
+        Sarvam --> |WAV Chunks| WS
+    end
 
-    # 2. Accept connection and create DynamoDB session document
-    await manager.connect(websocket, session_id)
-    language = "en"
-    # Create isolated session record (one doc per concurrent user)
-    try:
-        await asyncio.to_thread(create_session, session_id, user_id, language)
-        logger.info(f"Session {session_id}: DynamoDB session created successfully.")
-    except Exception as e:
-        logger.warning(f"Session {session_id}: Session creation failed (may already exist): {e}")
-
-    try:
-        # Main message loop
-        while True:
-            try:
-                data = await websocket.receive_text()
-            except WebSocketDisconnect:
-                logger.info(f"Session {session_id}: Client disconnected normally.")
-                break
-            except RuntimeError as e:
-                logger.warning(f"Session {session_id}: WebSocket runtime error: {e}")
-                break
-            except Exception as e:
-                logger.warning(f"Session {session_id}: Unexpected receive error: {e}")
-                break
-
-            try:
-                message = json.loads(data)
-            except json.JSONDecodeError:
-                logger.warning(f"Session {session_id}: Invalid JSON received.")
-                continue
-
-            msg_type = message.get("type")
-
-            if msg_type == "config":
-                language = message.get("language", "en")
-                logger.info(f"Session {session_id}: Language set to '{language}'.")
-
-            elif msg_type == "camera_capture":
-                # Future: pass to a vision model
-                pass
-
-            elif msg_type == "request_greeting":
-                await send_greeting(session_id, language)
-
-            elif msg_type == "user_text":
-                text = message.get("text", "")
-                if text:
-                    from app.services.rag_pipeline import rag_pipeline
-                    detected_lang = rag_pipeline.detect_language(text)
-                    
-                    if detected_lang != language:
-                        logger.info(f"Session {session_id}: Auto-switching language '{language}' → '{detected_lang}'")
-                        language = detected_lang
-                        # Notify frontend toggle to update
-                        await manager.send_json(session_id, {
-                            "type": "language_switch",
-                            "language": detected_lang
-                        })
-                        # Persist language change to DynamoDB
-                        asyncio.create_task(
-                            asyncio.to_thread(persist_language, session_id, detected_lang)
-                        )
-                    
-                    # Signal any currently running voice turn task to gracefully abort before starting a new one
-                    manager.set_cancel_event(session_id)
-                    manager.clear_cancel_event(session_id)
-                    
-                    # Spawn the processing as a background task so we don't block the WebSocket receive loop
-                    task = asyncio.create_task(process_voice_turn(session_id, text, language, user_id))
-                    manager.active_tasks[session_id] = task
-
-            elif msg_type == "session_end":
-                # Explicit cleanup when user navigates to draft page or leaves
-                logger.info(f"Session {session_id}: Received session_end from client.")
-                asyncio.create_task(
-                    asyncio.to_thread(delete_session, session_id)
-                )
-                break
-
-
-            elif msg_type == "ingestion_complete":
-                # Auto-respond about an uploaded document
-                doc_name = message.get("filename", "document")
-                auto_query = f"A document called '{doc_name}' was just uploaded. Please briefly tell me what this document is about and if there are any concerns I should know about."
-                await process_voice_turn(session_id, auto_query, language, user_id)
-
-            elif msg_type == "interrupt":
-                logger.info(f"Session {session_id}: Interrupted by user.")
-                # Immediately signal ongoing processing to abort and persist
-                manager.set_cancel_event(session_id)
-
-    except WebSocketDisconnect:
-        logger.info(f"Session {session_id}: WebSocket disconnected (outer).")
-    except Exception as e:
-        logger.error(f"Session {session_id}: Unexpected error: {e}")
-        traceback.print_exc()
-        try:
-            await manager.send_json(session_id, {
-                "type": "error",
-                "message": "An unexpected server error occurred."
-            })
-        except Exception:
-            pass
-    finally:
-        manager.disconnect(session_id)
-        # Only delete session on explicit session_end, not on accidental disconnect
-        # DynamoDB TTL (4 hours) acts as safety net for abandoned sessions
-        logger.info(f"Session {session_id}: WebSocket disconnected. Session data preserved in DynamoDB.")
-
+    style Redis fill:#a22,stroke:#333,stroke-width:2px,color:#fff
+    style DB fill:#168,stroke:#333,stroke-width:2px,color:#fff
+```

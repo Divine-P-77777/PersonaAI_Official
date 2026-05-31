@@ -56,7 +56,7 @@ export const metadata: Metadata = {
     description: "Connect with AI-powered personas of alumni, professors, and professionals.",
     images: [
       {
-        url: "/og-image.png",
+        url: "/homebanner.png",
         width: 1200,
         height: 630,
         alt: "AskMentor - Your AI Mentor",
@@ -67,7 +67,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "AskMentor | Your AI Mentor",
     description: "Connect with AI-powered personas of alumni, professors, and professionals.",
-    images: ["/og-image.png"],
+    images: ["/homebanner.png"],
     creator: "@askmentor",
   },
   robots: {

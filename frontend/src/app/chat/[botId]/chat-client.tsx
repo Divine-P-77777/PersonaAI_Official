@@ -49,7 +49,7 @@ export default function PublicChatClient({ botId }: { botId: string }) {
 
     if (loading) {
         return (
-            <div className="h-screen w-full flex flex-col items-center justify-center bg-zinc-50">
+            <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-zinc-50">
                 <motion.div
                     animate={{ rotate: 360 }}
                     transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
@@ -64,7 +64,7 @@ export default function PublicChatClient({ botId }: { botId: string }) {
 
     if (error || !bot) {
         return (
-            <div className="h-screen w-full flex flex-col items-center justify-center bg-white px-6 text-center">
+            <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-white px-6 text-center">
                 <div className="w-20 h-20 bg-red-50 text-red-500 rounded-3xl flex items-center justify-center mb-6 shadow-sm border border-red-100">
                     <ShieldAlert size={32} />
                 </div>
@@ -95,7 +95,7 @@ export default function PublicChatClient({ botId }: { botId: string }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
-            className="h-screen"
+            className="h-[100dvh]"
         >
             <ChatInterface bot={bot} />
         </motion.div>

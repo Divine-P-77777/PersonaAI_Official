@@ -57,7 +57,7 @@ ALTER TABLE bots ADD COLUMN IF NOT EXISTS voice_gender TEXT NOT NULL DEFAULT 'fe
 -- One row per (user_id, month). Tracks which mentor bots a user tried free this month.
 
 CREATE TABLE IF NOT EXISTS user_monthly_explorations (
-    id                UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    id                UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id           UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     month             TEXT        NOT NULL,                  -- 'YYYY-MM'
     mentors_explored  JSONB       NOT NULL DEFAULT '[]',     -- list of bot_id strings
@@ -72,7 +72,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS ume_user_month_idx
 -- Auto-update updated_at
 CREATE OR REPLACE TRIGGER ume_updated_at
     BEFORE UPDATE ON user_monthly_explorations
-    FOR EACH ROW EXECUTE FUNCTION extensions.moddatetime(updated_at);
+    FOR EACH ROW EXECUTE FUNCTION moddatetime(updated_at);
 
 
 -- ---------------------------------------------------------------------------
@@ -81,7 +81,7 @@ CREATE OR REPLACE TRIGGER ume_updated_at
 -- Tracks credit-based access (free trial or paid unlock) per user/bot pair.
 
 CREATE TABLE IF NOT EXISTS user_bot_access (
-    id                UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+    id                UUID          PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id           UUID          NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     bot_id            UUID          NOT NULL REFERENCES bots(id)  ON DELETE CASCADE,
     status            access_status NOT NULL DEFAULT 'free_trial',
@@ -99,7 +99,7 @@ CREATE        INDEX IF NOT EXISTS uba_status_idx   ON user_bot_access (status);
 -- Auto-update updated_at
 CREATE OR REPLACE TRIGGER uba_updated_at
     BEFORE UPDATE ON user_bot_access
-    FOR EACH ROW EXECUTE FUNCTION extensions.moddatetime(updated_at);
+    FOR EACH ROW EXECUTE FUNCTION moddatetime(updated_at);
 
 
 -- ---------------------------------------------------------------------------
@@ -109,7 +109,7 @@ CREATE OR REPLACE TRIGGER uba_updated_at
 -- after server-side webhook signature verification.
 
 CREATE TABLE IF NOT EXISTS payment_transactions (
-    id               UUID           PRIMARY KEY DEFAULT gen_random_uuid(),
+    id               UUID           PRIMARY KEY DEFAULT uuid_generate_v4(),
     order_id         TEXT           UNIQUE NOT NULL,         -- Our internal ID
     cf_order_id      TEXT,                                   -- Cashfree's cf_order_id
     cf_payment_id    TEXT,                                   -- Cashfree's payment_id (from webhook)
@@ -132,7 +132,7 @@ CREATE INDEX IF NOT EXISTS pt_status_idx   ON payment_transactions (status);
 -- Auto-update updated_at
 CREATE OR REPLACE TRIGGER pt_updated_at
     BEFORE UPDATE ON payment_transactions
-    FOR EACH ROW EXECUTE FUNCTION extensions.moddatetime(updated_at);
+    FOR EACH ROW EXECUTE FUNCTION moddatetime(updated_at);
 
 
 -- ---------------------------------------------------------------------------
@@ -186,4 +186,4 @@ CREATE POLICY "Users read own transactions"
     FOR SELECT
     USING (user_id = auth.uid());
 
--- ✅ Service role bypasses RLS automatically (webhook handler uses service role).
+--   Service role bypasses RLS automatically (webhook handler uses service role).

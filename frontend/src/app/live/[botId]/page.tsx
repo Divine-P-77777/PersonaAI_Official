@@ -249,7 +249,7 @@ export default function LivePage() {
     useLiveSession(sessionId, token, handleMessage)
 
   // Mic + STT via Web Speech API
-  const { isListening, micError, toggleMic } = useAudioCapture(
+  const { isListening, micError, toggleMic, startListening, stopListening } = useAudioCapture(
     isConnected,
     language,
     (text) => {
@@ -259,6 +259,25 @@ export default function LivePage() {
       setTranscript(prev => [...prev, { role: "user", text: correctedText }])
     },
   )
+
+  // Auto-mute mic when AI is speaking to prevent echo loops on mobile devices
+  const wasListeningRef = useRef(false)
+  useEffect(() => {
+    if (isAISpeaking) {
+      if (isListening) {
+        wasListeningRef.current = true
+        stopListening()
+      }
+    } else {
+      if (wasListeningRef.current) {
+        wasListeningRef.current = false
+        // Small delay to ensure speaker output has completely stopped
+        setTimeout(() => {
+          startListening()
+        }, 400)
+      }
+    }
+  }, [isAISpeaking, isListening, startListening, stopListening])
 
   // Send config once connected
   useEffect(() => {

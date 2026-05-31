@@ -27,6 +27,8 @@ from backend.voice.event_types import (
 from backend.rag.retrieval import retrieve_similar_chunks
 from backend.rag.context_builder import build_context
 from backend.core.config import get_settings
+from backend.core.redis_client import get_cache, set_cache, invalidate_cache
+from backend.database.queries import save_message
 
 logger   = logging.getLogger(__name__)
 settings = get_settings()
@@ -79,10 +81,10 @@ async def process_voice_turn(
     Flow:
       1. Detect language from user text → emit language_switch if changed
       2. Retrieve relevant chunks from pgvector
-      3. Build live-mode system prompt
+      3. Build live-mode system prompt (cached and persona-aware)
       4. Stream LLM tokens through TTS
       5. Send audio chunks over WebSocket (with interruption checks)
-      6. Send final ai_transcript + speaking_done events
+      6. Send final ai_transcript + speaking_done events & save asynchronously
     """
     user_text = user_text.strip()
     if not user_text:
@@ -109,11 +111,16 @@ async def process_voice_turn(
         logger.warning(f"[Stream] RAG failed (answering without context): {exc}")
         chunk_texts = []
 
-    # Step 4: Build live-mode system prompt 
+    # Step 4: Build live-mode system prompt (Cached and Persona-Aware)
+    bot_cache_key = f"bot_config:{bot_id}"
+    bot = await get_cache(bot_cache_key)
+    bot_name = bot.get("name", "AI Mentor") if bot else "AI Mentor"
+    persona_config = bot.get("persona_config", {}) if bot else {}
+
     system_prompt = build_context(
-        persona_config={},
+        persona_config=persona_config,
         chunks=chunk_texts,
-        bot_name="AI Mentor",
+        bot_name=bot_name,
         mode="live",
     )
 
@@ -129,25 +136,78 @@ async def process_voice_turn(
             full_response_chunks.append(token_str)
             yield token_str
 
-    audio_generator, audio_fmt = await stream_tts(text_iterator(), language, voice_gender)
+    try:
+        audio_generator, audio_fmt = await stream_tts(text_iterator(), language, voice_gender)
 
-    async for audio_chunk in audio_generator:
-        # Interruption check: stop streaming if user spoke
-        if manager.is_cancelled(session_id):
-            logger.debug(f"[Stream] Audio interrupted for session {session_id[:8]}")
-            break
+        async for audio_chunk in audio_generator:
+            # Interruption check: stop streaming if user spoke
+            if manager.is_cancelled(session_id):
+                logger.debug(f"[Stream] Audio interrupted for session {session_id[:8]}")
+                raise asyncio.CancelledError()
 
-        chunk_b64 = base64.b64encode(audio_chunk).decode("utf-8")
-        sent = await manager.send_json(session_id, audio_chunk_event(chunk_b64, audio_fmt))
-        if not sent:
-            break   # Connection dropped
+            chunk_b64 = base64.b64encode(audio_chunk).decode("utf-8")
+            sent = await manager.send_json(session_id, audio_chunk_event(chunk_b64, audio_fmt))
+            if not sent:
+                break   # Connection dropped
 
-    # Step 7: Send transcript + done signal 
-    final_text = "".join(full_response_chunks)
-    if final_text:
-        await manager.send_json(session_id, ai_transcript_event(final_text))
+        # Step 7: Send transcript + done signal 
+        final_text = "".join(full_response_chunks).strip()
+        if final_text:
+            await manager.send_json(session_id, ai_transcript_event(final_text))
 
-    await manager.send_json(session_id, speaking_done_event())
+        await manager.send_json(session_id, speaking_done_event())
 
-    logger.debug(f"[Stream] Turn complete for session {session_id[:8]} ({len(final_text)} chars)")
+        # Success path memory persistence: save full response asynchronously in background
+        if final_text:
+            # 1. Asynchronously save to Supabase
+            asyncio.create_task(
+                save_message(
+                    user_id=user_id,
+                    bot_id=bot_id,
+                    role="assistant",
+                    content=final_text,
+                    token=token
+                )
+            )
+            # 2. Update Redis rolling cache key
+            async def _update_success_cache():
+                cache_key = f"chat_history:{bot_id}:{user_id}"
+                hist = await get_cache(cache_key) or []
+                hist.append({"role": "assistant", "content": final_text})
+                hist = hist[-5:]
+                await set_cache(cache_key, hist, expire=3600)
+                await invalidate_cache(f"full_history:{bot_id}:{user_id}")
+            asyncio.create_task(_update_success_cache())
+
+        logger.debug(f"[Stream] Turn complete for session {session_id[:8]} ({len(final_text)} chars)")
+
+    except asyncio.CancelledError:
+        logger.debug(f"[Stream] Task was cancelled (interrupted) for session {session_id[:8]}")
+        # Interruption path memory persistence: harvest partial response spoken up to this point
+        partial_text = "".join(full_response_chunks).strip()
+        if partial_text:
+            partial_text_marked = f"{partial_text}... [interrupted]"
+            logger.info(f"[Stream] Harvesting partial response: '{partial_text_marked}'")
+
+            # 1. Asynchronously save partial text to Supabase
+            asyncio.create_task(
+                save_message(
+                    user_id=user_id,
+                    bot_id=bot_id,
+                    role="assistant",
+                    content=partial_text_marked,
+                    token=token
+                )
+            )
+            # 2. Update Redis rolling cache with partial response
+            async def _update_interrupted_cache():
+                cache_key = f"chat_history:{bot_id}:{user_id}"
+                hist = await get_cache(cache_key) or []
+                hist.append({"role": "assistant", "content": partial_text_marked})
+                hist = hist[-5:]
+                await set_cache(cache_key, hist, expire=3600)
+                await invalidate_cache(f"full_history:{bot_id}:{user_id}")
+            asyncio.create_task(_update_interrupted_cache())
+        raise
+
     return language  # Return possibly-updated language

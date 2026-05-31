@@ -23,12 +23,13 @@ from pydantic import BaseModel
 
 from backend.core.security          import get_current_user, verify_supabase_token
 from fastapi.security               import HTTPAuthorizationCredentials
-from backend.database.queries       import get_bot_by_id
+from backend.database.queries       import get_bot_by_id, save_message, get_recent_messages
 from backend.voice.connection_manager  import manager
 from backend.voice.session_manager     import create_live_session, delete_live_session
 from backend.voice.streaming           import process_voice_turn
 from backend.voice.interruption_manager import handle_interrupt
 from backend.voice.event_types         import ClientEvent, error_event
+from backend.core.redis_client          import get_cache, set_cache, invalidate_cache
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -206,8 +207,17 @@ async def _run_voice_turn(
 ) -> None:
     """Wrapper to run process_voice_turn and handle errors gracefully."""
     try:
-        # Check credits
-        bot = await get_bot_by_id(bot_id, token=token)
+        # Check credits (cache-optimized to prevent hitting Supabase on every single turn)
+        bot_cache_key = f"bot_config:{bot_id}"
+        bot = await get_cache(bot_cache_key)
+        if bot is None:
+            logger.info(f"[Live] Cache MISS for {bot_cache_key}. Querying Supabase...")
+            bot = await get_bot_by_id(bot_id, token=token)
+            if bot:
+                await set_cache(bot_cache_key, bot, expire=3600)
+        else:
+            logger.info(f"[Live] ⚡ Cache HIT for {bot_cache_key}. Using fast Redis bot config.")
+
         if not bot:
             await manager.send_json(session_id, error_event("Bot not found"))
             return
@@ -258,6 +268,41 @@ async def _run_voice_turn(
             if access:
                 await consume_credits(access["id"], credit_cost, token=token)
 
+        # 1. Fetch recent chat history from Upstash Redis (Key: chat_history:{bot_id}:{user_id})
+        cache_key = f"chat_history:{bot_id}:{user_id}"
+        llm_history = await get_cache(cache_key)
+        if llm_history is None:
+            logger.info(f"[Live] Cache MISS for {cache_key}. Querying Supabase...")
+            llm_history = await get_recent_messages(
+                user_id=user_id,
+                bot_id=bot_id,
+                limit=5,
+                token=token
+            )
+            await set_cache(cache_key, llm_history, expire=3600)
+        else:
+            logger.info(f"[Live] ⚡ Cache HIT for {cache_key}. Using fast Redis memory.")
+
+        # Keep a copy of previous history for the current turn prompt
+        chat_history = list(llm_history)
+
+        # 2. Asynchronously save incoming user text to Supabase (RLS compliant)
+        asyncio.create_task(
+            save_message(
+                user_id=user_id,
+                bot_id=bot_id,
+                role="user",
+                content=text,
+                token=token
+            )
+        )
+
+        # 3. Optimistically append current message to local history cache
+        llm_history.append({"role": "user", "content": text})
+        llm_history = llm_history[-5:]
+        await set_cache(cache_key, llm_history, expire=3600)
+        asyncio.create_task(invalidate_cache(f"full_history:{bot_id}:{user_id}"))
+
         await process_voice_turn(
             session_id=session_id,
             user_text=text,
@@ -265,7 +310,7 @@ async def _run_voice_turn(
             voice_gender=voice_gender,
             bot_id=bot_id,
             user_id=user_id,
-            chat_history=[],   # TODO: persist and load from Redis/Supabase
+            chat_history=chat_history,
             token=token,
         )
     except asyncio.CancelledError:

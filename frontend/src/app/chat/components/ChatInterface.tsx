@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useRef, useEffect, useLayoutEffect } from "react";
-import { Send, Share2, ArrowLeft, MoreVertical, ShieldCheck, User, RefreshCcw, Mic, Paperclip } from "lucide-react";
+import { Send, Share2, ArrowLeft, MoreVertical, ShieldCheck, User, RefreshCcw, Mic, Paperclip, Plus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageBubble } from "./MessageBubble";
 import { api } from "../../../services/api";
@@ -25,10 +25,27 @@ export const ChatInterface = ({ bot }: ChatInterfaceProps) => {
   const [isStreaming, setIsStreaming] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    handleResize(); // Set initial value on client
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const lenisRef = useRef<Lenis | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const router = useRouter();
+
+  // Auto-resize textarea whenever input changes
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  }, [input]);
 
   // Initialize Local Lenis for the Chat Container
   useLayoutEffect(() => {
@@ -234,7 +251,7 @@ export const ChatInterface = ({ bot }: ChatInterfaceProps) => {
   return (
     <div
       data-lenis-prevent
-      className="flex flex-col h-screen bg-zinc-50 overflow-hidden relative"
+      className="flex flex-col h-[100dvh] bg-zinc-50 overflow-hidden relative"
     >
       {/* Fixed Sticky Header */}
       <header className="fixed top-0 left-0 right-0 z-50 h-20 bg-white/80 backdrop-blur-xl border-b border-gray-100 px-4 md:px-8 flex items-center justify-between shadow-sm">
@@ -320,9 +337,9 @@ export const ChatInterface = ({ bot }: ChatInterfaceProps) => {
       <main
         ref={scrollRef}
         data-lenis-prevent
-        className="flex-1 overflow-y-auto pt-24 pb-60 px-4 md:px-8 relative scrollbar-hide"
+        className="flex-1 overflow-y-auto pt-24 px-4 md:px-8 relative scrollbar-hide"
       >
-        <div className="max-w-4xl mx-auto py-8">
+        <div className="max-w-4xl mx-auto pt-8 pb-48 md:pb-56">
           <AnimatePresence mode="popLayout">
             {isLoadingHistory ? (
               <div className="flex flex-col items-center justify-center py-20 gap-4">
@@ -352,24 +369,18 @@ export const ChatInterface = ({ bot }: ChatInterfaceProps) => {
             {/* The Floating Bubble */}
             <div className="relative bg-white/80 backdrop-blur-2xl rounded-[2.5rem] border border-white/50 shadow-[0_20px_50px_rgba(0,0,0,0.1)] p-2">
               <div className="flex items-end gap-2 px-2">
-                <div className="flex items-center gap-1 pb-1.5 pl-1">
-                  <button
-                    onClick={() => handleComingSoon("Voice talk")}
-                    className="w-10 h-10 rounded-2xl flex items-center justify-center text-gray-400 hover:text-orange-500 hover:bg-orange-50 transition-all active:scale-90"
-                    title="Voice Talk"
-                  >
-                    <Mic size={20} />
-                  </button>
+                <div className="flex items-center pb-1.5 pl-1 md:pl-2">
                   <button
                     onClick={() => handleComingSoon("File upload")}
-                    className="w-10 h-10 rounded-2xl flex items-center justify-center text-gray-400 hover:text-orange-500 hover:bg-orange-50 transition-all active:scale-90"
+                    className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gray-100/80 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-all active:scale-90"
                     title="Upload File"
                   >
-                    <Paperclip size={20} />
+                    <Plus size={20} />
                   </button>
                 </div>
 
                 <textarea
+                  ref={textareaRef}
                   rows={1}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
@@ -379,43 +390,44 @@ export const ChatInterface = ({ bot }: ChatInterfaceProps) => {
                       handleSend();
                     }
                   }}
-                  placeholder={`Ask ${bot.name} anything...`}
-                  className="flex-1 bg-transparent px-2 py-4 outline-none text-gray-800 resize-none max-h-48 scrollbar-hide text-[15px] font-medium placeholder:text-gray-400"
+                  placeholder={isMobile ? "Ask anything..." : `Ask ${bot.name} anything...`}
+                  className="flex-1 bg-transparent px-2 py-3 outline-none text-gray-800 resize-none max-h-32 md:max-h-48 overflow-y-auto scrollbar-hide text-[15px] font-medium placeholder:text-gray-400 self-center"
+                  style={{ minHeight: "48px" }}
                 />
 
-                <div className="pb-1.5 pr-1.5">
-                  <Link href={`/live/${bot.id}`}> 
+                <div className="pb-1.5 pr-1.5 flex items-center gap-1 md:pr-2">
+                  {!input.trim() && !isStreaming ? (
+                    <Link href={`/live/${bot.id}`}> 
+                      <button
+                        className="w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-all active:scale-90"
+                         >
+                        <Radio size={20} />
+                      </button>
+                    </Link>
+                  ) : (
                     <button
-                      className=" text-white p-2 rounded-3xl shadow-lg hover:shadow-orange-500/20 hover:bg-orange-100 hover:text-white transition-all"
-                       >
-                      <Radio color="orange " />
+                      onClick={handleSend}
+                      disabled={!input.trim() || isStreaming}
+                      className={clsx(
+                        "w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-all duration-300 active:scale-90 shrink-0",
+                        !input.trim() || isStreaming
+                          ? "bg-gray-100 text-gray-300 cursor-not-allowed"
+                          : "bg-gray-900 text-white shadow-md hover:bg-gray-800"
+                      )}
+                    >
+                      <Send size={18} className={clsx(isStreaming && "animate-pulse", "-ml-0.5")} />
                     </button>
-                  </Link>
-                </div>
-
-                <div className="pb-1.5 pr-1.5">
-                  <button
-                    onClick={handleSend}
-                    disabled={!input.trim() || isStreaming}
-                    className={clsx(
-                      "w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 active:scale-90 shrink-0",
-                      !input.trim() || isStreaming
-                        ? "bg-gray-100 text-gray-300 cursor-not-allowed"
-                        : "bg-gray-900 text-white shadow-lg hover:shadow-orange-500/20 hover:bg-orange-600"
-                    )}
-                  >
-                    <Send size={20} className={clsx(isStreaming && "animate-pulse")} />
-                  </button>
+                  )}
                 </div>
 
               </div>
+            </div>
 
-              {/* Notice built into the float */}
-              <div className="px-6 pb-2 text-center">
-                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest opacity-60">
-                  AskMentor can make mistakes. Check important info.
-                </p>
-              </div>
+            {/* Notice below the input bar */}
+            <div className="pt-2 text-center">
+              <p className="text-[11px] text-gray-400 font-medium">
+                AskMentor can make mistakes. Check important info.
+              </p>
             </div>
           </div>
         </div>

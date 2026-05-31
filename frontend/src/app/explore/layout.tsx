@@ -18,11 +18,11 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Explore Experts | AskMentor",
     description: "Connect with hyper-realistic AI twins of industry leaders.",
-    images: ["/og-explore.png"],
+    images: ["/explorebanner.png"],
   },
   twitter: {
     title: "Explore Experts | AskMentor",
     description: "Connect with hyper-realistic AI twins of industry leaders.",
-    images: ["/og-explore.png"],
+    images: ["/explorebanner.png"],
   },
 };

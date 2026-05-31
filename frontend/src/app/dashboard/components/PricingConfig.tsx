@@ -11,9 +11,6 @@ import {
   type PricingTier,
 } from '../../../config/pricing';
 import { useEffect } from 'react';
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
 
 export interface PricingFormData {
   is_free: boolean;
