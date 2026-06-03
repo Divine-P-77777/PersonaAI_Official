@@ -78,6 +78,10 @@ async def start_live_session(
         voice_gender=voice_gender,
     )
 
+    # Also log it in the database so it counts towards the mentor's total session count
+    from backend.database.queries import record_chat_session
+    await record_chat_session(user_id=user["id"], bot_id=body.bot_id, token=user.get("_token"))
+
     ws_url = f"/api/live/ws/{session_id}"
     logger.debug(f"[Live] Session created: {session_id[:8]}… (bot={body.bot_id[:8]}, gender={voice_gender})")
     return {"session_id": session_id, "ws_url": ws_url}

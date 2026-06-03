@@ -79,28 +79,42 @@ async def list_public_bots(
     bots = await get_public_bots(token=token)
     
     for bot in bots:
-        # Extract session count from the related messages table
-        messages = bot.pop("messages", None)
-        if isinstance(messages, list) and len(messages) > 0:
-            bot["session_count"] = messages[0].get("count", 0)
+        # Extract session count from the related chat_sessions table
+        chat_sessions = bot.pop("chat_sessions", None)
+        if isinstance(chat_sessions, list) and len(chat_sessions) > 0:
+            bot["session_count"] = chat_sessions[0].get("count", 0)
         else:
             bot["session_count"] = 0
 
     if user:
-        from backend.database.payment_queries import get_user_bot_access, get_monthly_exploration
+        from backend.database.payment_queries import get_all_user_bot_accesses, get_monthly_exploration
+        from datetime import datetime, timezone
         monthly_exp = await get_monthly_exploration(user["id"], token=token)
         free_explorations_used = len(monthly_exp.get("mentors_explored", [])) if monthly_exp else 0
+        now = datetime.now(tz=timezone.utc)
+        
+        # Fetch ALL access records in one query to avoid N+1 issue
+        access_map = await get_all_user_bot_accesses(user["id"], token=token)
         
         for bot in bots:
             bot["free_explorations_used"] = free_explorations_used
             # Check if user has active access
-            access = await get_user_bot_access(user["id"], str(bot["id"]), token=token)
+            access = access_map.get(str(bot["id"]))
             if access:
                 credits_remaining = access.get("credits_allowed", 0) - access.get("credits_used", 0)
-                if credits_remaining > 0:
-                    bot["is_unlocked"] = True
+                # Also check expiry — expired trials must re-lock
+                expires_at_raw = access.get("access_expires_at")
+                if expires_at_raw:
+                    try:
+                        from dateutil import parser as dateparser
+                        exp_dt = dateparser.parse(expires_at_raw) if isinstance(expires_at_raw, str) else expires_at_raw
+                        is_expired = exp_dt < now
+                    except Exception:
+                        is_expired = False
                 else:
-                    bot["is_unlocked"] = False
+                    is_expired = False
+                
+                bot["is_unlocked"] = credits_remaining > 0 and not is_expired
             else:
                 bot["is_unlocked"] = False
     

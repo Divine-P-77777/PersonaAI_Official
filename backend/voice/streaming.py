@@ -25,7 +25,7 @@ from backend.voice.event_types import (
     speaking_done_event, language_switch_event, error_event,
 )
 from backend.rag.retrieval import retrieve_similar_chunks
-from backend.rag.context_builder import build_context
+from backend.rag.context_builder import build_context, build_managed_context
 from backend.core.config import get_settings
 from backend.core.redis_client import get_cache, set_cache, invalidate_cache
 from backend.database.queries import save_message
@@ -117,15 +117,18 @@ async def process_voice_turn(
     bot_name = bot.get("name", "AI Mentor") if bot else "AI Mentor"
     persona_config = bot.get("persona_config", {}) if bot else {}
 
-    system_prompt = build_context(
+    system_prompt, trimmed_history = build_managed_context(
         persona_config=persona_config,
         chunks=chunk_texts,
+        chat_history=chat_history,
+        user_message=user_text,
         bot_name=bot_name,
         mode="live",
+        max_tokens=6000,
     )
 
     # Step 5: Build LLM token stream (async)
-    llm_stream = _build_llm_stream(system_prompt, chat_history, user_text)
+    llm_stream = _build_llm_stream(system_prompt, trimmed_history, user_text)
 
     # Step 6: Route to TTS and stream audio 
     full_response_chunks: list[str] = []
@@ -174,7 +177,7 @@ async def process_voice_turn(
                 cache_key = f"chat_history:{bot_id}:{user_id}"
                 hist = await get_cache(cache_key) or []
                 hist.append({"role": "assistant", "content": final_text})
-                hist = hist[-5:]
+                hist = hist[-20:]
                 await set_cache(cache_key, hist, expire=3600)
                 await invalidate_cache(f"full_history:{bot_id}:{user_id}")
             asyncio.create_task(_update_success_cache())
@@ -204,7 +207,7 @@ async def process_voice_turn(
                 cache_key = f"chat_history:{bot_id}:{user_id}"
                 hist = await get_cache(cache_key) or []
                 hist.append({"role": "assistant", "content": partial_text_marked})
-                hist = hist[-5:]
+                hist = hist[-20:]
                 await set_cache(cache_key, hist, expire=3600)
                 await invalidate_cache(f"full_history:{bot_id}:{user_id}")
             asyncio.create_task(_update_interrupted_cache())

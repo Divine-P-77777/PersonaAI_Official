@@ -30,7 +30,7 @@ from backend.payments.pricing_config import (
     DEFAULT_CREDIT_COST,
 )
 from backend.rag.retrieval import retrieve_similar_chunks
-from backend.rag.context_builder import build_context
+from backend.rag.context_builder import build_context, build_managed_context
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -190,14 +190,7 @@ async def chat_with_bot(
         logger.warning(f"[CHAT] RAG retrieval failed (answering without context): {err}")
         chunk_texts = []
 
-    # 3. Build persona-aware system prompt
-    system_prompt = build_context(
-        persona_config=bot.get("persona_config", {}),
-        chunks=chunk_texts,
-        bot_name=bot["name"]
-    )
-
-    # 4. Fetch recent chat history for context (Top 5 messages)
+    # 3. Fetch recent chat history for context (Top 20 messages)
     cache_key = f"chat_history:{bot_id}:{user['id']}"
     llm_history = await get_cache(cache_key)
     
@@ -206,23 +199,39 @@ async def chat_with_bot(
         llm_history = await get_recent_messages(
             user_id=user["id"], 
             bot_id=bot_id, 
-            limit=5, 
+            limit=20, 
             token=user.get("_token")
         )
         # Store in redis with an expiration (e.g. 1 hour of inactivity)
         await set_cache(cache_key, llm_history, expire=3600)
     else:
         logger.info(f"[CHAT] ⚡ Cache HIT for {cache_key}. Using fast Redis memory.")
+
+    # 4. Build persona-aware system prompt & trim history using Token Budget Manager
+    system_prompt, trimmed_history = build_managed_context(
+        persona_config=bot.get("persona_config", {}),
+        chunks=chunk_texts,
+        chat_history=llm_history,
+        user_message=user_message,
+        bot_name=bot["name"],
+        mode="chat",
+        max_tokens=6000
+    )
     
-    # Format history for LangChain
+    # Format trimmed history for LangChain
     history_messages = []
-    for msg in llm_history:
+    for msg in trimmed_history:
         if msg["role"] == "user":
             history_messages.append(HumanMessage(content=msg["content"]))
         else:
             history_messages.append(AIMessage(content=msg["content"]))
 
     # 5. Save incoming user message to history
+    # If this is the very first message, record a new session
+    if len(llm_history) == 0:
+        from backend.database.queries import record_chat_session
+        await record_chat_session(user_id=user["id"], bot_id=bot_id, token=user.get("_token"))
+
     await save_message(
         user_id=user["id"],
         bot_id=bot_id,
@@ -235,8 +244,8 @@ async def chat_with_bot(
         "role": "user",
         "content": user_message
     })
-    # Maintain rolling window size
-    llm_history = llm_history[-5:]
+    # Maintain rolling window size (up to 20 messages now)
+    llm_history = llm_history[-20:]
     await set_cache(cache_key, llm_history, expire=3600)
     
     # Invalidate full history cache so the next GET /history call reflects this new message
@@ -282,7 +291,7 @@ async def chat_with_bot(
                     "role": "assistant",
                     "content": full_response
                 }]
-                final_history = final_history[-5:]
+                final_history = final_history[-20:]
                 await set_cache(cache_key, final_history, expire=3600)
                 
                 # Invalidate full history cache

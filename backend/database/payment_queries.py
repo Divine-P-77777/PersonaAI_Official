@@ -118,6 +118,24 @@ async def get_user_bot_access(user_id: str, bot_id: str, token: str = None) -> O
         return None
 
 
+async def get_all_user_bot_accesses(user_id: str, token: str = None) -> dict[str, dict]:
+    """Fetch ALL access records for a user, returning a map of {bot_id: access_dict}. Solves N+1 queries."""
+    try:
+        client = get_authed_client(token) if token else get_service_client()
+        result = (
+            client
+            .table("user_bot_access")
+            .select("*")
+            .eq("user_id", user_id)
+            .execute()
+        )
+        data = result.data if result and hasattr(result, "data") else []
+        return {str(row["bot_id"]): row for row in data}
+    except Exception as e:
+        logger.error("[PayDB] get_all_user_bot_accesses failed: %s", e)
+        return {}
+
+
 async def create_free_trial_access(
     user_id: str,
     bot_id: str,

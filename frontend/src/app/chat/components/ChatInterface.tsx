@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useRef, useEffect, useLayoutEffect } from "react";
-import { Send, Share2, ArrowLeft, MoreVertical, ShieldCheck, User, RefreshCcw, Mic, Paperclip, Plus } from "lucide-react";
+import { Send, Share2, ArrowLeft, MoreVertical, ShieldCheck, User, RefreshCcw, FileUp, Radio } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageBubble } from "./MessageBubble";
 import { api } from "../../../services/api";
@@ -12,7 +12,6 @@ import { toast } from "react-toastify";
 import { clsx } from "clsx";
 import Lenis from "lenis";
 import { BotAvatar } from "../../explore/components/BotAvatar";
-import { Radio } from 'lucide-react';
 import { CreditWarningPopup } from "@/components/ui/CreditWarningPopup";
 
 interface ChatInterfaceProps {
@@ -37,6 +36,8 @@ export const ChatInterface = ({ bot }: ChatInterfaceProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const lenisRef = useRef<Lenis | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const resumeInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingResume, setIsUploadingResume] = useState(false);
   const router = useRouter();
 
   // Auto-resize textarea whenever input changes
@@ -164,6 +165,61 @@ export const ChatInterface = ({ bot }: ChatInterfaceProps) => {
       draggable: true,
       theme: "light",
     });
+  };
+
+  const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Reset input so same file can be re-selected
+    e.target.value = "";
+
+    const allowed = ["application/pdf", "image/png", "image/jpeg"];
+    if (!allowed.includes(file.type)) {
+      toast.error("Only PDF, PNG, or JPG files are supported.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File too large. Maximum size is 5MB.");
+      return;
+    }
+
+    // Show a card in the chat for the upload
+    setMessages(prev => [...prev, { role: "user", content: `📎 **Uploaded Resume:** ${file.name}` }]);
+    setMessages(prev => [...prev, { role: "assistant", content: "" }]); // placeholder
+    setIsUploadingResume(true);
+    toast.info("Uploading and analyzing your resume...");
+
+    try {
+      const result = await api.reviewResume(bot.id, file);
+      toast.success("Resume reviewed successfully!");
+      // Replace empty placeholder with real review
+      setMessages(prev => {
+        const next = [...prev];
+        next[next.length - 1] = { role: "assistant", content: result.review };
+        return next;
+      });
+      // Deduct credits (resume costs 4)
+      if (creditsRemaining !== null) {
+        const newCredits = creditsRemaining - 4;
+        setCreditsRemaining(newCredits);
+        if (newCredits <= 1 && newCredits > 0) {
+          setWarningPopup({ isOpen: true, mode: 'warning' });
+        } else if (newCredits <= 0) {
+          setWarningPopup({ isOpen: true, mode: 'blocked', message: "You've used all your credits for this mentor." });
+        }
+      }
+    } catch (err: any) {
+      // Remove the placeholder messages on failure
+      setMessages(prev => prev.slice(0, -2));
+      const detail = err?.message || "Resume review failed. Please try again.";
+      if (detail.includes("INSUFFICIENT_CREDITS") || detail.includes("ACCESS_EXPIRED") || detail.includes("EXPLORATION_LIMIT_REACHED")) {
+        setWarningPopup({ isOpen: true, mode: 'blocked', message: detail });
+      } else {
+        toast.error(detail);
+      }
+    } finally {
+      setIsUploadingResume(false);
+    }
   };
 
   const [warningPopup, setWarningPopup] = useState<{ isOpen: boolean; mode: 'warning' | 'blocked'; message?: string }>({ isOpen: false, mode: 'warning' });
@@ -370,12 +426,23 @@ export const ChatInterface = ({ bot }: ChatInterfaceProps) => {
             <div className="relative bg-white/80 backdrop-blur-2xl rounded-[2.5rem] border border-white/50 shadow-[0_20px_50px_rgba(0,0,0,0.1)] p-2">
               <div className="flex items-end gap-2 px-2">
                 <div className="flex items-center pb-1.5 pl-1 md:pl-2">
+                  {/* Hidden file input for resume upload */}
+                  <input
+                    ref={resumeInputRef}
+                    type="file"
+                    accept=".pdf,.png,.jpg,.jpeg"
+                    className="hidden"
+                    onChange={handleResumeUpload}
+                  />
                   <button
-                    onClick={() => handleComingSoon("File upload")}
-                    className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gray-100/80 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-all active:scale-90"
-                    title="Upload File"
+                    onClick={() => resumeInputRef.current?.click()}
+                    disabled={isUploadingResume || isStreaming}
+                    title={isUploadingResume ? "Reviewing resume…" : "Upload resume for AI review (PDF/PNG/JPG)"}
+                    className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gray-100/80 flex items-center justify-center text-gray-500 hover:bg-orange-100 hover:text-orange-600 transition-all active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed aspect-square shrink-0"
                   >
-                    <Plus size={20} />
+                    {isUploadingResume
+                      ? <div className="w-4 h-4 md:w-5 md:h-5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                      : <FileUp className="w-4 h-4 md:w-5 md:h-5 shrink-0" />}
                   </button>
                 </div>
 

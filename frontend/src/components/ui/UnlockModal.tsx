@@ -12,9 +12,10 @@ interface UnlockModalProps {
   isOpen: boolean;
   onClose: () => void;
   bot: Bot | null;
+  onUnlocked?: (botId: string) => void; // Notifies parent to flip Lock → MessageSquare
 }
 
-export function UnlockModal({ isOpen, onClose, bot }: UnlockModalProps) {
+export function UnlockModal({ isOpen, onClose, bot, onUnlocked }: UnlockModalProps) {
   const router = useRouter();
   const { showError } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -28,21 +29,38 @@ export function UnlockModal({ isOpen, onClose, bot }: UnlockModalProps) {
   const handleUnlock = async () => {
     setIsLoading(true);
 
-    // If paid, this would normally call payment API.
-    // We just route to chat, which handles access or redirects to billing.
+    // Paid bot — route to chat which handles payment redirect internally
     if (!isFree) {
       router.push(`/chat/${bot.id}`);
       return;
     }
 
-    // For free bots, we start exploration (handled in Chat Interface or an explicit API call here)
+    // Free bot — check monthly quota before proceeding
     if (freeUsed >= freeLimit) {
       showError(`You have already unlocked ${freeLimit} free mentors this month.`);
       setIsLoading(false);
       return;
     }
 
-    // Success - redirect to chat
+    try {
+      // Pre-flight check: verify access via the payments API.
+      // This does NOT yet create the user_bot_access row (that happens on
+      // first message in chat.py), but it confirms quota is still available.
+      // We also call onUnlocked so the Explore page flips Lock → MessageSquare
+      // optimistically — the actual access row will be created when user sends
+      // their first message.
+      await import('@/services/api').then(m => m.api.getBotAccess(bot.id));
+    } catch {
+      // Access check failed or quota exhausted on the server — show error
+      showError('Could not verify access. Please try again.');
+      setIsLoading(false);
+      return;
+    }
+
+    // Notify parent to flip this bot's icon from Lock → MessageSquare
+    onUnlocked?.(bot.id);
+    onClose();
+    // Navigate to chat — first message will finalize the access record
     router.push(`/chat/${bot.id}`);
   };
 

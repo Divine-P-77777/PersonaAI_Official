@@ -229,6 +229,7 @@ Please structure your review precisely with the following sections:
 4. **Critical Areas for Improvement:** List 3-4 specific suggestions for improving the content, formatting, or clarity.
 5. **STAR Accomplishment Rephrasing Examples:** Take at least 2 weak or standard bullet points from the extracted text above, and show a "Before" and "After" rephrasing utilizing the STAR (Situation, Task, Action, Result) or Google XYZ (Accomplished [X] as measured by [Y] by doing [Z]) framework to maximize impact.
 6. **Actionable Next Steps:** A bulleted checklist of immediate actions to take.
+7. **Engaging Follow-up Question:** End your review by explicitly mentioning specific projects, internships, or skills you noticed in their resume, and ask an open-ended question about what they are planning to do next in their career. Keep the conversation going!
 """
 
     # 5. Query Groq LLM (ChatGroq)

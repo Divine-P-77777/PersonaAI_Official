@@ -34,6 +34,27 @@ export default function ExplorePage() {
   const [selectedUnlockBot, setSelectedUnlockBot] = useState<Bot | null>(null);
   const router = useRouter()
 
+  // Flip Lock → MessageSquare instantly when a free mentor is unlocked
+  const handleBotUnlocked = (unlockedBotId: string) => {
+    setBots(prev =>
+      prev.map(bot =>
+        bot.id === unlockedBotId
+          ? {
+              ...bot,
+              is_unlocked: true,
+              // Also bump the counter so the modal reflects the new usage
+              free_explorations_used: (bot.free_explorations_used ?? 0) + 1,
+            }
+          : // Update counter on all other bots too (same per-user value)
+            {
+              ...bot,
+              free_explorations_used: (bot.free_explorations_used ?? 0) + 1,
+            }
+      )
+    );
+    setSelectedUnlockBot(null);
+  };
+
   useEffect(() => {
     const fetchBots = async () => {
       try {
@@ -186,10 +207,10 @@ export default function ExplorePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 justify-items-center">
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <div key={i} className="w-full max-w-sm h-[480px] bg-white rounded-[3rem] p-8 space-y-4 animate-pulse">
-                <div className="h-40 bg-gray-50 rounded-3xl" />
-                <div className="h-6 w-1/2 bg-gray-50 rounded-full" />
-                <div className="h-4 w-full bg-gray-50 rounded-full" />
-                <div className="h-4 w-2/3 bg-gray-50 rounded-full" />
+                <div className="h-40 bg-gray-200 rounded-3xl" />
+                <div className="h-6 w-1/2 bg-gray-200 rounded-full" />
+                <div className="h-4 w-full bg-gray-200 rounded-full" />
+                <div className="h-4 w-2/3 bg-gray-200 rounded-full" />
               </div>
             ))}
           </div>
@@ -350,7 +371,8 @@ export default function ExplorePage() {
       <UnlockModal 
         isOpen={!!selectedUnlockBot} 
         onClose={() => setSelectedUnlockBot(null)} 
-        bot={selectedUnlockBot} 
+        bot={selectedUnlockBot}
+        onUnlocked={handleBotUnlocked}
       />
     </div>
   );

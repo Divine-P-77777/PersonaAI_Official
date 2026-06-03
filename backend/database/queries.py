@@ -75,7 +75,7 @@ async def get_public_bots(token: str = None) -> list[dict]:
     result = (
         client
         .table("bots")
-        .select("*, owner:users(display_name, avatar_url), messages(count)")
+        .select("*, owner:users(display_name, avatar_url), chat_sessions(count)")
         .eq("status", "ready")
         .order("created_at", desc=True)
         .execute()
@@ -384,6 +384,19 @@ async def save_message(user_id: str, bot_id: str, role: str, content: str, token
     except Exception as e:
         logger.error(f"[DB] Failed to save message: {e}")
         return None
+
+async def record_chat_session(user_id: str, bot_id: str, token: str = None) -> bool:
+    """Record a fresh chat session in the chat_sessions table."""
+    try:
+        client = get_authed_client(token) if token else get_supabase_client()
+        client.table("chat_sessions").insert({
+            "user_id": user_id,
+            "bot_id": bot_id
+        }).execute()
+        return True
+    except Exception as e:
+        logger.error(f"[DB] Failed to record chat session: {e}")
+        return False
 
 async def clear_chat_history(user_id: str, bot_id: str, token: str = None) -> bool:
     """Delete all chat history between a user and a specific bot."""

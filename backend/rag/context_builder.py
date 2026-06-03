@@ -3,6 +3,24 @@ Context builder for LLM prompts.
 Combines persona config, retrieved chunks, and chat history into a prompt.
 """
 from typing import Optional
+import logging
+import tiktoken
+
+logger = logging.getLogger(__name__)
+
+# Try to use standard encoding for openai/llama
+try:
+    encoding = tiktoken.get_encoding("cl100k_base")
+except Exception as e:
+    logger.warning(f"Failed to load tiktoken encoding: {e}")
+    encoding = None
+
+def count_tokens(text: str) -> int:
+    """Helper to count approximate tokens using cl100k_base."""
+    if not text or not encoding: 
+        # Fallback approximation if tiktoken fails (roughly 4 chars per token)
+        return len(text) // 4 if text else 0
+    return len(encoding.encode(text))
 
 
 def build_context(
@@ -96,3 +114,75 @@ STRICT BEHAVIOR RULES (follow these precisely):
         system_prompt += "\n\n[No relevant context found in the knowledge base for this query. If the user's question is within your expertise domain, answer briefly from general knowledge. Otherwise, politely decline.]"
 
     return system_prompt
+
+def build_managed_context(
+    persona_config: dict,
+    chunks: list[str],
+    chat_history: list[dict],
+    user_message: str,
+    bot_name: str = "AI Mentor",
+    mode: str = "chat",
+    max_tokens: int = 6000,
+) -> tuple[str, list[dict]]:
+    """
+    Builds the system prompt and trims history/chunks to stay within the token budget.
+    
+    Returns:
+        tuple: (final_system_prompt: str, trimmed_chat_history: list[dict])
+    """
+    # 1. Build the base persona instructions (without chunks)
+    base_prompt = build_context(persona_config, [], bot_name, mode)
+    
+    # Calculate fixed costs
+    user_msg_tokens = count_tokens(user_message)
+    base_prompt_tokens = count_tokens(base_prompt)
+    fixed_tokens = user_msg_tokens + base_prompt_tokens
+    
+    # 2. Count tokens for chat history
+    history_tokens = 0
+    for msg in chat_history:
+        # approx 4 tokens for message framing (role etc)
+        msg["_tokens"] = count_tokens(msg.get("content", "")) + 4 
+        history_tokens += msg["_tokens"]
+        
+    # 3. Count tokens for chunks
+    chunk_tokens = 0
+    chunk_objects = []
+    for chunk in chunks:
+        tokens = count_tokens(chunk) + 10 # +10 for framing "\n[1] ..."
+        chunk_objects.append({"text": chunk, "tokens": tokens})
+        chunk_tokens += tokens
+        
+    total_tokens = fixed_tokens + history_tokens + chunk_tokens
+    
+    # 4. Trim if over budget
+    trimmed_history = list(chat_history)
+    trimmed_chunks = list(chunk_objects)
+    
+    if total_tokens > max_tokens:
+        logger.info(f"[Token Budget] Context over budget ({total_tokens} > {max_tokens}). Starting eviction...")
+        
+        # Step 4a: Evict oldest chat history first
+        while total_tokens > max_tokens and len(trimmed_history) > 0:
+            removed_msg = trimmed_history.pop(0) # Remove oldest
+            total_tokens -= removed_msg["_tokens"]
+            logger.debug(f"[Token Budget] Evicted old history message (-{removed_msg['_tokens']} tokens)")
+            
+        # Step 4b: If still over budget, evict lowest-scoring chunks (they are at the end of the list)
+        while total_tokens > max_tokens and len(trimmed_chunks) > 0:
+            removed_chunk = trimmed_chunks.pop(-1) # Remove last (lowest scoring)
+            total_tokens -= removed_chunk["tokens"]
+            logger.debug(f"[Token Budget] Evicted lowest-scoring chunk (-{removed_chunk['tokens']} tokens)")
+            
+    # 5. Rebuild final system prompt with the surviving chunks
+    final_chunks = [c["text"] for c in trimmed_chunks]
+    final_system_prompt = build_context(persona_config, final_chunks, bot_name, mode)
+    
+    # Clean up temporary _tokens keys from history
+    for msg in trimmed_history:
+        msg.pop("_tokens", None)
+        
+    logger.info(f"[Token Budget] Final context built. Total estimated tokens: {total_tokens}/{max_tokens}")
+    
+    return final_system_prompt, trimmed_history
+
