@@ -266,6 +266,10 @@ class ApiService {
     return this.request<any>(`/payments/access/${botId}`);
   }
 
+  async unlockFreeBot(botId: string): Promise<{ status: string }> {
+    return this.request<{ status: string }>(`/payments/unlock-free/${botId}`, "POST");
+  }
+
   async getWallet(): Promise<any> {
     return this.request<any>('/payments/wallet');
   }

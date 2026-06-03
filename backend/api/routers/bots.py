@@ -109,14 +109,17 @@ async def list_public_bots(
                         from dateutil import parser as dateparser
                         exp_dt = dateparser.parse(expires_at_raw) if isinstance(expires_at_raw, str) else expires_at_raw
                         is_expired = exp_dt < now
-                    except Exception:
+                    except Exception as e:
+                        print(f"[DEBUG] expiry parse error: {e}")
                         is_expired = False
                 else:
                     is_expired = False
                 
                 bot["is_unlocked"] = credits_remaining > 0 and not is_expired
+                print(f"[DEBUG] bot {bot['name']}: access exists. credits_rem={credits_remaining}, is_expired={is_expired} => is_unlocked={bot['is_unlocked']}")
             else:
                 bot["is_unlocked"] = False
+                print(f"[DEBUG] bot {bot['name']}: no access record found.")
     
     return bots
 

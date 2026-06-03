@@ -227,6 +227,54 @@ async def check_bot_access(
 
 
 # ---------------------------------------------------------------------------
+# POST /api/payments/unlock-free/{bot_id} — Explicitly unlock a free mentor
+# ---------------------------------------------------------------------------
+
+@router.post("/unlock-free/{bot_id}")
+async def unlock_free_bot(
+    bot_id: str,
+    user: Dict[str, Any] = Depends(get_current_user),
+):
+    """Explicitly unlock a free mentor, consuming 1 monthly quota."""
+    token = user.get("_token")
+    user_id = user["id"]
+
+    bot = await get_bot_by_id(bot_id, token=token)
+    if not bot or not bot.get("is_free", True):
+        raise HTTPException(status_code=400, detail="Bot not found or is not free.")
+
+    now = datetime.now(tz=timezone.utc)
+    
+    # Check existing access
+    access = await get_user_bot_access(user_id, bot_id, token=token)
+    if access:
+        return {"status": "already_unlocked"}
+        
+    exploration = await get_monthly_exploration(user_id, token=token)
+    explored_bots: list = (exploration or {}).get("mentors_explored", [])
+    
+    if bot_id not in explored_bots:
+        if len(explored_bots) >= FREE_EXPLORATION.max_mentors_per_month:
+            raise HTTPException(
+                status_code=402,
+                detail="You have reached your free exploration limit for this month."
+            )
+            
+        # Grant free trial access
+        trial_expires = now + timedelta(days=7)
+        await create_free_trial_access(
+            user_id=user_id,
+            bot_id=bot_id,
+            credits_allowed=FREE_EXPLORATION.free_credits_per_mentor,
+            expires_at=trial_expires,
+            token=token,
+        )
+        await upsert_monthly_exploration(user_id, bot_id, token=token)
+        
+    return {"status": "unlocked"}
+
+
+# ---------------------------------------------------------------------------
 # POST /api/payments/create-order — Initiate Cashfree payment
 # ---------------------------------------------------------------------------
 

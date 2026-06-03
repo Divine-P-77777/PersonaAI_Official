@@ -343,7 +343,7 @@ export default function LivePage() {
 
   const handleLiveResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (!file) return
+    if (!file || !bot) return
     e.target.value = ""
 
     const allowed = ["application/pdf", "image/png", "image/jpeg"]

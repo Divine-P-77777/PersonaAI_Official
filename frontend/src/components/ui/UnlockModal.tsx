@@ -12,7 +12,7 @@ interface UnlockModalProps {
   isOpen: boolean;
   onClose: () => void;
   bot: Bot | null;
-  onUnlocked?: (botId: string) => void; // Notifies parent to flip Lock → MessageSquare
+  onUnlocked?: (botId: string) => void;
 }
 
 export function UnlockModal({ isOpen, onClose, bot, onUnlocked }: UnlockModalProps) {
@@ -43,16 +43,13 @@ export function UnlockModal({ isOpen, onClose, bot, onUnlocked }: UnlockModalPro
     }
 
     try {
-      // Pre-flight check: verify access via the payments API.
-      // This does NOT yet create the user_bot_access row (that happens on
-      // first message in chat.py), but it confirms quota is still available.
-      // We also call onUnlocked so the Explore page flips Lock → MessageSquare
-      // optimistically — the actual access row will be created when user sends
-      // their first message.
-      await import('@/services/api').then(m => m.api.getBotAccess(bot.id));
-    } catch {
+      if (isFree) {
+        // Explicitly unlock the free bot (consumes quota and creates DB record)
+        await import('@/services/api').then(m => m.api.unlockFreeBot(bot.id));
+      }
+    } catch (e: any) {
       // Access check failed or quota exhausted on the server — show error
-      showError('Could not verify access. Please try again.');
+      showError(e?.message || 'Could not verify access. Please try again.');
       setIsLoading(false);
       return;
     }

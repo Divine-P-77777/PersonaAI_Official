@@ -148,7 +148,9 @@ async def create_free_trial_access(
     Called automatically when a user discovers a new mentor within their monthly quota.
     """
     try:
-        client = get_authed_client(token) if token else get_service_client()
+        # Use service client because granting access is a privileged system action
+        # and users do not have RLS INSERT permissions on user_bot_access.
+        client = get_service_client()
         result = (
             client
             .table("user_bot_access")
