@@ -23,11 +23,21 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const checkAccess = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user?.user_metadata?.role === "user") {
-        router.push("/explore")
-      } else {
+      try {
+        // Always read role from our DB via API (NOT user_metadata — that's OAuth data from Google)
+        const profile = await api.getCurrentUser()
+        if (!profile || profile.role !== "alumni") {
+          // Student or unrecognized role — redirect to explore
+          import("react-toastify").then(({ toast }) =>
+            toast.info("Only mentors can access the dashboard. Redirecting you to Explore!", { autoClose: 3000 })
+          )
+          router.replace("/explore")
+          return
+        }
         fetchBots()
+      } catch {
+        // Not authenticated or request failed
+        router.replace("/signin")
       }
     }
     checkAccess()

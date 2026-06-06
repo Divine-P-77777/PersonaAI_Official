@@ -26,9 +26,7 @@ interface PricingConfigProps {
   updateFormData: (data: Partial<PricingFormData>) => void;
 }
 
-// ---------------------------------------------------------------------------
 // Tier Icons (decorative, per tier)
-// ---------------------------------------------------------------------------
 const TIER_ICONS: Record<string, React.ReactNode> = {
   starter: <Zap className="w-5 h-5" />,
   standard: <Star className="w-5 h-5" />,
@@ -47,9 +45,7 @@ const TIER_BORDER: Record<string, string> = {
   premium: 'border-orange-400 ring-orange-100',
 };
 
-// ---------------------------------------------------------------------------
 // PricingConfig Component
-// ---------------------------------------------------------------------------
 
 export function PricingConfig({ formData, updateFormData }: PricingConfigProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -187,16 +183,16 @@ export function PricingConfig({ formData, updateFormData }: PricingConfigProps) 
                 </span>
               </div>
               <input
-                type="number"
-                min={1}
+                type="range"
+                min={10}
                 max={100}
-                value={formData.credits_per_pack || ''}
+                value={formData.credits_per_pack || 40}
                 onChange={(e) => updateFormData({ credits_per_pack: parseInt(e.target.value) || 0 })}
                 className="w-full h-2 bg-gray-200 rounded-full appearance-none cursor-pointer accent-emerald-500"
               />
               <div className="flex justify-between text-xs text-gray-400 mt-1">
                 <span>10</span>
-                <span>40</span>
+                <span>100</span>
               </div>
             </div>
 

@@ -34,9 +34,23 @@ export default function PublicChatClient({ botId }: { botId: string }) {
                 // Check if bot is ready or private
                 if (data.status !== 'ready') {
                     setError("This persona is currently in draft mode or private.");
-                } else {
-                    setBot(data);
+                    return;
                 }
+
+                // 3. Prevent unauthorized access to paid bots
+                if (!data.is_free) {
+                    try {
+                        const access = await api.getBotAccess(botId);
+                        if (access.has_access === false) {
+                            setError(`This is a Premium Persona. You must unlock it first for ₹${data.unlock_price}. Please visit the Billing page to purchase credits.`);
+                            return;
+                        }
+                    } catch (e) {
+                        console.error("Access check failed", e);
+                    }
+                }
+
+                setBot(data);
             } catch (err) {
                 console.error("Failed to fetch bot:", err);
                 setError("Persona not found or inaccessible.");
@@ -73,12 +87,21 @@ export default function PublicChatClient({ botId }: { botId: string }) {
                     {error || "We couldn't find the professional persona you're looking for."}
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3">
-                    <Link 
-                        href="/explore"
-                        className="px-8 py-3.5 bg-gray-900 text-white rounded-2xl font-bold hover:shadow-xl hover:scale-105 transition-all"
-                    >
-                        Explore Personas
-                    </Link>
+                    {error?.includes('Premium Persona') ? (
+                        <Link 
+                            href="/billing"
+                            className="px-8 py-3.5 bg-orange-500 text-white rounded-2xl font-bold hover:shadow-xl hover:scale-105 transition-all"
+                        >
+                            Go to Billing
+                        </Link>
+                    ) : (
+                        <Link 
+                            href="/explore"
+                            className="px-8 py-3.5 bg-gray-900 text-white rounded-2xl font-bold hover:shadow-xl hover:scale-105 transition-all"
+                        >
+                            Explore Personas
+                        </Link>
+                    )}
                     <Link 
                         href="/"
                         className="px-8 py-3.5 bg-gray-50 text-gray-700 rounded-2xl font-bold border border-gray-100 hover:bg-gray-100 transition-all"

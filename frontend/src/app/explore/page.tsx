@@ -22,6 +22,7 @@ import { Bot } from "../../types";
 import Link from 'next/link';
 import { BotAvatar } from "./components/BotAvatar";
 import { UnlockModal } from "@/components/ui/UnlockModal";
+import { ProfileModal } from "@/components/ui/ProfileModal";
 import { toast } from "react-toastify";
 
 import { useRouter } from "next/navigation"
@@ -32,24 +33,25 @@ export default function ExplorePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedUnlockBot, setSelectedUnlockBot] = useState<Bot | null>(null);
+  const [selectedProfileBot, setSelectedProfileBot] = useState<Bot | null>(null);
   const router = useRouter()
 
-  // Flip Lock → MessageSquare instantly when a free mentor is unlocked
+
   const handleBotUnlocked = (unlockedBotId: string) => {
     setBots(prev =>
       prev.map(bot =>
         bot.id === unlockedBotId
           ? {
-              ...bot,
-              is_unlocked: true,
-              // Also bump the counter so the modal reflects the new usage
-              free_explorations_used: (bot.free_explorations_used ?? 0) + 1,
-            }
-          : // Update counter on all other bots too (same per-user value)
-            {
-              ...bot,
-              free_explorations_used: (bot.free_explorations_used ?? 0) + 1,
-            }
+            ...bot,
+            is_unlocked: true,
+
+            free_explorations_used: (bot.free_explorations_used ?? 0) + 1,
+          }
+          :
+          {
+            ...bot,
+            free_explorations_used: (bot.free_explorations_used ?? 0) + 1,
+          }
       )
     );
     setSelectedUnlockBot(null);
@@ -235,12 +237,11 @@ export default function ExplorePage() {
                         <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
                         Live Now
                       </div>
-                      
-                      <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black tracking-widest uppercase shadow-sm ${
-                        bot.is_free 
-                          ? "bg-blue-50 text-blue-600 border border-blue-100" 
+
+                      <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black tracking-widest uppercase shadow-sm ${bot.is_free
+                          ? "bg-blue-50 text-blue-600 border border-blue-100"
                           : "bg-purple-50 text-purple-600 border border-purple-100"
-                      }`}>
+                        }`}>
                         {bot.is_free ? "Free" : `Paid: ₹${bot.unlock_price || 99}`}
                       </div>
                     </div>
@@ -260,25 +261,35 @@ export default function ExplorePage() {
                           </h3>
                           <ShieldCheck size={18} className="text-blue-500 fill-blue-500/10" />
                         </div>
-                        <div className="flex items-center gap-2 text-[10px] text-gray-400 font-bold uppercase tracking-widest leading-none">
-                          <User size={10} className="text-gray-300" />
-                          Created by {bot.owner?.display_name || "Nexus Network"}
-                        </div>
+                        {bot.owner?.display_name && (
+                          <div className="flex items-center gap-2 text-[10px] text-gray-400 font-bold uppercase tracking-widest leading-none mt-2">
+                            <User size={10} className="text-gray-300" />
+                            Created by {bot.owner.display_name}
+                          </div>
+                        )}
+                        <button
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedProfileBot(bot); }}
+                          className="mt-3 text-xs font-bold text-orange-500 hover:text-orange-600 flex items-center gap-1 bg-orange-50/50 hover:bg-orange-50 px-3 py-1.5 rounded-lg w-fit transition-colors"
+                        >
+                          <User size={14} /> View Profile
+                        </button>
                       </div>
                     </div>
 
                     {/* Tags */}
                     <div className="flex flex-wrap gap-1.5 mb-6">
                       {bot.persona_config.expertise?.slice(0, 3).map((skill, i) => (
-                        <span key={i} className="px-3 py-1 bg-zinc-50 text-zinc-500 text-[9px] font-black rounded-xl uppercase tracking-widest flex items-center gap-1">
-                          <Zap size={9} className="text-orange-400" />
-                          {skill}
+                        <span key={i} className="px-3 py-1 bg-zinc-50 text-zinc-500 text-[9px] font-black rounded-xl uppercase tracking-widest flex items-center gap-1 max-w-full">
+                          <Zap size={9} className="text-orange-400 shrink-0" />
+                          <span className="truncate">
+                            {skill.length > 25 ? skill.slice(0, 25) + '...' : skill}
+                          </span>
                         </span>
                       ))}
                     </div>
 
                     {/* Bio Snippet */}
-                    <p className="text-gray-500 text-sm line-clamp-3 leading-relaxed font-medium mb-auto">
+                    <p className="text-gray-500 text-sm line-clamp-2 leading-relaxed font-medium mb-auto">
                       {bot.description || `Specialized AI mentor focused on ${bot.persona_config.expertise?.join(', ')}. Ask anything about industry frameworks or leadership.`}
                     </p>
 
@@ -368,11 +379,15 @@ export default function ExplorePage() {
         </div>
       </section>
 
-      <UnlockModal 
-        isOpen={!!selectedUnlockBot} 
-        onClose={() => setSelectedUnlockBot(null)} 
+      <UnlockModal
+        isOpen={!!selectedUnlockBot}
+        onClose={() => setSelectedUnlockBot(null)}
         bot={selectedUnlockBot}
         onUnlocked={handleBotUnlocked}
+      />
+      <ProfileModal
+        bot={selectedProfileBot}
+        onClose={() => setSelectedProfileBot(null)}
       />
     </div>
   );

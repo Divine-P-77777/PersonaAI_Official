@@ -23,9 +23,15 @@ logger = logging.getLogger(__name__)
 
 
 async def get_user_by_id(user_id: str, token: str = None) -> Optional[dict]:
-    """Fetch a user profile row. Pass token to satisfy RLS via auth.uid()."""
+    """Fetch a user profile row.
+    
+    Uses the service client to guarantee the role enum column is always readable,
+    regardless of RLS edge cases. The caller has already verified the JWT via
+    verify_supabase_token — so this read is safe.
+    """
     try:
-        client = get_authed_client(token) if token else get_supabase_client()
+        # Service client bypasses RLS — always returns the true role value
+        client = get_service_client()
         result = (
             client
             .table("users")
@@ -35,38 +41,59 @@ async def get_user_by_id(user_id: str, token: str = None) -> Optional[dict]:
             .execute()
         )
         return result.data if result else None
-    except Exception:
+    except Exception as e:
+        logger.warning("[DB] get_user_by_id failed: %s", e)
         return None
 
 
 async def upsert_user(user_data: dict, token: str = None) -> dict:
-    """Insert or update a user row. Pass token to satisfy RLS via auth.uid()."""
-    client = get_authed_client(token) if token else get_supabase_client()
+    """Insert or update a user row.
+    
+    Uses the service client to bypass RLS — the auth check has already been
+    performed at the HTTP layer (get_current_user), so this is safe.
+    Using the authed client can silently fail for enum column writes (role)
+    in some Supabase configurations.
+    """
+    # Filter to only known columns — strip internal keys that are not DB columns
+    ALLOWED_COLUMNS = {
+        "id", "email", "display_name", "avatar_url",
+        "role", "onboarding_completed", "created_at", "updated_at"
+    }
+    clean_data = {k: v for k, v in user_data.items() if k in ALLOWED_COLUMNS}
+    
+    client = get_service_client()
     result = (
         client
         .table("users")
-        .upsert(user_data, on_conflict="id")
+        .upsert(clean_data, on_conflict="id")
         .execute()
     )
     return result.data[0]
 
 
-# ---------------------------------------------------------------------------
+
 # Bots
-# ---------------------------------------------------------------------------
 
 
 async def get_bots_by_owner(owner_id: str) -> list[dict]:
-    """Return all bots owned by an alumni/professional."""
-    result = (
-        get_supabase_client()
-        .table("bots")
-        .select("*")
-        .eq("owner_id", owner_id)
-        .order("created_at", desc=True)
-        .execute()
-    )
-    return result.data or []
+    """Return all bots owned by an alumni/professional.
+    
+    Uses service client so the query works even when called outside a user
+    request context (e.g., from require_alumni_role fallback).
+    """
+    try:
+        result = (
+            get_service_client()
+            .table("bots")
+            .select("*")
+            .eq("owner_id", owner_id)
+            .order("created_at", desc=True)
+            .execute()
+        )
+        return result.data or []
+    except Exception as e:
+        logger.warning("[DB] get_bots_by_owner failed: %s", e)
+        return []
 
 
 async def get_public_bots(token: str = None) -> list[dict]:

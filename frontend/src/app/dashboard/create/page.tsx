@@ -12,18 +12,30 @@ const CreatePersonaPage = () => {
   useEffect(() => {
     (async () => {
       try {
+        // Guard 1: only alumni can access bot creation
+        const profile = await api.getCurrentUser()
+        if (!profile || profile.role !== "alumni") {
+          import("react-toastify").then(({ toast }) =>
+            toast.info("Only mentors can create personas. Redirecting you to Explore!", { autoClose: 3000 })
+          )
+          router.replace("/explore")
+          return
+        }
+
+        // Guard 2: already has a bot → redirect to edit it
         const data = await api.getBots()
         if (data && data.length >= 1) {
           import("react-toastify").then(({ toast }) =>
             toast.info("You can't create more bots. Either delete your existing bot or edit it.")
           )
           router.push(`/dashboard/${data[0].id}`)
-        } else {
-          setChecking(false)
+          return
         }
-      } catch (err) {
-        console.error("Failed to check bot count:", err)
+
         setChecking(false)
+      } catch (err) {
+        console.error("Failed to check permissions:", err)
+        router.replace("/signin")
       }
     })()
   }, [router])
@@ -41,7 +53,7 @@ const CreatePersonaPage = () => {
     <div>
       <CreateBot />
     </div>
-  );
-};
+  )
+}
 
-export default CreatePersonaPage;
+export default CreatePersonaPage

@@ -167,10 +167,60 @@ async def get_optional_user(
 async def require_alumni_role(
     user: Dict[str, Any] = Depends(get_current_user),
 ) -> Dict[str, Any]:
-    """Enforce that the user must have an 'alumni' role."""
-    if user.get("role") != "alumni":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="This action requires an alumni/professional account",
+    """Enforce that the user must have an 'alumni' role.
+    
+    Since get_user_by_id now uses the service client, user['role'] will always
+    reflect the real value from the DB. The fallback handles two edge cases:
+    1. User has bots already (completed onboarding before the role was set correctly).
+    2. User has onboarding_completed=True (just finished alumni onboarding, creating their first bot).
+    In both cases, we self-heal the DB role to 'alumni'.
+    """
+    import logging
+    _log = logging.getLogger(__name__)
+
+    # Fast path — role is correctly set in DB
+    if user.get("role") == "alumni":
+        return user
+
+    user_id = user.get("id", "?")
+    _log.warning(
+        "[security] require_alumni_role: user %s has role=%r. Checking fallback signals.",
+        user_id, user.get("role")
+    )
+
+    # Fallback signal 1: user owns at least one bot (stale role from old onboarding)
+    from backend.database.queries import get_bots_by_owner, upsert_user
+    try:
+        owned_bots = await get_bots_by_owner(user_id)
+        has_bots = bool(owned_bots)
+    except Exception as e:
+        _log.warning("[security] get_bots_by_owner failed: %s", e)
+        has_bots = False
+
+    # Fallback signal 2: user completed onboarding (just finished mentor flow, first bot creation)
+    # onboarding_completed=True + role != "alumni" means the upsert_user call during onboarding
+    # either silently failed to update the enum column, or the trigger set it back to 'user'.
+    just_finished_onboarding = bool(user.get("onboarding_completed"))
+
+    if has_bots or just_finished_onboarding:
+        _log.warning(
+            "[security] Granting alumni access to user %s via fallback "
+            "(has_bots=%s, just_finished_onboarding=%s). Self-healing DB role.",
+            user_id, has_bots, just_finished_onboarding
         )
-    return user
+        # Self-heal: write the correct role to DB so future requests use the fast path
+        try:
+            token = user.get("_token")
+            clean = {k: v for k, v in user.items() if k not in ("_token", "is_new")}
+            clean["role"] = "alumni"
+            await upsert_user(clean, token=token)
+        except Exception as e:
+            _log.warning("[security] Self-heal upsert failed (non-fatal): %s", e)
+
+        user["role"] = "alumni"
+        return user
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="This action requires an alumni/professional account",
+    )
