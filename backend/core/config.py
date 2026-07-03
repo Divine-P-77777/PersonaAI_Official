@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     # LLM & Embeddings (Groq + Nomic)
     GROQ_API_KEY: str = ""
     NOMIC_API_KEY: str = ""
-    LLM_MODEL: str = "llama3-8b-8192"
+    LLM_MODEL: str = "meta-llama/llama-4-scout-17b-16e-instruct"
     EMBEDDING_MODEL: str = "nomic-embed-text-v1.5"
 
     # ElevenLabs (Voice)

@@ -70,7 +70,7 @@ This plan outlines the analysis of the current AskMentor backend and the structu
 - **Integration**: Automated payouts and transaction handling via **Cashfree Gateway**.
 
 ### 6. Technical Stack: High-Speed AI
-- **Inference**: Groq (llama-3.3-70b-versatile).
+- **Inference**: Groq (meta-llama/llama-4-scout-17b-16e-instruct).
 - **Voice**: Deepgram (STT) & Sarvam AI (TTS).
 - **Memory**: Persistent Rolling Window (Top-5 Messages).
 

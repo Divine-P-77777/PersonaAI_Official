@@ -114,10 +114,10 @@ export default function ExplorePage() {
       </div>
 
       {/* Navigation Space Holder */}
-      <div className="h-24 lg:h-32" />
+      <div className="h-16 lg:h-24" />
 
       {/* Hero Section */}
-      <section className="relative pt-4 pb-20 px-6 lg:px-12 z-10">
+      <section className="relative pt-2 pb-10 px-6 lg:px-12 z-10">
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -126,19 +126,14 @@ export default function ExplorePage() {
             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
             className="text-center"
           >
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/70 backdrop-blur-md rounded-2xl border border-orange-100/50 mb-8 shadow-sm">
-              <Sparkles className="w-4 h-4 text-orange-500 fill-orange-500/20" />
-              <span className="text-xs text-orange-950 font-bold tracking-widest uppercase">Verified Experts</span>
-            </div>
-
-            <h1 className="text-5xl md:text-7xl lg:text-8xl font-black text-gray-900 mb-8 tracking-tighter leading-[0.9]">
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-gray-900 mb-4 tracking-tighter leading-[0.9]">
               Elite Mentors <br />
               <span className="bg-gradient-to-r from-gray-900 via-orange-600 to-pink-600 bg-clip-text text-transparent">
                 One Click Away.
               </span>
             </h1>
 
-            <p className="text-lg md:text-xl text-gray-500 max-w-2xl mx-auto leading-relaxed font-medium mb-12">
+            <p className="text-base md:text-lg text-gray-500 max-w-2xl mx-auto leading-relaxed font-medium mb-8">
               Connect with hyper-realistic AI twins of industry leaders. Personalized mentorship, available 24/7.
             </p>
 
@@ -170,7 +165,7 @@ export default function ExplorePage() {
               </div>
 
               {/* Enhanced Categories */}
-              <div className="flex flex-wrap justify-center gap-3 mt-10">
+              <div className="flex flex-wrap justify-center gap-3 mt-6">
                 {categories.map((cat) => (
                   <button
                     key={cat}
@@ -190,20 +185,7 @@ export default function ExplorePage() {
       </section>
 
       {/* Bot Grid Section */}
-      <section className="max-w-7xl mx-auto px-6 lg:px-12 pb-40 z-10 relative">
-        <div className="flex items-center justify-between mb-12">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-orange-500/10 flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-orange-600" />
-            </div>
-            <h2 className="text-2xl font-black text-gray-900 tracking-tight">Top Trending Personas</h2>
-          </div>
-
-          <div className="hidden lg:flex items-center gap-2 bg-white p-1 rounded-xl shadow-sm border border-gray-100">
-            <button className="p-2.5 rounded-lg bg-gray-50 text-gray-900"><LayoutGrid size={18} /></button>
-            <button className="p-2.5 rounded-lg text-gray-300 hover:text-gray-400"><LayoutGrid size={18} /></button>
-          </div>
-        </div>
+      <section className="max-w-7xl mx-auto px-6 lg:px-12 pb-32 z-10 relative mt-4">
 
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 justify-items-center">

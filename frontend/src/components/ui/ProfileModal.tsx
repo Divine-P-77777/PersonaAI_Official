@@ -51,7 +51,7 @@ export function ProfileModal({ bot, onClose }: ProfileModalProps) {
             </button>
           </div>
 
-          <div className="overflow-y-auto w-full h-full pb-8">
+          <div className="overflow-y-auto w-full h-full pb-8 overscroll-contain" data-lenis-prevent="true">
             {/* Header Cover */}
             <div className="h-32 bg-gradient-to-r from-orange-400 to-pink-500 relative shrink-0">
             </div>
