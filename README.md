@@ -171,4 +171,10 @@ npm run dev
 - [System Workflow](file:///c:/Mern%20Stack/persona_ai_capstone/WorkFlow.md)
 
 ## ⚖️ License
-MIT
+## ⚖️ License
+
+This project is proprietary software and is made publicly available **for demonstration and evaluation purposes only**.
+
+Viewing the source code does **not** grant permission to copy, modify, redistribute, deploy, or use any part of this project without prior written permission from the copyright holder.
+
+See the [LICENSE](LICENSE) file for complete terms.
